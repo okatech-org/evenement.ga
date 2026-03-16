@@ -1,0 +1,3 @@
+// Admin components directory
+// This file ensures the directory is tracked by git
+export {};

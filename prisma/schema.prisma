@@ -1,0 +1,260 @@
+// EventFlow — Prisma Schema
+// PostgreSQL database schema for the event management platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────
+
+enum Role {
+  ORGANIZER
+  CO_ORGANIZER
+}
+
+enum Plan {
+  FREE
+  ESSENTIEL
+  PREMIUM
+  ENTREPRISE
+}
+
+enum EventType {
+  MARIAGE
+  ANNIVERSAIRE
+  DEUIL
+  BAPTEME
+  CONFERENCE
+  PRIVE
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum Visibility {
+  PUBLIC
+  SEMI_PRIVATE
+  PRIVATE
+  PASSWORD
+}
+
+enum GuestStatus {
+  INVITED
+  SEEN
+  CONFIRMED
+  DECLINED
+  ABSENT
+}
+
+enum ModuleType {
+  MOD_INVITE
+  MOD_RSVP
+  MOD_MENU
+  MOD_QR
+  MOD_LOGISTIQUE
+  MOD_CHAT
+  MOD_PROGRAMME
+  MOD_GALERIE
+  MOD_DASHBOARD
+}
+
+enum ScanStatus {
+  VALID
+  ALREADY_SCANNED
+  INVALID
+  EXPIRED
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  REACTION
+}
+
+// ─── Models ─────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  image         String?
+  role          Role      @default(ORGANIZER)
+  plan          Plan      @default(FREE)
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  events        Event[]
+  chatMessages  ChatMessage[]
+  notifications Notification[]
+  qrScans       QRScan[]       @relation("ScannedBy")
+
+  @@map("users")
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  title       String
+  type        EventType
+  date        DateTime
+  endDate     DateTime?
+  location    String?
+  description String?     @db.Text
+  status      EventStatus @default(DRAFT)
+  visibility  Visibility  @default(SEMI_PRIVATE)
+  password    String?
+  maxGuests   Int?
+  userId      String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme        EventTheme?
+  modules      EventModule[]
+  guests       Guest[]
+  chatMessages ChatMessage[]
+  qrScans      QRScan[]
+
+  @@index([userId])
+  @@index([slug])
+  @@map("events")
+}
+
+model EventTheme {
+  id               String  @id @default(cuid())
+  eventId          String  @unique
+  preset           String  @default("mariage")
+  entryEffect      String  @default("fade_white")
+  ambientEffect    String?
+  ambientIntensity Float   @default(0.6)
+  scrollReveal     String  @default("fade_up")
+  cursorEffect     String?
+  soundEnabled     Boolean @default(false)
+  soundUrl         String?
+  colorPrimary     String  @default("#8B5A6A")
+  colorSecondary   String  @default("#C48B90")
+  colorAccent      String  @default("#C9A96E")
+  colorBackground  String  @default("#FFFDF9")
+  colorText        String  @default("#3D2428")
+  colorSurface     String  @default("#FFFFFF")
+  colorMuted       String  @default("#9B8A8E")
+  colorBorder      String  @default("#E8DDD5")
+  fontDisplay      String  @default("Cormorant Garamond")
+  fontBody         String  @default("Montserrat")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("event_themes")
+}
+
+model EventModule {
+  id         String     @id @default(cuid())
+  eventId    String
+  type       ModuleType
+  active     Boolean    @default(true)
+  order      Int        @default(0)
+  configJson Json       @default("{}")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, type])
+  @@index([eventId])
+  @@map("event_modules")
+}
+
+model Guest {
+  id          String      @id @default(cuid())
+  eventId     String
+  firstName   String
+  lastName    String
+  email       String?
+  phone       String?
+  group       String?
+  status      GuestStatus @default(INVITED)
+  qrToken     String?     @unique
+  qrExpiresAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  rsvp    RSVP?
+  qrScans QRScan[]
+
+  @@index([eventId])
+  @@index([email])
+  @@map("guests")
+}
+
+model RSVP {
+  id            String   @id @default(cuid())
+  guestId       String   @unique
+  presence      Boolean
+  adultCount    Int      @default(1)
+  childrenCount Int      @default(0)
+  menuChoice    String?
+  allergies     String[]
+  message       String?  @db.Text
+  submittedAt   DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  guest Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  @@map("rsvps")
+}
+
+model QRScan {
+  id        String     @id @default(cuid())
+  guestId   String
+  eventId   String
+  scannedAt DateTime   @default(now())
+  scannedBy String
+  status    ScanStatus
+
+  guest   Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  event   Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  scanner User  @relation("ScannedBy", fields: [scannedBy], references: [id])
+
+  @@index([guestId])
+  @@index([eventId])
+  @@map("qr_scans")
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  eventId   String
+  userId    String
+  channel   String      @default("general")
+  content   String      @db.Text
+  type      MessageType @default(TEXT)
+  createdAt DateTime    @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, channel])
+  @@map("chat_messages")
+}
+
+model Notification {
+  id      String   @id @default(cuid())
+  userId  String
+  type    String
+  content String   @db.Text
+  read    Boolean  @default(false)
+  sentAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
+}
