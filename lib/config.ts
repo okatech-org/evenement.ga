@@ -188,6 +188,198 @@ export const PLAN_LIMITS: Record<
   },
 };
 
+// ─── Currency System ────────────────────────────────────────
+
+export interface Currency {
+  code: string;
+  symbol: string;
+  label: string;
+  flag: string;
+  rate: number; // rate relative to EUR (1 EUR = X currency)
+  decimals: number;
+}
+
+export const CURRENCIES: Currency[] = [
+  { code: "EUR", symbol: "€", label: "Euro", flag: "🇪🇺", rate: 1, decimals: 2 },
+  { code: "USD", symbol: "$", label: "Dollar US", flag: "🇺🇸", rate: 1.08, decimals: 2 },
+  { code: "XAF", symbol: "FCFA", label: "Franc CFA", flag: "🇬🇦", rate: 655.957, decimals: 0 },
+  { code: "CDF", symbol: "FC", label: "Franc congolais", flag: "🇨🇩", rate: 2800, decimals: 0 },
+  { code: "NGN", symbol: "₦", label: "Naira", flag: "🇳🇬", rate: 1700, decimals: 0 },
+];
+
+export function convertPrice(priceEur: number, currency: Currency): number {
+  const converted = priceEur * currency.rate;
+  if (currency.decimals === 0) {
+    // Round to nearest 500 for clean local prices
+    return Math.round(converted / 500) * 500;
+  }
+  return Math.round(converted * 100) / 100;
+}
+
+function formatNumber(n: number, decimals: number): string {
+  if (decimals === 0) {
+    // Deterministic thousands separator (space) - no locale dependency
+    return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  }
+  return n.toFixed(2).replace(".", ",");
+}
+
+export function formatPrice(price: number, currency: Currency): string {
+  if (price === 0) return "Gratuit";
+  const formatted = formatNumber(price, currency.decimals);
+
+  // Symbol position depends on currency
+  if (currency.code === "EUR") return `${formatted} €`;
+  if (currency.code === "USD") return `$${formatted}`;
+  return `${formatted} ${currency.symbol}`;
+}
+
+// ─── Wedding Invitation Tiers ───────────────────────────────
+
+export interface InvitationTier {
+  id: string;
+  label: string;
+  subtitle: string;
+  price: number; // in EUR
+  minGuests: number;
+  maxGuests: number;
+  color: string;
+  features: string[];
+  popular?: boolean;
+}
+
+export const INVITATION_TIERS: InvitationTier[] = [
+  {
+    id: "decouverte",
+    label: "Découverte",
+    subtitle: "Mariage intime",
+    price: 0,
+    minGuests: 1,
+    maxGuests: 15,
+    color: "#9CA3AF",
+    features: [
+      "Carte d'invitation digitale",
+      "RSVP en ligne",
+      "QR Code basique",
+      "1 page d'accueil",
+      "Filigrane EventFlow",
+    ],
+  },
+  {
+    id: "essentiel",
+    label: "Essentiel",
+    subtitle: "Petit mariage",
+    price: 19.99,
+    minGuests: 16,
+    maxGuests: 30,
+    color: "#3B82F6",
+    features: [
+      "Carte personnalisée",
+      "RSVP + QR Code",
+      "Programme de la journée",
+      "Menu du repas",
+      "Sans filigrane",
+    ],
+  },
+  {
+    id: "confort",
+    label: "Confort",
+    subtitle: "Mariage classique",
+    price: 39.99,
+    minGuests: 31,
+    maxGuests: 50,
+    color: "#06B6D4",
+    features: [
+      "Tous les modules",
+      "Galerie photos des mariés",
+      "Infos pratiques (accès, hôtels)",
+      "Chat en direct",
+      "Thème personnalisable",
+    ],
+  },
+  {
+    id: "premium",
+    label: "Premium",
+    subtitle: "Grande célébration",
+    price: 99.99,
+    minGuests: 51,
+    maxGuests: 100,
+    color: "#8B5CF6",
+    features: [
+      "Tous les modules",
+      "Scanner QR à l'entrée",
+      "Gestion des tables / groupes",
+      "Programme multi-cérémonies",
+      "Support par email 48h",
+    ],
+    popular: true,
+  },
+  {
+    id: "prestige",
+    label: "Prestige",
+    subtitle: "Mariage d'exception",
+    price: 199.99,
+    minGuests: 101,
+    maxGuests: 250,
+    color: "#C9A96E",
+    features: [
+      "Tout le plan Premium",
+      "Personnalisation complète",
+      "Menu avec choix par invité",
+      "Logistique détaillée (navettes, parkings)",
+      "Support prioritaire 24h",
+    ],
+  },
+  {
+    id: "royal",
+    label: "Royal",
+    subtitle: "Grand mariage",
+    price: 299.99,
+    minGuests: 251,
+    maxGuests: 500,
+    color: "#F59E0B",
+    features: [
+      "Tout le plan Prestige",
+      "Multi-événements (civil + religieux + réception)",
+      "Domaine personnalisé",
+      "Gestion des accompagnants",
+      "Coordinateur dédié",
+    ],
+  },
+  {
+    id: "imperial",
+    label: "Impérial",
+    subtitle: "Mariage grandiose",
+    price: 599.99,
+    minGuests: 501,
+    maxGuests: 1000,
+    color: "#EF4444",
+    features: [
+      "Tout le plan Royal",
+      "Multi-jours (jusqu'à 3 jours)",
+      "API Access & intégrations",
+      "Statistiques avancées",
+      "Account Manager dédié",
+    ],
+  },
+  {
+    id: "legendaire",
+    label: "Légendaire",
+    subtitle: "Méga mariage",
+    price: 999.99,
+    minGuests: 1001,
+    maxGuests: 2000,
+    color: "#7C3AED",
+    features: [
+      "Tout illimité",
+      "Multi-jours illimité",
+      "API + Webhooks",
+      "Application mobile dédiée",
+      "SLA garantie + support 24/7",
+    ],
+  },
+];
+
 // ─── Effect Registry ────────────────────────────────────────
 
 export const ENTRY_EFFECTS = {

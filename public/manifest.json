@@ -1,0 +1,22 @@
+{
+  "name": "EventFlow",
+  "short_name": "EventFlow",
+  "description": "Invitations vivantes pour vos événements",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#FFFDF9",
+  "theme_color": "#7A3A50",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

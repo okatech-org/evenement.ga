@@ -8,6 +8,9 @@ import type {
   ChatMessage as PrismaChatMessage,
   Notification as PrismaNotification,
   User as PrismaUser,
+  SystemLog as PrismaSystemLog,
+  GlobalConfig as PrismaGlobalConfig,
+  AbuseReport as PrismaAbuseReport,
 } from "@prisma/client";
 
 // ─── Re-export Prisma types ───────────────────────────────
@@ -20,6 +23,9 @@ export type RSVP = PrismaRSVP;
 export type QRScan = PrismaQRScan;
 export type ChatMessage = PrismaChatMessage;
 export type Notification = PrismaNotification;
+export type SystemLog = PrismaSystemLog;
+export type GlobalConfig = PrismaGlobalConfig;
+export type AbuseReport = PrismaAbuseReport;
 
 // ─── Re-export Prisma enums ───────────────────────────────
 export {
@@ -32,6 +38,8 @@ export {
   ModuleType,
   ScanStatus,
   MessageType,
+  LogLevel,
+  ReportStatus,
 } from "@prisma/client";
 
 // ─── Custom Types ─────────────────────────────────────────

@@ -60,15 +60,15 @@ export default function HomePage() {
             >
               Commencer gratuitement
             </Link>
-            <a
-              href="#demo"
+            <Link
+              href="/demo"
               className="group flex items-center gap-2 rounded-full border border-gray-200 bg-white px-8 py-3.5 text-base font-semibold text-gray-700 shadow-sm transition-all hover:border-[#7A3A50]/30 hover:shadow-md"
             >
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#7A3A50]/10 text-[#7A3A50] transition group-hover:bg-[#7A3A50] group-hover:text-white">
                 ▶
               </span>
               Voir la démo
-            </a>
+            </Link>
           </div>
         </div>
       </section>

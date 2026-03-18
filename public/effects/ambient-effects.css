@@ -1,0 +1,142 @@
+/* ─── Floating Petals ──────────────────── */
+.ambient-petals {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.petal {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: radial-gradient(ellipse, var(--petal-color, rgba(196,139,144,0.6)) 0%, transparent 70%);
+  border-radius: 50% 0 50% 0;
+  animation: petalFall linear infinite;
+  opacity: 0;
+}
+
+@keyframes petalFall {
+  0% {
+    opacity: 0;
+    transform: translateY(-10vh) rotate(0deg) translateX(0);
+  }
+  10% { opacity: var(--ambient-intensity, 0.6); }
+  90% { opacity: var(--ambient-intensity, 0.6); }
+  100% {
+    opacity: 0;
+    transform: translateY(110vh) rotate(720deg) translateX(100px);
+  }
+}
+
+/* ─── Sparkle ────────────────────────────── */
+.ambient-sparkle {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.sparkle-dot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: var(--sparkle-color, #F2C94C);
+  border-radius: 50%;
+  animation: sparkleGlow 2s ease-in-out infinite;
+}
+
+@keyframes sparkleGlow {
+  0%, 100% { opacity: 0; transform: scale(0); }
+  50% { opacity: var(--ambient-intensity, 0.8); transform: scale(1); }
+}
+
+/* ─── Bubbles ────────────────────────────── */
+.ambient-bubbles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.bubble {
+  position: absolute;
+  bottom: -20px;
+  border-radius: 50%;
+  border: 1px solid rgba(147, 197, 253, 0.3);
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2), transparent);
+  animation: bubbleRise linear infinite;
+  opacity: 0;
+}
+
+@keyframes bubbleRise {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.5);
+  }
+  10% { opacity: var(--ambient-intensity, 0.5); }
+  90% { opacity: calc(var(--ambient-intensity, 0.5) * 0.3); }
+  100% {
+    opacity: 0;
+    transform: translateY(-110vh) scale(1);
+  }
+}
+
+/* ─── Starlight ──────────────────────────── */
+.ambient-starlight {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: var(--star-color, #D4AF37);
+  border-radius: 50%;
+  animation: starTwinkle ease-in-out infinite;
+}
+
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.1; transform: scale(0.5); }
+  50% { opacity: var(--ambient-intensity, 0.4); transform: scale(1.5); }
+}
+
+/* ─── Geometric Grid ─────────────────────── */
+.ambient-geometric {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(30, 58, 95, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 58, 95, 0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  animation: gridPulse 4s ease-in-out infinite;
+}
+
+@keyframes gridPulse {
+  0%, 100% { opacity: var(--ambient-intensity, 0.3); }
+  50% { opacity: calc(var(--ambient-intensity, 0.3) * 1.5); }
+}
+
+/* ─── Reduced Motion ──────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .petal,
+  .sparkle-dot,
+  .bubble,
+  .star {
+    animation: none !important;
+    display: none;
+  }
+
+  .ambient-geometric {
+    animation: none !important;
+  }
+}

@@ -7,7 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ─── Enums ──────────────────────────────────────────────────
@@ -15,6 +14,10 @@ datasource db {
 enum Role {
   ORGANIZER
   CO_ORGANIZER
+  GUEST_PREVIEW
+  MODERATOR
+  ADMIN
+  SUPER_ADMIN
 }
 
 enum Plan {
@@ -79,19 +82,41 @@ enum MessageType {
   REACTION
 }
 
+enum LogLevel {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+enum ControllerPermission {
+  VERIFY // Read-only: can verify status but not record scans
+  SCAN   // Full: can verify AND record entry scans
+}
+
 // ─── Models ─────────────────────────────────────────────────
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  password      String?
-  image         String?
-  role          Role      @default(ORGANIZER)
-  plan          Plan      @default(FREE)
-  emailVerified DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  email           String    @unique
+  name            String?
+  password        String?
+  phone           String?   @unique
+  image           String?
+  role            Role      @default(ORGANIZER)
+  plan            Plan      @default(FREE)
+  emailVerified   DateTime?
+  isDemoAccount   Boolean   @default(false)
+  demoAccountType String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   events        Event[]
   chatMessages  ChatMessage[]
@@ -99,6 +124,18 @@ model User {
   qrScans       QRScan[]       @relation("ScannedBy")
 
   @@map("users")
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([phone, code])
+  @@map("otp_codes")
 }
 
 model Event {
@@ -114,16 +151,19 @@ model Event {
   visibility  Visibility  @default(SEMI_PRIVATE)
   password    String?
   maxGuests   Int?
+  coverImage  String?
+  coverVideo  String?
   userId      String
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  theme        EventTheme?
-  modules      EventModule[]
-  guests       Guest[]
-  chatMessages ChatMessage[]
-  qrScans      QRScan[]
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme           EventTheme?
+  modules         EventModule[]
+  guests          Guest[]
+  chatMessages    ChatMessage[]
+  qrScans         QRScan[]
+  controllerLinks ControllerLink[]
 
   @@index([userId])
   @@index([slug])
@@ -151,6 +191,10 @@ model EventTheme {
   colorBorder      String  @default("#E8DDD5")
   fontDisplay      String  @default("Cormorant Garamond")
   fontBody         String  @default("Montserrat")
+  fontSizeTitle    String  @default("2xl")
+  fontSizeBody     String  @default("base")
+  letterSpacing    String  @default("normal")
+  lineHeight       String  @default("normal")
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
@@ -181,6 +225,7 @@ model Guest {
   phone       String?
   group       String?
   status      GuestStatus @default(INVITED)
+  inviteToken String?     @unique
   qrToken     String?     @unique
   qrExpiresAt DateTime?
   createdAt   DateTime    @default(now())
@@ -213,33 +258,59 @@ model RSVP {
 }
 
 model QRScan {
-  id        String     @id @default(cuid())
-  guestId   String
-  eventId   String
-  scannedAt DateTime   @default(now())
-  scannedBy String
-  status    ScanStatus
+  id               String     @id @default(cuid())
+  guestId          String
+  eventId          String
+  scannedAt        DateTime   @default(now())
+  scannedBy        String?
+  controllerLinkId String?
+  status           ScanStatus
 
-  guest   Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
-  event   Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  scanner User  @relation("ScannedBy", fields: [scannedBy], references: [id])
+  guest          Guest           @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  event          Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  scanner        User?           @relation("ScannedBy", fields: [scannedBy], references: [id])
+  controllerLink ControllerLink? @relation(fields: [controllerLinkId], references: [id], onDelete: SetNull)
 
   @@index([guestId])
   @@index([eventId])
+  @@index([controllerLinkId])
   @@map("qr_scans")
 }
 
+model ControllerLink {
+  id         String               @id @default(cuid())
+  eventId    String
+  token      String               @unique
+  label      String               // "Sécurité entrée", "Hôtesse VIP", etc.
+  permission ControllerPermission @default(VERIFY)
+  isActive   Boolean              @default(true)
+  expiresAt  DateTime?
+  createdAt  DateTime             @default(now())
+  lastUsedAt DateTime?
+
+  event Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  scans QRScan[]
+
+  @@index([eventId])
+  @@index([token])
+  @@map("controller_links")
+}
+
 model ChatMessage {
-  id        String      @id @default(cuid())
-  eventId   String
-  userId    String
-  channel   String      @default("general")
-  content   String      @db.Text
-  type      MessageType @default(TEXT)
-  createdAt DateTime    @default(now())
+  id         String      @id @default(cuid())
+  eventId    String
+  userId     String?
+  channel    String      @default("general")
+  content    String      @db.Text
+  type       MessageType @default(TEXT)
+  senderName String      @default("Anonyme")
+  senderRole String      @default("GUEST") // GUEST | ORGANIZER
+  replyToId  String?
+  reactions  Json        @default("{}")
+  createdAt  DateTime    @default(now())
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([eventId, channel])
   @@map("chat_messages")
@@ -257,4 +328,56 @@ model Notification {
 
   @@index([userId, read])
   @@map("notifications")
+}
+
+// ─── System Models (Super Admin) ────────────────────────────
+
+model SystemLog {
+  id         String   @id @default(cuid())
+  level      LogLevel
+  category   String
+  action     String
+  actorId    String?
+  targetId   String?
+  targetType String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([level, category, createdAt])
+  @@index([actorId])
+  @@map("system_logs")
+}
+
+model GlobalConfig {
+  id                 String   @id @default("global")
+  maintenanceMode    Boolean  @default(false)
+  maintenanceMessage String?
+  newRegistrations   Boolean  @default(true)
+  demoEnabled        Boolean  @default(true)
+  maxEventsPerUser   Json     @default("{\"FREE\":1,\"ESSENTIEL\":3,\"PREMIUM\":-1,\"ENTREPRISE\":-1}")
+  maxGuestsPerEvent  Json     @default("{\"FREE\":50,\"ESSENTIEL\":200,\"PREMIUM\":1000,\"ENTREPRISE\":-1}")
+  featureFlags       Json     @default("{\"ENABLE_QR_SCAN\":true,\"ENABLE_CHAT\":true,\"ENABLE_GALLERY_UPLOAD\":true,\"ENABLE_DEMO_AUTO_LOGIN\":true,\"ENABLE_AI_SUGGESTIONS\":false,\"ENABLE_STRIPE\":false,\"MAINTENANCE_MODE\":false}")
+  updatedAt          DateTime @updatedAt
+  updatedBy          String?
+
+  @@map("global_config")
+}
+
+model AbuseReport {
+  id          String       @id @default(cuid())
+  reportedBy  String
+  targetId    String
+  targetType  String
+  reason      String
+  description String?      @db.Text
+  status      ReportStatus @default(PENDING)
+  resolvedBy  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@index([status])
+  @@index([targetId])
+  @@map("abuse_reports")
 }

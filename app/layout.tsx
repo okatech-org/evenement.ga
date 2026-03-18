@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { Inter, Geist } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { cn } from "@/lib/utils";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+import { AuthProvider } from "@/components/auth-provider";
+import { ConvexClientProvider } from "@/components/providers/convex-provider";
+import { ThemeProvider } from "@/components/providers/theme-provider";
+import { I18nProvider } from "@/components/providers/i18n-provider";
 
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
-  variable: "--font-inter",
+  variable: "--font-sans",
   display: "swap",
 });
 
@@ -18,7 +19,9 @@ export const metadata: Metadata = {
   },
   description:
     "Plateforme modulaire de gestion d'événements. Créez des cartes d'invitation vivantes et immersives pour vos mariages, anniversaires, baptêmes et plus.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  ),
 };
 
 export default function RootLayout({
@@ -27,10 +30,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
+    <html lang="fr" suppressHydrationWarning>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#7A3A50" />
+      </head>
       <body className={`${inter.variable} font-sans antialiased`}>
-        {children}
+        <ThemeProvider>
+          <I18nProvider>
+            <ConvexClientProvider>
+              <AuthProvider>{children}</AuthProvider>
+            </ConvexClientProvider>
+          </I18nProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
 }
+
