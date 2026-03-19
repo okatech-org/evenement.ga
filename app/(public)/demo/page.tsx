@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/db";
+import { convexClient } from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
 import { DEMO_ACCOUNTS } from "@/lib/demo-guard";
 import { EVENT_TYPES, MODULE_TYPES } from "@/lib/config";
 import { DemoClientSection } from "./demo-client";
@@ -14,7 +15,7 @@ interface DemoEvent {
   slug: string;
   title: string;
   type: string;
-  date: Date;
+  date: string;
   location: string | null;
   description: string | null;
   totalGuests: number;
@@ -26,52 +27,64 @@ interface DemoEvent {
 
 async function getDemoEvents(): Promise<DemoEvent[]> {
   try {
-    const events = await prisma.event.findMany({
-      where: {
-        OR: [
-          { slug: { startsWith: "demo-" } },
-          { slug: "mariage-ray-et-ashly-2026" },
-        ],
-        status: "PUBLISHED",
-      },
-      include: {
-        guests: { select: { status: true } },
-        modules: { where: { active: true }, select: { type: true } },
-      },
-      orderBy: { date: "asc" },
-    });
+    // Get all events, then filter demo ones
+    // We'll use the events that have demo-related slugs
+    const demoSlugs = [
+      "mariage-ray-et-ashly-2026",
+      "demo-mariage-sophie-marc",
+      "demo-anniversaire-50ans-kone",
+      "demo-deuil-famille-mbeki",
+      "demo-conference-techsummit-2026",
+      "demo-bapteme-eden-traore",
+    ];
 
-    // Sort: vitrine event first, then by date
-    const sorted = events.sort((a, b) => {
-      if (a.slug === "mariage-ray-et-ashly-2026") return -1;
-      if (b.slug === "mariage-ray-et-ashly-2026") return 1;
-      return a.date.getTime() - b.date.getTime();
-    });
+    const results: DemoEvent[] = [];
 
-    return sorted.map((event) => {
-      const totalGuests = event.guests.length;
-      const confirmed = event.guests.filter((g) => g.status === "CONFIRMED").length;
-      const declined = event.guests.filter((g) => g.status === "DECLINED").length;
+    for (const slug of demoSlugs) {
+      const event = await convexClient.query(api.events.getBySlug, { slug });
+      if (!event || event.status !== "PUBLISHED") continue;
+
+      // Get guests for this event
+      const guests = await convexClient.query(api.rsvp.listGuests, {
+        eventId: event._id,
+      });
+
+      // Get modules for this event
+      const modules = await convexClient.query(api.modules.listByEvent, {
+        eventId: event._id,
+      });
+
+      const totalGuests = guests.length;
+      const confirmed = guests.filter((g: { status: string }) => g.status === "CONFIRMED").length;
+      const declined = guests.filter((g: { status: string }) => g.status === "DECLINED").length;
       const rsvpRate =
         totalGuests > 0
           ? Math.round(((confirmed + declined) / totalGuests) * 100)
           : 0;
 
-      return {
+      results.push({
         slug: event.slug,
         title: event.title,
         type: event.type,
-        date: event.date,
-        location: event.location,
-        description: event.description,
+        date: new Date(event.dates[0]).toISOString(),
+        location: event.location ?? null,
+        description: event.description ?? null,
         totalGuests,
         confirmed,
         declined,
         rsvpRate,
-        activeModules: event.modules.map((m) => m.type),
-      };
+        activeModules: modules.filter((m: { active: boolean }) => m.active).map((m: { type: string }) => m.type),
+      });
+    }
+
+    // Sort: vitrine event first
+    return results.sort((a, b) => {
+      if (a.slug === "mariage-ray-et-ashly-2026") return -1;
+      if (b.slug === "mariage-ray-et-ashly-2026") return 1;
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
     });
-  } catch {
+  } catch (error) {
+    console.error("[Demo Page] Error fetching events:", error);
     return [];
   }
 }
@@ -94,7 +107,6 @@ export default async function DemoPage() {
 
   const eventsData = events.map((e) => ({
     ...e,
-    date: e.date.toISOString(),
     typeConfig: eventTypesConfig[e.type as keyof typeof eventTypesConfig],
     moduleIcons: e.activeModules
       .slice(0, 4)

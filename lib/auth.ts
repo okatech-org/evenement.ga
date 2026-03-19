@@ -2,7 +2,8 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import Apple from "next-auth/providers/apple";
-import { prisma } from "@/lib/db";
+import { convexClient } from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
 
 async function verifyPassword(plain: string, hashed: string): Promise<boolean> {
   const { compare } = await import("bcryptjs");
@@ -40,8 +41,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new Error("Email et mot de passe requis");
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+        const user = await convexClient.query(api.auth.getUserForAuth, {
+          email: credentials.email as string,
         });
 
         if (!user || !user.password) {
@@ -58,7 +59,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         return {
-          id: user.id,
+          id: user._id,
           email: user.email,
           name: user.name,
           image: user.image,
@@ -82,15 +83,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const phone = credentials.phone as string;
         const otp = credentials.otp as string;
 
-        // Verify OTP
-        const otpRecord = await prisma.otpCode.findFirst({
-          where: {
-            phone,
-            code: otp,
-            used: false,
-            expiresAt: { gt: new Date() },
-          },
-          orderBy: { createdAt: "desc" },
+        // Verify OTP via Convex
+        const otpRecord = await convexClient.query(api.auth.verifyOtp, {
+          phone,
+          code: otp,
         });
 
         if (!otpRecord) {
@@ -98,30 +94,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         // Mark OTP as used
-        await prisma.otpCode.update({
-          where: { id: otpRecord.id },
-          data: { used: true },
+        await convexClient.mutation(api.users.markOtpUsed, {
+          otpId: otpRecord._id,
         });
 
         // Find or create user by phone
-        let user = await prisma.user.findUnique({
-          where: { phone },
+        const user = await convexClient.mutation(api.users.getOrCreateByPhone, {
+          phone,
         });
 
         if (!user) {
-          user = await prisma.user.create({
-            data: {
-              phone,
-              email: `wa_${phone.replace(/\+/g, "")}@whatsapp.placeholder`,
-              name: `WhatsApp ${phone}`,
-              role: "ORGANIZER",
-              plan: "FREE",
-            },
-          });
+          throw new Error("Erreur lors de la création du compte");
         }
 
         return {
-          id: user.id,
+          id: user._id,
           email: user.email,
           name: user.name,
           image: user.image,
@@ -134,32 +121,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider === "google" || account?.provider === "apple") {
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email! },
+        await convexClient.mutation(api.users.upsertFromOAuth, {
+          email: user.email!,
+          name: user.name ?? undefined,
+          image: user.image ?? undefined,
         });
-
-        if (!existingUser) {
-          await prisma.user.create({
-            data: {
-              email: user.email!,
-              name: user.name,
-              image: user.image,
-              role: "ORGANIZER",
-              plan: "FREE",
-              emailVerified: new Date(),
-            },
-          });
-        }
       }
       return true;
     },
     async jwt({ token, user }) {
       if (user) {
-        const dbUser = await prisma.user.findUnique({
-          where: { email: token.email! },
+        const dbUser = await convexClient.query(api.auth.getUserForAuth, {
+          email: token.email!,
         });
         if (dbUser) {
-          token.id = dbUser.id;
+          token.id = dbUser._id;
           token.role = dbUser.role;
           token.plan = dbUser.plan;
           token.isDemoAccount = dbUser.isDemoAccount;

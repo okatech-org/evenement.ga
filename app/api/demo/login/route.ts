@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { convexClient } from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
 import { DEMO_ACCOUNTS, type DemoAccountType } from "@/lib/demo-guard";
 
 // ─── Simple in-memory rate limiter ──────────────────────────
@@ -57,12 +58,12 @@ export async function POST(req: Request) {
 
     const account = DEMO_ACCOUNTS[accountType as DemoAccountType];
 
-    // Verify the demo user exists in DB
-    const user = await prisma.user.findUnique({
-      where: { email: account.email },
+    // Verify the demo user exists in Convex
+    const user = await convexClient.query(api.auth.getDemoUser, {
+      email: account.email,
     });
 
-    if (!user || !user.isDemoAccount) {
+    if (!user) {
       return NextResponse.json(
         {
           success: false,

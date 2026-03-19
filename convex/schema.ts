@@ -6,11 +6,59 @@ export default defineSchema({
     email: v.string(),
     name: v.optional(v.string()),
     password: v.optional(v.string()),
+    phone: v.optional(v.string()),
     image: v.optional(v.string()),
-    role: v.string(), // ORGANIZER | CO_ORGANIZER
+    role: v.string(), // ORGANIZER | CO_ORGANIZER | GUEST_PREVIEW | MODERATOR | ADMIN | SUPER_ADMIN
     plan: v.string(), // FREE | ESSENTIEL | PREMIUM | ENTREPRISE
     emailVerified: v.optional(v.number()),
-  }).index("by_email", ["email"]),
+    isDemoAccount: v.optional(v.boolean()),
+    demoAccountType: v.optional(v.string()),
+  })
+    .index("by_email", ["email"])
+    .index("by_phone", ["phone"]),
+
+  globalConfig: defineTable({
+    key: v.string(), // always "global"
+    maintenanceMode: v.boolean(),
+    maintenanceMessage: v.optional(v.string()),
+    newRegistrations: v.boolean(),
+    demoEnabled: v.boolean(),
+    maxEventsPerUser: v.optional(v.string()), // JSON string
+    maxGuestsPerEvent: v.optional(v.string()), // JSON string
+    featureFlags: v.optional(v.string()), // JSON string
+    updatedBy: v.optional(v.string()),
+  }).index("by_key", ["key"]),
+
+  otpCodes: defineTable({
+    phone: v.string(),
+    code: v.string(),
+    expiresAt: v.number(),
+    used: v.boolean(),
+  }).index("by_phone_code", ["phone", "code"]),
+
+  systemLogs: defineTable({
+    level: v.string(), // INFO | WARNING | ERROR | CRITICAL
+    category: v.string(),
+    action: v.string(),
+    actorId: v.optional(v.string()),
+    targetId: v.optional(v.string()),
+    targetType: v.optional(v.string()),
+    metadata: v.optional(v.string()), // JSON string
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+  }).index("by_level_category", ["level", "category"]),
+
+  controllerLinks: defineTable({
+    eventId: v.id("events"),
+    token: v.string(),
+    label: v.string(),
+    permission: v.string(), // VERIFY | SCAN
+    isActive: v.boolean(),
+    expiresAt: v.optional(v.number()),
+    lastUsedAt: v.optional(v.number()),
+  })
+    .index("by_event", ["eventId"])
+    .index("by_token", ["token"]),
 
   events: defineTable({
     slug: v.string(),
