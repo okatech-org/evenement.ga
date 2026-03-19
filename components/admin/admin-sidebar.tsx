@@ -59,9 +59,12 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [eventCtx, setEventCtx] = useState<EventContext | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Detect if we're inside an event page
-  const eventIdMatch = pathname.match(/\/events\/([^/]+)/);
+  useEffect(() => { setMounted(true); }, []);
+
+  // Detect if we're inside an event page (only after mount to avoid hydration mismatch)
+  const eventIdMatch = mounted ? pathname.match(/\/events\/([^/]+)/) : null;
   const activeEventId = eventIdMatch?.[1] || null;
 
   // Detect active sub-page

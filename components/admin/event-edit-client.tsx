@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -18,7 +18,12 @@ import {
   Loader2,
   Eye,
   ExternalLink,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
+import { DevicePreviewFrame, DEVICE_PRESETS, type DevicePreset } from "./device-preview-frame";
+import { DeviceSwitcher } from "./device-switcher";
+import { InvitationCard } from "@/components/public/invitation-card";
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -28,6 +33,28 @@ interface ModuleData {
   active: boolean;
   order: number;
   configJson: Record<string, unknown>;
+}
+
+interface ThemeColors {
+  primary: string;
+  secondary: string;
+  accent: string;
+  background: string;
+  text: string;
+  surface: string;
+  muted: string;
+  border: string;
+}
+
+interface ThemeData {
+  cssVars: Record<string, string>;
+  fontDisplay: string;
+  fontBody: string;
+  entryEffect: string;
+  ambientEffect: string | null;
+  ambientIntensity: number;
+  scrollReveal: string;
+  colors: ThemeColors;
 }
 
 interface EventEditClientProps {
@@ -42,25 +69,101 @@ interface EventEditClientProps {
     coverImage: string | null;
     coverVideo: string | null;
     type: string;
+    organizer: string | null;
+    guestCount: number;
     modules: ModuleData[];
   };
+  theme: ThemeData;
 }
 
 // ─── Step definitions ───────────────────────────────────
 
 const STEPS = [
-  { id: "accueil", label: "Accueil", icon: "🏠", desc: "Titre, description, médias" },
-  { id: "evenement", label: "L'événement", icon: "📋", desc: "Programme & Menu" },
-  { id: "infos", label: "Infos & Moments", icon: "📍", desc: "Logistique & Galerie" },
-  { id: "rsvp", label: "Confirmation", icon: "✅", desc: "RSVP & Paramètres" },
+  { id: "accueil", label: "Accueil", icon: "🏠", desc: "Titre, description, médias", previewPage: 0 },
+  { id: "evenement", label: "L'événement", icon: "📋", desc: "Programme & Menu", previewPage: 1 },
+  { id: "infos", label: "Infos & Moments", icon: "📍", desc: "Logistique & Galerie", previewPage: 2 },
+  { id: "rsvp", label: "Confirmation", icon: "✅", desc: "RSVP & Paramètres", previewPage: 3 },
 ];
+
+// ─── Collapsible Section ─────────────────────────────────
+
+function EditorSection({
+  title,
+  icon,
+  children,
+  badge,
+  defaultOpen = true,
+}: {
+  title: string;
+  icon: string | React.ReactNode;
+  children: React.ReactNode;
+  badge?: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden transition-all">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen(!open)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(!open); } }}
+        className="w-full flex items-center gap-2.5 px-4 py-3 text-left hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer select-none"
+      >
+        <span className="text-sm">{icon}</span>
+        <span className="flex-1 text-sm font-semibold text-gray-900 dark:text-white truncate">
+          {title}
+        </span>
+        {badge && <span className="shrink-0">{badge}</span>}
+        {open ? (
+          <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+        ) : (
+          <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+        )}
+      </div>
+      {open && (
+        <div className="px-4 pb-4 space-y-3 border-t border-gray-50 dark:border-gray-800/50 pt-3">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Module Toggle ───────────────────────────────────────
+
+function ModuleToggle({
+  active,
+  onToggle,
+}: {
+  active: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onToggle(); }}
+      className={`relative h-5 w-9 rounded-full transition flex-shrink-0 ${
+        active ? "bg-[#7A3A50]" : "bg-gray-300 dark:bg-gray-600"
+      }`}
+    >
+      <div
+        className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all"
+        style={{ left: active ? "18px" : "2px" }}
+      />
+    </button>
+  );
+}
 
 // ─── Component ──────────────────────────────────────────
 
-export function EventEditClient({ event }: EventEditClientProps) {
+export function EventEditClient({ event, theme }: EventEditClientProps) {
   const searchParams = useSearchParams();
   const stepParam = searchParams.get("step");
   const currentStep = stepParam ? parseInt(stepParam, 10) : 0;
+
+  // ── Device state ──
+  const [selectedDevice, setSelectedDevice] = useState<DevicePreset>(DEVICE_PRESETS[1]); // iPhone 14
 
   // ── Form state ──
   const [title, setTitle] = useState(event.title);
@@ -100,7 +203,6 @@ export function EventEditClient({ event }: EventEditClientProps) {
     setIsSaving(true);
     setSaved(false);
     try {
-      // Save event details
       await fetch(`/api/events/${event.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -112,7 +214,6 @@ export function EventEditClient({ event }: EventEditClientProps) {
         }),
       });
 
-      // Save modules
       if (modules.length > 0) {
         await fetch(`/api/events/${event.id}/modules`, {
           method: "PUT",
@@ -246,374 +347,384 @@ export function EventEditClient({ event }: EventEditClientProps) {
     updateModuleConfig("MOD_LOGISTIQUE", { sections: newSections });
   }
 
-  // ─── Card style ───
-  const cardClass = "rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm";
-  const inputClass = "w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20";
-  const labelClass = "mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400";
-  const btnSecondary = "inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 transition hover:bg-gray-50 dark:hover:bg-gray-800";
+  // ─── Styles ───
+  const inputClass = "w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20";
+  const btnSecondary = "inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 transition hover:bg-gray-50 dark:hover:bg-gray-800";
   const btnDanger = "inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition";
 
+  // ─── Preview data (memoized) ──────────────────────────
+
+  const activeModuleTypes = useMemo(
+    () => modules.filter((m) => m.active).map((m) => m.type),
+    [modules]
+  );
+
+  const modulesData = useMemo(() => {
+    const getModConfig = (type: string): Record<string, unknown> | null => {
+      const mod = modules.find((m) => m.type === type && m.active);
+      return mod?.configJson as Record<string, unknown> || null;
+    };
+    return {
+      programme: getModConfig("MOD_PROGRAMME"),
+      menu: getModConfig("MOD_MENU"),
+      logistics: getModConfig("MOD_LOGISTIQUE"),
+      chat: getModConfig("MOD_CHAT"),
+      gallery: getModConfig("MOD_GALERIE"),
+      rsvp: getModConfig("MOD_RSVP"),
+    };
+  }, [modules]);
+
+  // Preview page navigation: sync with current step
+  const [previewPage, setPreviewPage] = useState(0);
+
+  // Map editor steps to available preview pages
+  const previewPagesAvailable = useMemo(() => {
+    const pages: string[] = ["accueil"];
+    if (activeModuleTypes.includes("MOD_PROGRAMME") || activeModuleTypes.includes("MOD_MENU")) {
+      pages.push("evenement");
+    }
+    if (activeModuleTypes.includes("MOD_LOGISTIQUE") || activeModuleTypes.includes("MOD_GALERIE")) {
+      pages.push("infos");
+    }
+    if (activeModuleTypes.includes("MOD_RSVP")) {
+      pages.push("rsvp");
+    }
+    return pages;
+  }, [activeModuleTypes]);
+
+  // When step changes, try to navigate preview to matching page
+  useEffect(() => {
+    const stepId = STEPS[currentStep]?.id;
+    if (!stepId) return;
+    const pageIdx = previewPagesAvailable.indexOf(stepId);
+    if (pageIdx >= 0) {
+      setPreviewPage(pageIdx);
+    } else {
+      // If the target page doesn't exist in preview, go to closest
+      setPreviewPage(0);
+    }
+  }, [currentStep, previewPagesAvailable]);
+
+  // ─── Calculate preview scale ──────────────────────────
+  const previewContainerRef = useRef<HTMLDivElement>(null);
+  const [previewScale, setPreviewScale] = useState(1);
+
+  const recalcScale = useCallback(() => {
+    if (!previewContainerRef.current) return;
+    const containerH = previewContainerRef.current.clientHeight - 80; // header space
+    const containerW = previewContainerRef.current.clientWidth - 48; // padding
+    const scaleH = containerH / selectedDevice.height;
+    const scaleW = containerW / selectedDevice.width;
+    setPreviewScale(Math.min(scaleH, scaleW, 1));
+  }, [selectedDevice]);
+
+  useEffect(() => {
+    recalcScale();
+    window.addEventListener("resize", recalcScale);
+    return () => window.removeEventListener("resize", recalcScale);
+  }, [recalcScale]);
+
+  const previewEventData = useMemo(() => ({
+    id: event.id,
+    slug: event.slug,
+    title,
+    type: event.type,
+    date: new Date(date).toISOString(),
+    location: location || null,
+    description: description || null,
+    organizer: event.organizer,
+    guestCount: event.guestCount,
+    coverImage,
+    coverVideo,
+  }), [event.id, event.slug, event.type, event.organizer, event.guestCount, title, date, location, description, coverImage, coverVideo]);
+
+  // ═════════════════════════════════════════════════════════
+  // RENDER
+  // ═════════════════════════════════════════════════════════
+
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-            {STEPS[currentStep].icon} {STEPS[currentStep].label}
-          </h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {STEPS[currentStep].desc}
-          </p>
+    <div className="flex h-[calc(100vh-4rem)] gap-0 overflow-hidden -m-6 lg:-m-8">
+      {/* ═══════════ LEFT: Editor Panel ═══════════ */}
+      <div className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 flex flex-col border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
+        {/* Editor Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+          <div className="min-w-0">
+            <h1 className="text-base font-bold text-gray-900 dark:text-white truncate flex items-center gap-2">
+              <span>{STEPS[currentStep].icon}</span>
+              {STEPS[currentStep].label}
+            </h1>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+              {STEPS[currentStep].desc}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <a
+              href={`/${event.slug}`}
+              target="_blank"
+              className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 text-[11px] font-medium text-gray-600 dark:text-gray-400 transition hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <Eye className="h-3 w-3" />
+              <ExternalLink className="h-2.5 w-2.5 opacity-50" />
+            </a>
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#7A3A50] px-3 py-1.5 text-xs font-semibold text-white shadow-md shadow-[#7A3A50]/25 transition hover:bg-[#6A2A40] disabled:opacity-50"
+            >
+              {isSaving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : saved ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : (
+                <Save className="h-3.5 w-3.5" />
+              )}
+              {isSaving ? "..." : saved ? "OK" : "Sauvegarder"}
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <a
-            href={`/${event.slug}`}
-            target="_blank"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 transition hover:bg-gray-50 dark:hover:bg-gray-800"
-          >
-            <Eye className="h-3.5 w-3.5" />
-            Aperçu
-            <ExternalLink className="h-3 w-3 opacity-50" />
-          </a>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#7A3A50] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#7A3A50]/25 transition hover:bg-[#6A2A40] disabled:opacity-50"
-          >
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : saved ? (
-              <Check className="h-4 w-4" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )}
-            {isSaving ? "Sauvegarde..." : saved ? "Sauvegardé !" : "Sauvegarder"}
-          </button>
-        </div>
-      </div>
 
+        {/* Editor Content (scrollable) */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {/* ═══════════════ STEP 0 — ACCUEIL ═══════════════ */}
+          {currentStep === 0 && (
+            <>
+              <EditorSection title="Titre de l'événement" icon="✏️">
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className={`${inputClass} font-semibold`}
+                />
+              </EditorSection>
 
+              <EditorSection title="Description" icon="📝">
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                  className={`${inputClass} resize-none`}
+                  placeholder="Décrivez votre événement..."
+                />
+                <p className="text-right text-[10px] text-gray-400">{description.length} car.</p>
+              </EditorSection>
 
-      {/* Step content */}
-      <div className="space-y-5">
-        {/* ═══════════════ STEP 1 — ACCUEIL ═══════════════ */}
-        {currentStep === 0 && (
-          <>
-            {/* Title */}
-            <div className={cardClass}>
-              <label className={labelClass}>Titre de l&apos;événement</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className={`${inputClass} text-lg font-semibold`}
-              />
-            </div>
-
-            {/* Description */}
-            <div className={cardClass}>
-              <label className={labelClass}>Description</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                className={`${inputClass} resize-none`}
-                placeholder="Décrivez votre événement..."
-              />
-              <p className="mt-1.5 text-right text-[11px] text-gray-400">{description.length} caractères</p>
-            </div>
-
-            {/* Date & Lieu */}
-            <div className={cardClass}>
-              <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-[#7A3A50] dark:text-[#C48B90]" />
-                Date & Lieu
-              </h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={labelClass}>
-                    <Clock className="inline h-3 w-3 mr-1" />Date
-                  </label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>
-                    <MapPin className="inline h-3 w-3 mr-1" />Lieu
-                  </label>
-                  <input
-                    type="text"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className={inputClass}
-                    placeholder="Adresse ou nom du lieu"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Cover Image & Video */}
-            <div className="grid gap-5 sm:grid-cols-2">
-              {/* Image */}
-              <div className={cardClass}>
-                <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4 text-[#7A3A50] dark:text-[#C48B90]" />
-                  Image de couverture
-                </h3>
-                {coverImage ? (
-                  <div className="relative group">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={coverImage} alt="Cover" className="w-full h-40 object-cover rounded-lg" />
-                    <button
-                      onClick={() => handleRemoveMedia("image")}
-                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+              <EditorSection title="Date & Lieu" icon={<Calendar className="h-3.5 w-3.5 text-[#7A3A50]" />}>
+                <div className="grid gap-3 grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                      <Clock className="inline h-3 w-3 mr-0.5" />Date
+                    </label>
+                    <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
                   </div>
-                ) : (
-                  <button
-                    onClick={() => imageRef.current?.click()}
-                    disabled={isUploading}
-                    className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-6 text-gray-400 dark:text-gray-500 transition hover:border-[#7A3A50]/40 hover:text-[#7A3A50]"
-                  >
-                    {isUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Upload className="h-6 w-6" />}
-                    <span className="text-xs font-medium">{isUploading ? "Upload..." : "Choisir une image"}</span>
-                  </button>
-                )}
-                <input ref={imageRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f, "image"); }} />
-              </div>
-
-              {/* Video */}
-              <div className={cardClass}>
-                <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Video className="h-4 w-4 text-[#7A3A50] dark:text-[#C48B90]" />
-                  Vidéo de couverture
-                </h3>
-                {coverVideo ? (
-                  <div className="relative group">
-                    <video src={coverVideo} className="w-full h-40 object-cover rounded-lg" controls />
-                    <button
-                      onClick={() => handleRemoveMedia("video")}
-                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                  <div>
+                    <label className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                      <MapPin className="inline h-3 w-3 mr-0.5" />Lieu
+                    </label>
+                    <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className={inputClass} placeholder="Adresse..." />
                   </div>
-                ) : (
-                  <button
-                    onClick={() => videoRef.current?.click()}
-                    disabled={isUploading}
-                    className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-6 text-gray-400 dark:text-gray-500 transition hover:border-[#7A3A50]/40 hover:text-[#7A3A50]"
-                  >
-                    {isUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Upload className="h-6 w-6" />}
-                    <span className="text-xs font-medium">{isUploading ? "Upload..." : "Choisir une vidéo"}</span>
-                  </button>
-                )}
-                <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f, "video"); }} />
-              </div>
-            </div>
-          </>
-        )}
+                </div>
+              </EditorSection>
 
-        {/* ═══════════════ STEP 2 — L'ÉVÉNEMENT ═══════════════ */}
-        {currentStep === 1 && (
-          <>
-            {/* Programme */}
-            <div className={cardClass}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">📋 Programme</h3>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="text-xs text-gray-500">{getModule("MOD_PROGRAMME")?.active ? "Actif" : "Inactif"}</span>
-                  <button
-                    onClick={() => toggleModule("MOD_PROGRAMME")}
-                    className={`relative h-5 w-9 rounded-full transition ${getModule("MOD_PROGRAMME")?.active ? "bg-[#7A3A50]" : "bg-gray-300 dark:bg-gray-600"}`}
-                  >
-                    <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${getModule("MOD_PROGRAMME")?.active ? "left-4.5" : "left-0.5"}`} style={{ left: getModule("MOD_PROGRAMME")?.active ? "18px" : "2px" }} />
-                  </button>
-                </label>
-              </div>
-
-              {getModule("MOD_PROGRAMME")?.active && (
-                <div className="space-y-3">
-                  {programmeDays.map((day: { label: string; items: { time: string; title: string; description: string; icon: string }[] }, dayIdx: number) => (
-                    <div key={dayIdx}>
-                      <label className={labelClass}>
-                        {programmeDays.length > 1 ? day.label || `Jour ${dayIdx + 1}` : "Éléments du programme"}
-                      </label>
-                      <div className="space-y-2">
-                        {(day.items || []).map((item: { time: string; title: string; description: string; icon: string }, itemIdx: number) => (
-                          <div key={itemIdx} className="flex gap-2 items-start">
-                            <input
-                              type="text"
-                              value={item.time}
-                              onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "time", e.target.value)}
-                              className={`${inputClass} w-20`}
-                              placeholder="14:00"
-                            />
-                            <input
-                              type="text"
-                              value={item.title}
-                              onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "title", e.target.value)}
-                              className={`${inputClass} flex-1`}
-                              placeholder="Titre"
-                            />
-                            <input
-                              type="text"
-                              value={item.description || ""}
-                              onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "description", e.target.value)}
-                              className={`${inputClass} flex-1 hidden sm:block`}
-                              placeholder="Description"
-                            />
-                            <button onClick={() => removeProgrammeItem(dayIdx, itemIdx)} className={btnDanger}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <button onClick={() => addProgrammeItem(dayIdx)} className={`${btnSecondary} mt-2`}>
-                        <Plus className="h-3.5 w-3.5" /> Ajouter
+              {/* Cover Media */}
+              <div className="grid gap-3 grid-cols-2">
+                <EditorSection title="Image" icon={<ImageIcon className="h-3.5 w-3.5 text-[#7A3A50]" />}>
+                  {coverImage ? (
+                    <div className="relative group">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={coverImage} alt="Cover" className="w-full h-24 object-cover rounded-lg" />
+                      <button
+                        onClick={() => handleRemoveMedia("image")}
+                        className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition"
+                      >
+                        <X className="h-3 w-3" />
                       </button>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                  ) : (
+                    <button
+                      onClick={() => imageRef.current?.click()}
+                      disabled={isUploading}
+                      className="flex w-full flex-col items-center gap-1.5 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 p-4 text-gray-400 dark:text-gray-500 transition hover:border-[#7A3A50]/40 hover:text-[#7A3A50]"
+                    >
+                      {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
+                      <span className="text-[10px] font-medium">{isUploading ? "Upload..." : "Choisir"}</span>
+                    </button>
+                  )}
+                  <input ref={imageRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f, "image"); }} />
+                </EditorSection>
 
-            {/* Menu */}
-            <div className={cardClass}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">🍽️ Menu</h3>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="text-xs text-gray-500">{getModule("MOD_MENU")?.active ? "Actif" : "Inactif"}</span>
-                  <button
-                    onClick={() => toggleModule("MOD_MENU")}
-                    className={`relative h-5 w-9 rounded-full transition ${getModule("MOD_MENU")?.active ? "bg-[#7A3A50]" : "bg-gray-300 dark:bg-gray-600"}`}
-                  >
-                    <div className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all" style={{ left: getModule("MOD_MENU")?.active ? "18px" : "2px" }} />
-                  </button>
-                </label>
-              </div>
-
-              {getModule("MOD_MENU")?.active && (
-                <div className="space-y-3">
-                  {menuCourses.map((course: { name: string; items: string[]; icon: string }, courseIdx: number) => (
-                    <div key={courseIdx} className="rounded-lg border border-gray-100 dark:border-gray-800 p-3">
-                      <div className="flex gap-2 items-center mb-2">
-                        <input
-                          type="text"
-                          value={course.name}
-                          onChange={(e) => updateMenuCourse(courseIdx, "name", e.target.value)}
-                          className={`${inputClass} flex-1`}
-                          placeholder="Nom du plat (ex: Entrée)"
-                        />
-                        <button onClick={() => removeMenuCourse(courseIdx)} className={btnDanger}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      <div className="space-y-1.5 pl-2">
-                        {course.items.map((item: string, itemIdx: number) => (
-                          <input
-                            key={itemIdx}
-                            type="text"
-                            value={item}
-                            onChange={(e) => updateMenuItem(courseIdx, itemIdx, e.target.value)}
-                            className={`${inputClass} text-xs`}
-                            placeholder={`Élément ${itemIdx + 1}`}
-                          />
-                        ))}
-                        <button onClick={() => addMenuItem(courseIdx)} className="text-[11px] text-[#7A3A50] dark:text-[#C48B90] hover:underline">
-                          + Ajouter un élément
-                        </button>
-                      </div>
+                <EditorSection title="Vidéo" icon={<Video className="h-3.5 w-3.5 text-[#7A3A50]" />}>
+                  {coverVideo ? (
+                    <div className="relative group">
+                      <video src={coverVideo} className="w-full h-24 object-cover rounded-lg" controls />
+                      <button
+                        onClick={() => handleRemoveMedia("video")}
+                        className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </div>
-                  ))}
-                  <button onClick={addMenuCourse} className={btnSecondary}>
-                    <Plus className="h-3.5 w-3.5" /> Ajouter un plat
-                  </button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* ═══════════════ STEP 3 — INFOS & MOMENTS ═══════════════ */}
-        {currentStep === 2 && (
-          <>
-            {/* Logistics */}
-            <div className={cardClass}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">🚗 Infos pratiques</h3>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="text-xs text-gray-500">{getModule("MOD_LOGISTIQUE")?.active ? "Actif" : "Inactif"}</span>
-                  <button
-                    onClick={() => toggleModule("MOD_LOGISTIQUE")}
-                    className={`relative h-5 w-9 rounded-full transition ${getModule("MOD_LOGISTIQUE")?.active ? "bg-[#7A3A50]" : "bg-gray-300 dark:bg-gray-600"}`}
-                  >
-                    <div className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all" style={{ left: getModule("MOD_LOGISTIQUE")?.active ? "18px" : "2px" }} />
-                  </button>
-                </label>
+                  ) : (
+                    <button
+                      onClick={() => videoRef.current?.click()}
+                      disabled={isUploading}
+                      className="flex w-full flex-col items-center gap-1.5 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 p-4 text-gray-400 dark:text-gray-500 transition hover:border-[#7A3A50]/40 hover:text-[#7A3A50]"
+                    >
+                      {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
+                      <span className="text-[10px] font-medium">{isUploading ? "Upload..." : "Choisir"}</span>
+                    </button>
+                  )}
+                  <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f, "video"); }} />
+                </EditorSection>
               </div>
+            </>
+          )}
 
-              {getModule("MOD_LOGISTIQUE")?.active && (
-                <div className="space-y-3">
-                  {logSections.map((section: { title: string; description: string; icon: string }, idx: number) => (
-                    <div key={idx} className="rounded-lg border border-gray-100 dark:border-gray-800 p-3">
-                      <div className="flex gap-2 items-center mb-2">
-                        <input
-                          type="text"
-                          value={section.title}
-                          onChange={(e) => updateLogSection(idx, "title", e.target.value)}
-                          className={`${inputClass} flex-1`}
-                          placeholder="Titre (ex: Transport)"
-                        />
-                        <button onClick={() => removeLogSection(idx)} className={btnDanger}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      <textarea
-                        value={section.description || ""}
-                        onChange={(e) => updateLogSection(idx, "description", e.target.value)}
-                        className={`${inputClass} text-xs resize-none`}
-                        rows={2}
-                        placeholder="Description..."
-                      />
-                    </div>
-                  ))}
-                  <button onClick={addLogSection} className={btnSecondary}>
-                    <Plus className="h-3.5 w-3.5" /> Ajouter une section
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Gallery */}
-            <div className={cardClass}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">📷 Galerie</h3>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="text-xs text-gray-500">{getModule("MOD_GALERIE")?.active ? "Actif" : "Inactif"}</span>
-                  <button
-                    onClick={() => toggleModule("MOD_GALERIE")}
-                    className={`relative h-5 w-9 rounded-full transition ${getModule("MOD_GALERIE")?.active ? "bg-[#7A3A50]" : "bg-gray-300 dark:bg-gray-600"}`}
-                  >
-                    <div className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all" style={{ left: getModule("MOD_GALERIE")?.active ? "18px" : "2px" }} />
-                  </button>
-                </label>
-              </div>
-
-              {getModule("MOD_GALERIE")?.active && (
-                <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                    Ajoutez des URLs d&apos;images pour votre galerie.
-                  </p>
+          {/* ═══════════════ STEP 1 — L'ÉVÉNEMENT ═══════════════ */}
+          {currentStep === 1 && (
+            <>
+              <EditorSection
+                title="Programme"
+                icon="📋"
+                badge={<ModuleToggle active={getModule("MOD_PROGRAMME")?.active ?? false} onToggle={() => toggleModule("MOD_PROGRAMME")} />}
+              >
+                {getModule("MOD_PROGRAMME")?.active && (
                   <div className="space-y-2">
+                    {programmeDays.map((day: { label: string; items: { time: string; title: string; description: string; icon: string }[] }, dayIdx: number) => (
+                      <div key={dayIdx}>
+                        <label className="mb-1 block text-[11px] font-medium text-gray-500">
+                          {programmeDays.length > 1 ? day.label || `Jour ${dayIdx + 1}` : "Éléments"}
+                        </label>
+                        <div className="space-y-1.5">
+                          {(day.items || []).map((item: { time: string; title: string; description: string; icon: string }, itemIdx: number) => (
+                            <div key={itemIdx} className="flex gap-1.5 items-start">
+                              <input
+                                type="text"
+                                value={item.time}
+                                onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "time", e.target.value)}
+                                className={`${inputClass} w-16 text-xs`}
+                                placeholder="14:00"
+                              />
+                              <input
+                                type="text"
+                                value={item.title}
+                                onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "title", e.target.value)}
+                                className={`${inputClass} flex-1 text-xs`}
+                                placeholder="Titre"
+                              />
+                              <button onClick={() => removeProgrammeItem(dayIdx, itemIdx)} className={btnDanger}>
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <button onClick={() => addProgrammeItem(dayIdx)} className={`${btnSecondary} mt-1.5 text-[11px]`}>
+                          <Plus className="h-3 w-3" /> Ajouter
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </EditorSection>
+
+              <EditorSection
+                title="Menu"
+                icon="🍽️"
+                badge={<ModuleToggle active={getModule("MOD_MENU")?.active ?? false} onToggle={() => toggleModule("MOD_MENU")} />}
+              >
+                {getModule("MOD_MENU")?.active && (
+                  <div className="space-y-2">
+                    {menuCourses.map((course: { name: string; items: string[]; icon: string }, courseIdx: number) => (
+                      <div key={courseIdx} className="rounded-lg border border-gray-100 dark:border-gray-800 p-2.5">
+                        <div className="flex gap-1.5 items-center mb-1.5">
+                          <input
+                            type="text"
+                            value={course.name}
+                            onChange={(e) => updateMenuCourse(courseIdx, "name", e.target.value)}
+                            className={`${inputClass} flex-1 text-xs`}
+                            placeholder="Nom du plat"
+                          />
+                          <button onClick={() => removeMenuCourse(courseIdx)} className={btnDanger}>
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <div className="space-y-1 pl-2">
+                          {course.items.map((item: string, itemIdx: number) => (
+                            <input
+                              key={itemIdx}
+                              type="text"
+                              value={item}
+                              onChange={(e) => updateMenuItem(courseIdx, itemIdx, e.target.value)}
+                              className={`${inputClass} text-xs`}
+                              placeholder={`Élément ${itemIdx + 1}`}
+                            />
+                          ))}
+                          <button onClick={() => addMenuItem(courseIdx)} className="text-[10px] text-[#7A3A50] dark:text-[#C48B90] hover:underline">
+                            + Élément
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <button onClick={addMenuCourse} className={`${btnSecondary} text-[11px]`}>
+                      <Plus className="h-3 w-3" /> Ajouter un plat
+                    </button>
+                  </div>
+                )}
+              </EditorSection>
+            </>
+          )}
+
+          {/* ═══════════════ STEP 2 — INFOS & MOMENTS ═══════════════ */}
+          {currentStep === 2 && (
+            <>
+              <EditorSection
+                title="Infos pratiques"
+                icon="🚗"
+                badge={<ModuleToggle active={getModule("MOD_LOGISTIQUE")?.active ?? false} onToggle={() => toggleModule("MOD_LOGISTIQUE")} />}
+              >
+                {getModule("MOD_LOGISTIQUE")?.active && (
+                  <div className="space-y-2">
+                    {logSections.map((section: { title: string; description: string; icon: string }, idx: number) => (
+                      <div key={idx} className="rounded-lg border border-gray-100 dark:border-gray-800 p-2.5">
+                        <div className="flex gap-1.5 items-center mb-1.5">
+                          <input
+                            type="text"
+                            value={section.title}
+                            onChange={(e) => updateLogSection(idx, "title", e.target.value)}
+                            className={`${inputClass} flex-1 text-xs`}
+                            placeholder="Titre (ex: Transport)"
+                          />
+                          <button onClick={() => removeLogSection(idx)} className={btnDanger}>
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <textarea
+                          value={section.description || ""}
+                          onChange={(e) => updateLogSection(idx, "description", e.target.value)}
+                          className={`${inputClass} text-xs resize-none`}
+                          rows={2}
+                          placeholder="Description..."
+                        />
+                      </div>
+                    ))}
+                    <button onClick={addLogSection} className={`${btnSecondary} text-[11px]`}>
+                      <Plus className="h-3 w-3" /> Ajouter une section
+                    </button>
+                  </div>
+                )}
+              </EditorSection>
+
+              <EditorSection
+                title="Galerie"
+                icon="📷"
+                badge={<ModuleToggle active={getModule("MOD_GALERIE")?.active ?? false} onToggle={() => toggleModule("MOD_GALERIE")} />}
+              >
+                {getModule("MOD_GALERIE")?.active && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                      Ajoutez des URLs d&apos;images.
+                    </p>
                     {((getConfig("MOD_GALERIE")?.photos || []) as { url: string; caption: string }[]).map((photo: { url: string; caption: string }, idx: number) => (
-                      <div key={idx} className="flex gap-2 items-center">
+                      <div key={idx} className="flex gap-1.5 items-center">
                         <input
                           type="url"
                           value={photo.url || ""}
@@ -622,8 +733,8 @@ export function EventEditClient({ event }: EventEditClientProps) {
                             photos[idx] = { ...photos[idx], url: e.target.value };
                             updateModuleConfig("MOD_GALERIE", { photos });
                           }}
-                          className={`${inputClass} flex-1`}
-                          placeholder="URL de l'image"
+                          className={`${inputClass} flex-1 text-xs`}
+                          placeholder="URL"
                         />
                         <input
                           type="text"
@@ -633,7 +744,7 @@ export function EventEditClient({ event }: EventEditClientProps) {
                             photos[idx] = { ...photos[idx], caption: e.target.value };
                             updateModuleConfig("MOD_GALERIE", { photos });
                           }}
-                          className={`${inputClass} w-32`}
+                          className={`${inputClass} w-20 text-xs`}
                           placeholder="Légende"
                         />
                         <button
@@ -644,94 +755,112 @@ export function EventEditClient({ event }: EventEditClientProps) {
                           }}
                           className={btnDanger}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-3 w-3" />
                         </button>
                       </div>
                     ))}
+                    <button
+                      onClick={() => {
+                        const photos = [...(getConfig("MOD_GALERIE")?.photos || []), { url: "", caption: "" }];
+                        updateModuleConfig("MOD_GALERIE", { photos });
+                      }}
+                      className={`${btnSecondary} text-[11px]`}
+                    >
+                      <Plus className="h-3 w-3" /> Ajouter une photo
+                    </button>
                   </div>
-                  <button
-                    onClick={() => {
-                      const photos = [...(getConfig("MOD_GALERIE")?.photos || []), { url: "", caption: "" }];
-                      updateModuleConfig("MOD_GALERIE", { photos });
-                    }}
-                    className={`${btnSecondary} mt-2`}
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Ajouter une photo
-                  </button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
+                )}
+              </EditorSection>
+            </>
+          )}
 
-        {/* ═══════════════ STEP 4 — CONFIRMATION ═══════════════ */}
-        {currentStep === 3 && (
-          <>
-            {/* RSVP toggle */}
-            <div className={cardClass}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">✅ Confirmation de présence (RSVP)</h3>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="text-xs text-gray-500">{getModule("MOD_RSVP")?.active ? "Actif" : "Inactif"}</span>
-                  <button
-                    onClick={() => toggleModule("MOD_RSVP")}
-                    className={`relative h-5 w-9 rounded-full transition ${getModule("MOD_RSVP")?.active ? "bg-[#7A3A50]" : "bg-gray-300 dark:bg-gray-600"}`}
-                  >
-                    <div className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all" style={{ left: getModule("MOD_RSVP")?.active ? "18px" : "2px" }} />
-                  </button>
-                </label>
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Active le formulaire de confirmation de présence sur la carte d&apos;invitation.
-                Les invités pourront confirmer, choisir leur menu et recevoir leur QR code.
-              </p>
-            </div>
-
-            {/* Chat toggle */}
-            <div className={cardClass}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">💬 Chat en direct</h3>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="text-xs text-gray-500">{getModule("MOD_CHAT")?.active ? "Actif" : "Inactif"}</span>
-                  <button
-                    onClick={() => toggleModule("MOD_CHAT")}
-                    className={`relative h-5 w-9 rounded-full transition ${getModule("MOD_CHAT")?.active ? "bg-[#7A3A50]" : "bg-gray-300 dark:bg-gray-600"}`}
-                  >
-                    <div className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all" style={{ left: getModule("MOD_CHAT")?.active ? "18px" : "2px" }} />
-                  </button>
-                </label>
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Active le chat en direct sur la carte d&apos;invitation.
-                Les invités peuvent envoyer des messages visibles par tous.
-              </p>
-            </div>
-
-            {/* Quick links */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Link
-                href={`/events/${event.id}/theme`}
-                className="flex items-center gap-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm transition hover:border-[#7A3A50]/20 hover:shadow-md"
+          {/* ═══════════════ STEP 3 — CONFIRMATION ═══════════════ */}
+          {currentStep === 3 && (
+            <>
+              <EditorSection
+                title="Confirmation (RSVP)"
+                icon="✅"
+                badge={<ModuleToggle active={getModule("MOD_RSVP")?.active ?? false} onToggle={() => toggleModule("MOD_RSVP")} />}
               >
-                <span className="text-2xl">🎨</span>
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Personnaliser le thème</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Couleurs, polices, effets</p>
-                </div>
-              </Link>
-              <Link
-                href={`/events/${event.id}/guests`}
-                className="flex items-center gap-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm transition hover:border-[#7A3A50]/20 hover:shadow-md"
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                  Active le formulaire de confirmation de présence. Les invités pourront confirmer, choisir leur menu et recevoir leur QR code.
+                </p>
+              </EditorSection>
+
+              <EditorSection
+                title="Chat en direct"
+                icon="💬"
+                badge={<ModuleToggle active={getModule("MOD_CHAT")?.active ?? false} onToggle={() => toggleModule("MOD_CHAT")} />}
               >
-                <span className="text-2xl">👥</span>
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Gérer les invités</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Ajouter, inviter, suivre</p>
-                </div>
-              </Link>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                  Active le chat en direct. Les invités peuvent envoyer des messages visibles par tous.
+                </p>
+              </EditorSection>
+
+              <div className="grid gap-3 grid-cols-2">
+                <Link
+                  href={`/events/${event.id}/theme`}
+                  className="flex items-center gap-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 shadow-sm transition hover:border-[#7A3A50]/20 hover:shadow-md"
+                >
+                  <span className="text-lg">🎨</span>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-semibold text-gray-900 dark:text-white truncate">Thème</h4>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">Couleurs, polices</p>
+                  </div>
+                </Link>
+                <Link
+                  href={`/events/${event.id}/guests`}
+                  className="flex items-center gap-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 shadow-sm transition hover:border-[#7A3A50]/20 hover:shadow-md"
+                >
+                  <span className="text-lg">👥</span>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-semibold text-gray-900 dark:text-white truncate">Invités</h4>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">Ajouter, inviter</p>
+                  </div>
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ═══════════ RIGHT: Live Mobile Preview ═══════════ */}
+      <div
+        ref={previewContainerRef}
+        className="hidden lg:flex flex-1 flex-col bg-gradient-to-br from-gray-50 via-gray-100/50 to-gray-50 dark:from-gray-900 dark:via-gray-800/30 dark:to-gray-900 overflow-hidden"
+      >
+        {/* Device Switcher Header */}
+        <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200/50 dark:border-gray-700/30 bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-[#7A3A50] animate-pulse" />
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Aperçu en direct</span>
             </div>
-          </>
-        )}
+            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-mono">
+              {selectedDevice.width}×{selectedDevice.height}
+            </span>
+          </div>
+          <DeviceSwitcher
+            selected={selectedDevice}
+            onSelect={(d) => setSelectedDevice(d)}
+          />
+        </div>
+
+        {/* Preview Content — centered */}
+        <div className="flex-1 flex items-center justify-center p-6 overflow-hidden">
+          <DevicePreviewFrame device={selectedDevice} scale={previewScale}>
+            <InvitationCard
+              event={previewEventData}
+              theme={theme}
+              activeModules={activeModuleTypes}
+              modulesData={modulesData}
+              chatMessages={[]}
+              guestInfo={null}
+              // @ts-expect-error custom prop for preview page sync
+              initialPage={previewPage}
+            />
+          </DevicePreviewFrame>
+        </div>
       </div>
     </div>
   );

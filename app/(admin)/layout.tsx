@@ -1,6 +1,5 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { DemoBanner } from "@/components/superadmin/demo-banner";
 import { AdminLayoutClient } from "@/components/admin/admin-layout-client";
 
 export default async function AdminLayout({
@@ -19,9 +18,6 @@ export default async function AdminLayout({
         plan: session.user.plan,
       }}
     >
-      {session.user.isDemoAccount && (
-        <DemoBanner accountType={session.user.demoAccountType} />
-      )}
       {children}
     </AdminLayoutClient>
   );
