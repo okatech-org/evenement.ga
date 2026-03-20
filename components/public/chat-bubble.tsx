@@ -305,6 +305,7 @@ export function ChatBubble({
             {/* Close */}
             <button
               onClick={() => setIsOpen(false)}
+              aria-label="Fermer le chat"
               className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25 transition"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -574,6 +575,7 @@ export function ChatBubble({
               </div>
               <button
                 onClick={() => setReplyingTo(null)}
+                aria-label="Annuler la réponse"
                 className="shrink-0 p-1 rounded-full hover:bg-gray-200/20 transition"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke={colors.muted}>

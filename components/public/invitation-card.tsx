@@ -846,6 +846,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
             {currentPage > 0 && (
               <button
                 onClick={goPrev}
+                aria-label="Page précédente"
                 className="fixed bottom-6 left-20 z-30 flex h-10 w-10 items-center justify-center rounded-full transition-all hover:scale-110"
                 style={{
                   backgroundColor: theme.colors.surface,
@@ -861,6 +862,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
             {currentPage < totalPages - 1 && (
               <button
                 onClick={goNext}
+                aria-label="Page suivante"
                 className="fixed bottom-6 right-20 z-30 flex h-10 w-10 items-center justify-center rounded-full transition-all hover:scale-110"
                 style={{
                   backgroundColor: theme.colors.surface,

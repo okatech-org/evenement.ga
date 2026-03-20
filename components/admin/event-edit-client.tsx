@@ -143,6 +143,7 @@ function ModuleToggle({
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
+      aria-label={active ? "Désactiver le module" : "Activer le module"}
       className={`relative h-5 w-9 rounded-full transition flex-shrink-0 ${
         active ? "bg-[#7A3A50]" : "bg-gray-300 dark:bg-gray-600"
       }`}
@@ -461,6 +462,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
             <a
               href={`/${event.slug}`}
               target="_blank"
+              title="Prévisualiser l'événement"
               className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 text-[11px] font-medium text-gray-600 dark:text-gray-400 transition hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               <Eye className="h-3 w-3" />
@@ -494,6 +496,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className={`${inputClass} font-semibold`}
+                  aria-label="Titre de l'événement"
                 />
               </EditorSection>
 
@@ -514,7 +517,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                     <label className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-gray-400">
                       <Clock className="inline h-3 w-3 mr-0.5" />Date
                     </label>
-                    <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
+                    <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} aria-label="Date de l'événement" />
                   </div>
                   <div>
                     <label className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-gray-400">
@@ -535,6 +538,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                       <button
                         onClick={() => handleRemoveMedia("image")}
                         className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition"
+                        aria-label="Supprimer l'image"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -549,7 +553,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                       <span className="text-[10px] font-medium">{isUploading ? "Upload..." : "Choisir"}</span>
                     </button>
                   )}
-                  <input ref={imageRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f, "image"); }} />
+                  <input ref={imageRef} type="file" accept="image/*" className="hidden" aria-label="Choisir une image" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f, "image"); }} />
                 </EditorSection>
 
                 <EditorSection title="Vidéo" icon={<Video className="h-3.5 w-3.5 text-[#7A3A50]" />}>
@@ -559,6 +563,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                       <button
                         onClick={() => handleRemoveMedia("video")}
                         className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition"
+                        aria-label="Supprimer la vidéo"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -573,7 +578,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                       <span className="text-[10px] font-medium">{isUploading ? "Upload..." : "Choisir"}</span>
                     </button>
                   )}
-                  <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f, "video"); }} />
+                  <input ref={videoRef} type="file" accept="video/*" className="hidden" aria-label="Choisir une vidéo" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f, "video"); }} />
                 </EditorSection>
               </div>
             </>
@@ -611,7 +616,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                                 className={`${inputClass} flex-1 text-xs`}
                                 placeholder="Titre"
                               />
-                              <button onClick={() => removeProgrammeItem(dayIdx, itemIdx)} className={btnDanger}>
+                              <button onClick={() => removeProgrammeItem(dayIdx, itemIdx)} className={btnDanger} aria-label="Supprimer cet élément">
                                 <Trash2 className="h-3 w-3" />
                               </button>
                             </div>
@@ -643,7 +648,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                             className={`${inputClass} flex-1 text-xs`}
                             placeholder="Nom du plat"
                           />
-                          <button onClick={() => removeMenuCourse(courseIdx)} className={btnDanger}>
+                          <button onClick={() => removeMenuCourse(courseIdx)} className={btnDanger} aria-label="Supprimer ce plat">
                             <Trash2 className="h-3 w-3" />
                           </button>
                         </div>
@@ -693,7 +698,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                             className={`${inputClass} flex-1 text-xs`}
                             placeholder="Titre (ex: Transport)"
                           />
-                          <button onClick={() => removeLogSection(idx)} className={btnDanger}>
+                          <button onClick={() => removeLogSection(idx)} className={btnDanger} aria-label="Supprimer cette section">
                             <Trash2 className="h-3 w-3" />
                           </button>
                         </div>
@@ -754,6 +759,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                             updateModuleConfig("MOD_GALERIE", { photos });
                           }}
                           className={btnDanger}
+                          aria-label="Supprimer cette photo"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
