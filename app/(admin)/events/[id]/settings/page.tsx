@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import { EventSettingsClient } from "@/components/admin/event-settings-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function EventSettingsPage({
   params,
 }: {

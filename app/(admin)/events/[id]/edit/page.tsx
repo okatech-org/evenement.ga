@@ -5,6 +5,8 @@ import { THEME_PRESETS } from "@/lib/themes/presets";
 import { generateThemeCSS } from "@/lib/themes/presets";
 import { EventEditClient } from "@/components/admin/event-edit-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function EventEditPage({
   params,
 }: {

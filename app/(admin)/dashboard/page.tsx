@@ -5,6 +5,8 @@ import Link from "next/link";
 import { EVENT_TYPES } from "@/lib/config";
 import type { EventType, EventStatus } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");

@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
 import { ConfigForm } from "./config-form";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = { title: "Configuration — Super Admin" };
 
 export default async function SuperAdminConfigPage() {

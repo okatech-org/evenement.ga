@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { DEMO_ACCOUNTS } from "@/lib/demo-guard";
 import { DemoManagement } from "./demo-management";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = { title: "Comptes Démo — Super Admin" };
 
 export default async function SuperAdminDemoPage() {

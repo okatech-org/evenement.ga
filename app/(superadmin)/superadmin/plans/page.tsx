@@ -2,6 +2,8 @@ import { PLAN_LIMITS } from "@/lib/config";
 import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = { title: "Plans & Limites — Super Admin" };
 
 const PLAN_STYLES: Record<string, { gradient: string; border: string }> = {

@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 import type { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = { title: "Logs Système — Super Admin" };
 
 const LEVEL_COLORS: Record<string, string> = {

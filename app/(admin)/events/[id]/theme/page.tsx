@@ -4,6 +4,8 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ThemeEditor } from "@/components/admin/theme-editor";
 
+export const dynamic = "force-dynamic";
+
 export default async function EventThemePage({
   params,
 }: {

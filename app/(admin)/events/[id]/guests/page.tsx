@@ -6,6 +6,8 @@ import { GUEST_STATUS_LABELS } from "@/lib/config";
 import { GuestTable } from "@/components/admin/guest-table";
 import type { GuestStatus } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
+
 export default async function EventGuestsPage({
   params,
 }: {

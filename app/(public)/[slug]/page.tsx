@@ -7,6 +7,8 @@ import type { EventType, Prisma } from "@prisma/client";
 import { InvitationCard } from "@/components/public/invitation-card";
 import type { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const event = await prisma.event.findUnique({
     where: { slug: params.slug },
