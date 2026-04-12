@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { findUserByEmail } from "@/lib/auth-queries";
 import { DEMO_ACCOUNTS, type DemoAccountType } from "@/lib/demo-guard";
 
+// ─── PRODUCTION GUARD: Demo endpoints are dev-only ──────────
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
 // ─── Simple in-memory rate limiter ──────────────────────────
 const rateLimit = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_MAX = 20;
@@ -25,6 +28,14 @@ function checkRateLimit(ip: string): boolean {
 }
 
 export async function POST(req: Request) {
+  // ── Block in production ──
+  if (IS_PRODUCTION) {
+    return NextResponse.json(
+      { success: false, error: "Les comptes démo ne sont pas disponibles en production." },
+      { status: 404 }
+    );
+  }
+
   try {
     // Rate limit check
     const ip =

@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FFFDF9] via-white to-[#FFF0F3]">
@@ -60,15 +62,17 @@ export default function HomePage() {
             >
               Commencer gratuitement
             </Link>
-            <Link
-              href="/demo"
-              className="group flex items-center gap-2 rounded-full border border-gray-200 bg-white px-8 py-3.5 text-base font-semibold text-gray-700 shadow-sm transition-all hover:border-[#7A3A50]/30 hover:shadow-md"
-            >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#7A3A50]/10 text-[#7A3A50] transition group-hover:bg-[#7A3A50] group-hover:text-white">
-                ▶
-              </span>
-              Voir la démo
-            </Link>
+            {!IS_PRODUCTION && (
+              <Link
+                href="/demo"
+                className="group flex items-center gap-2 rounded-full border border-gray-200 bg-white px-8 py-3.5 text-base font-semibold text-gray-700 shadow-sm transition-all hover:border-[#7A3A50]/30 hover:shadow-md"
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#7A3A50]/10 text-[#7A3A50] transition group-hover:bg-[#7A3A50] group-hover:text-white">
+                  ▶
+                </span>
+                Voir la démo
+              </Link>
+            )}
           </div>
         </div>
       </section>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { z } from "zod";
 import { findUserByEmail, createUser } from "@/lib/auth-queries";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 const RegisterSchema = z.object({
   firstName: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
@@ -18,6 +19,16 @@ const RegisterSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    // Rate limiting: 5 inscriptions par IP par heure
+    const ip = getClientIp(request);
+    const rl = rateLimit(`register:${ip}`, 5, 60 * 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Trop de tentatives d'inscription. Réessayez plus tard." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const validatedData = RegisterSchema.parse(body);
 

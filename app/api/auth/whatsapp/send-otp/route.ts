@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * POST /api/auth/whatsapp/send-otp
@@ -8,6 +9,16 @@ import { prisma } from "@/lib/db";
  */
 export async function POST(request: Request) {
   try {
+    // Rate limiting: 5 OTP par IP par 15 minutes
+    const ip = getClientIp(request);
+    const rl = rateLimit(`otp:${ip}`, 5, 15 * 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Trop de demandes. Réessayez dans quelques minutes." },
+        { status: 429 }
+      );
+    }
+
     const { phone } = await request.json();
 
     if (!phone || typeof phone !== "string") {

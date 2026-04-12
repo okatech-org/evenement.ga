@@ -3,7 +3,18 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logSystem } from "@/lib/superadmin/logger";
 
+// ─── PRODUCTION GUARD ───────────────────────────────────────
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
 export async function POST() {
+  // ── Block in production ──
+  if (IS_PRODUCTION) {
+    return NextResponse.json(
+      { success: false, error: "Non disponible en production." },
+      { status: 404 }
+    );
+  }
+
   try {
     const session = await auth();
 

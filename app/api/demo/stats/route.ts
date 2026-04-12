@@ -1,7 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+// ─── PRODUCTION GUARD ───────────────────────────────────────
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
 export async function GET() {
+  // ── Block in production ──
+  if (IS_PRODUCTION) {
+    return NextResponse.json(
+      { success: false, error: "Non disponible en production." },
+      { status: 404 }
+    );
+  }
+
   try {
     // Get all demo events with guest counts
     const demoEvents = await prisma.event.findMany({
