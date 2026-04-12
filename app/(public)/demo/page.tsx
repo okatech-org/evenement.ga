@@ -1,9 +1,13 @@
+import { redirect } from "next/navigation";
 import { convexClient } from "@/lib/convex-server";
 import { api } from "@/convex/_generated/api";
 import { DEMO_ACCOUNTS } from "@/lib/demo-guard";
 import { EVENT_TYPES, MODULE_TYPES } from "@/lib/config";
 import { DemoClientSection } from "./demo-client";
 import type { Metadata } from "next";
+
+// ─── PRODUCTION GUARD ───────────────────────────────────────
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 export const metadata: Metadata = {
   title: "Démo en direct — EventFlow",
@@ -90,6 +94,11 @@ async function getDemoEvents(): Promise<DemoEvent[]> {
 }
 
 export default async function DemoPage() {
+  // Block demo page in production — redirect to home
+  if (IS_PRODUCTION) {
+    redirect("/");
+  }
+
   const events = await getDemoEvents();
 
   const eventTypesConfig = EVENT_TYPES;
