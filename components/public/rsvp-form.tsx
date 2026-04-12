@@ -204,9 +204,9 @@ export function RsvpForm({ eventId, showMenu, colors, guestInfo }: RsvpFormProps
   const isPreRegistered = !!guestInfo;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3">
       {error && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
+        <div className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
           {error}
         </div>
       )}
@@ -214,14 +214,14 @@ export function RsvpForm({ eventId, showMenu, colors, guestInfo }: RsvpFormProps
       {/* Personalized greeting */}
       {isPreRegistered && (
         <div
-          className="rounded-xl px-4 py-3 text-center text-sm"
+          className="rounded-lg px-3 py-2 text-center text-xs sm:text-sm"
           style={{
             backgroundColor: colors.primary + "10",
             color: colors.primary,
             border: `1px solid ${colors.primary}30`,
           }}
         >
-          ✨ Invitation personnalisée pour{" "}
+          ✨ Invitation pour{" "}
           <strong>
             {guestInfo.firstName} {guestInfo.lastName}
           </strong>
@@ -229,11 +229,11 @@ export function RsvpForm({ eventId, showMenu, colors, guestInfo }: RsvpFormProps
       )}
 
       {/* Presence Toggle */}
-      <div className="flex gap-3">
+      <div className="flex gap-2 sm:gap-3">
         <button
           type="button"
           onClick={() => setFormData((p) => ({ ...p, presence: true }))}
-          className="flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition"
+          className="flex-1 rounded-lg border px-3 py-2 text-xs sm:text-sm font-medium transition"
           style={{
             borderColor: formData.presence ? colors.primary : colors.border,
             backgroundColor: formData.presence ? colors.primary + "15" : "transparent",
@@ -245,7 +245,7 @@ export function RsvpForm({ eventId, showMenu, colors, guestInfo }: RsvpFormProps
         <button
           type="button"
           onClick={() => setFormData((p) => ({ ...p, presence: false }))}
-          className="flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition"
+          className="flex-1 rounded-lg border px-3 py-2 text-xs sm:text-sm font-medium transition"
           style={{
             borderColor: !formData.presence ? colors.primary : colors.border,
             backgroundColor: !formData.presence ? colors.primary + "15" : "transparent",
@@ -257,9 +257,9 @@ export function RsvpForm({ eventId, showMenu, colors, guestInfo }: RsvpFormProps
       </div>
 
       {/* Name fields — locked if pre-registered */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="mb-1 block text-xs font-medium" style={{ color: colors.muted }}>
+          <label className="mb-0.5 block text-[10px] sm:text-xs font-medium" style={{ color: colors.muted }}>
             Prénom *
           </label>
           <input
@@ -268,12 +268,12 @@ export function RsvpForm({ eventId, showMenu, colors, guestInfo }: RsvpFormProps
             value={formData.firstName}
             onChange={(e) => setFormData((p) => ({ ...p, firstName: e.target.value }))}
             disabled={isPreRegistered}
-            className="w-full rounded-lg border px-3 py-2 text-sm outline-none disabled:opacity-60"
+            className="w-full rounded-lg border px-2.5 py-1.5 text-xs sm:text-sm outline-none disabled:opacity-60"
             style={inputStyle}
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium" style={{ color: colors.muted }}>
+          <label className="mb-0.5 block text-[10px] sm:text-xs font-medium" style={{ color: colors.muted }}>
             Nom *
           </label>
           <input
@@ -282,7 +282,7 @@ export function RsvpForm({ eventId, showMenu, colors, guestInfo }: RsvpFormProps
             value={formData.lastName}
             onChange={(e) => setFormData((p) => ({ ...p, lastName: e.target.value }))}
             disabled={isPreRegistered}
-            className="w-full rounded-lg border px-3 py-2 text-sm outline-none disabled:opacity-60"
+            className="w-full rounded-lg border px-2.5 py-1.5 text-xs sm:text-sm outline-none disabled:opacity-60"
             style={inputStyle}
           />
         </div>
@@ -290,7 +290,7 @@ export function RsvpForm({ eventId, showMenu, colors, guestInfo }: RsvpFormProps
 
       {!isPreRegistered && (
         <div>
-          <label className="mb-1 block text-xs font-medium" style={{ color: colors.muted }}>
+          <label className="mb-0.5 block text-[10px] sm:text-xs font-medium" style={{ color: colors.muted }}>
             Email *
           </label>
           <input
@@ -298,7 +298,7 @@ export function RsvpForm({ eventId, showMenu, colors, guestInfo }: RsvpFormProps
             required
             value={formData.email}
             onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
-            className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+            className="w-full rounded-lg border px-2.5 py-1.5 text-xs sm:text-sm outline-none"
             style={inputStyle}
           />
         </div>
@@ -307,9 +307,9 @@ export function RsvpForm({ eventId, showMenu, colors, guestInfo }: RsvpFormProps
       {/* Guest counts (only if attending) */}
       {formData.presence && (
         <>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs font-medium" style={{ color: colors.muted }}>
+              <label className="mb-0.5 block text-[10px] sm:text-xs font-medium" style={{ color: colors.muted }}>
                 Adultes
               </label>
               <input
@@ -318,12 +318,12 @@ export function RsvpForm({ eventId, showMenu, colors, guestInfo }: RsvpFormProps
                 max={10}
                 value={formData.adultCount}
                 onChange={(e) => setFormData((p) => ({ ...p, adultCount: parseInt(e.target.value) || 1 }))}
-                className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+                className="w-full rounded-lg border px-2.5 py-1.5 text-xs sm:text-sm outline-none"
                 style={inputStyle}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium" style={{ color: colors.muted }}>
+              <label className="mb-0.5 block text-[10px] sm:text-xs font-medium" style={{ color: colors.muted }}>
                 Enfants
               </label>
               <input
@@ -332,62 +332,62 @@ export function RsvpForm({ eventId, showMenu, colors, guestInfo }: RsvpFormProps
                 max={10}
                 value={formData.childrenCount}
                 onChange={(e) => setFormData((p) => ({ ...p, childrenCount: parseInt(e.target.value) || 0 }))}
-                className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+                className="w-full rounded-lg border px-2.5 py-1.5 text-xs sm:text-sm outline-none"
                 style={inputStyle}
               />
             </div>
           </div>
 
-          {/* Menu choice */}
-          {showMenu && (
+          {/* Menu + Allergies en 2 colonnes */}
+          <div className={showMenu ? "grid grid-cols-2 gap-2" : ""}>
+            {showMenu && (
+              <div>
+                <label className="mb-0.5 block text-[10px] sm:text-xs font-medium" style={{ color: colors.muted }}>
+                  Choix du menu
+                </label>
+                <select
+                  value={formData.menuChoice}
+                  onChange={(e) => setFormData((p) => ({ ...p, menuChoice: e.target.value }))}
+                  className="w-full rounded-lg border px-2.5 py-1.5 text-xs sm:text-sm outline-none"
+                  style={inputStyle}
+                >
+                  <option value="">Sélectionner</option>
+                  <option value="classique">Classique</option>
+                  <option value="halal">Halal</option>
+                  <option value="végétarien">Végétarien</option>
+                  <option value="vegan">Vegan</option>
+                  <option value="enfant">Menu enfant</option>
+                </select>
+              </div>
+            )}
             <div>
-              <label className="mb-1 block text-xs font-medium" style={{ color: colors.muted }}>
-                Choix du menu
+              <label className="mb-0.5 block text-[10px] sm:text-xs font-medium" style={{ color: colors.muted }}>
+                Allergies / Régimes
               </label>
-              <select
-                value={formData.menuChoice}
-                onChange={(e) => setFormData((p) => ({ ...p, menuChoice: e.target.value }))}
-                className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+              <input
+                type="text"
+                value={formData.allergies}
+                onChange={(e) => setFormData((p) => ({ ...p, allergies: e.target.value }))}
+                className="w-full rounded-lg border px-2.5 py-1.5 text-xs sm:text-sm outline-none"
                 style={inputStyle}
-              >
-                <option value="">Sélectionner</option>
-                <option value="classique">Classique</option>
-                <option value="halal">Halal</option>
-                <option value="végétarien">Végétarien</option>
-                <option value="vegan">Vegan</option>
-                <option value="enfant">Menu enfant</option>
-              </select>
+                placeholder="gluten, lactose..."
+              />
             </div>
-          )}
-
-          {/* Allergies */}
-          <div>
-            <label className="mb-1 block text-xs font-medium" style={{ color: colors.muted }}>
-              Allergies / Régimes (séparés par des virgules)
-            </label>
-            <input
-              type="text"
-              value={formData.allergies}
-              onChange={(e) => setFormData((p) => ({ ...p, allergies: e.target.value }))}
-              className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
-              style={inputStyle}
-              placeholder="gluten, lactose..."
-            />
           </div>
         </>
       )}
 
       {/* Message */}
       <div>
-        <label className="mb-1 block text-xs font-medium" style={{ color: colors.muted }}>
+        <label className="mb-0.5 block text-[10px] sm:text-xs font-medium" style={{ color: colors.muted }}>
           Un petit mot (optionnel)
         </label>
         <textarea
           value={formData.message}
           onChange={(e) => setFormData((p) => ({ ...p, message: e.target.value }))}
-          className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+          className="w-full rounded-lg border px-2.5 py-1.5 text-xs sm:text-sm outline-none"
           style={inputStyle}
-          rows={3}
+          rows={2}
           placeholder="Félicitations..."
         />
       </div>
@@ -395,7 +395,7 @@ export function RsvpForm({ eventId, showMenu, colors, guestInfo }: RsvpFormProps
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full rounded-lg px-4 py-3 text-sm font-semibold text-white transition disabled:opacity-50"
+        className="w-full rounded-lg px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold text-white transition disabled:opacity-50"
         style={{ backgroundColor: colors.primary }}
       >
         {isSubmitting ? "Envoi..." : formData.presence ? "Confirmer ma présence" : "Envoyer ma réponse"}

@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/utils";
+import { checkEventLimit } from "@/lib/plan-guard";
 import { getDefaultModulesForType, getDefaultPresetForType } from "@/lib/modules/defaults";
-import type { EventType } from "@prisma/client";
+import type { EventType, Plan } from "@prisma/client";
 
 /**
  * GET /api/events — List events for the authenticated user
@@ -43,6 +44,18 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Titre et type requis" },
         { status: 400 }
+      );
+    }
+
+    // Verifier la limite d'evenements du plan
+    const planCheck = await checkEventLimit(
+      session.user.id,
+      (session.user.plan ?? "FREE") as Plan
+    );
+    if (!planCheck.allowed) {
+      return NextResponse.json(
+        { error: planCheck.reason, requiredPlan: planCheck.requiredPlan },
+        { status: 403 }
       );
     }
 

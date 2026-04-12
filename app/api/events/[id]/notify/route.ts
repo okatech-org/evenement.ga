@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import {
+  sendEventNotificationEmail,
+  checkEmailRateLimit,
+  recordEmailSent,
+} from "@/lib/email";
 
 /**
- * POST /api/events/[id]/notify — Send notification/email to guests
- * This is a placeholder for Resend integration
+ * POST /api/events/[id]/notify — Envoyer un email de notification aux invites
+ * Body: { subject, message, guestIds? (optionnel, sinon tous les invites avec email) }
  */
 export async function POST(
   request: Request,
@@ -13,6 +18,14 @@ export async function POST(
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+
+  // Rate limiting par utilisateur
+  if (!checkEmailRateLimit(session.user.id)) {
+    return NextResponse.json(
+      { error: "Trop d'emails envoyés. Attendez une minute." },
+      { status: 429 }
+    );
   }
 
   try {
@@ -40,7 +53,7 @@ export async function POST(
       );
     }
 
-    // Filter guests if specific IDs provided
+    // Filtrer les destinataires si des IDs specifiques sont fournis
     const recipients = guestIds
       ? event.guests.filter((g) => guestIds.includes(g.id))
       : event.guests;
@@ -52,36 +65,64 @@ export async function POST(
         name: `${g.firstName} ${g.lastName}`,
       }));
 
-    // Create notifications in DB
+    if (recipientEmails.length === 0) {
+      return NextResponse.json(
+        { error: "Aucun destinataire avec une adresse email" },
+        { status: 400 }
+      );
+    }
+
+    const baseUrl = process.env.NEXTAUTH_URL || "https://evenement.ga";
+    const eventUrl = `${baseUrl}/${event.slug}`;
+
+    // Envoyer les emails via Resend avec un delai entre chaque
+    let sentCount = 0;
+    let failedCount = 0;
+
+    for (const recipient of recipientEmails) {
+      try {
+        await sendEventNotificationEmail({
+          to: recipient.email,
+          guestName: recipient.name,
+          eventTitle: event.title,
+          subject,
+          message,
+          eventUrl,
+        });
+        sentCount++;
+        recordEmailSent(session.user.id);
+
+        // Delai de 200ms entre chaque email pour respecter les limites API
+        if (sentCount < recipientEmails.length) {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+      } catch (error) {
+        console.error(`Failed to send to ${recipient.email}:`, error);
+        failedCount++;
+      }
+    }
+
+    // Enregistrer la notification en base
     await prisma.notification.create({
       data: {
         userId: session.user.id,
         type: "EMAIL_SENT",
         content: JSON.stringify({
           subject,
-          recipientCount: recipientEmails.length,
+          sentCount,
+          failedCount,
+          totalRecipients: recipientEmails.length,
           eventTitle: event.title,
         }),
       },
     });
 
-    // TODO: Integrate Resend for actual email sending
-    // import { Resend } from "resend";
-    // const resend = new Resend(process.env.RESEND_API_KEY);
-    // for (const r of recipientEmails) {
-    //   await resend.emails.send({
-    //     from: "EventFlow <noreply@evenement.ga>",
-    //     to: r.email,
-    //     subject: subject,
-    //     html: `<p>Bonjour ${r.name},</p><p>${message}</p>`,
-    //   });
-    // }
-
     return NextResponse.json({
       success: true,
       data: {
-        recipientCount: recipientEmails.length,
-        message: "Notifications enregistrées (envoi email à configurer)",
+        sentCount,
+        failedCount,
+        totalRecipients: recipientEmails.length,
       },
     });
   } catch (error) {

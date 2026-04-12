@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { z } from "zod";
-import { convexClient } from "@/lib/convex-server";
-import { api } from "@/convex/_generated/api";
+import { findUserByEmail, createUser } from "@/lib/auth-queries";
 
 const RegisterSchema = z.object({
   firstName: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
@@ -22,10 +21,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validatedData = RegisterSchema.parse(body);
 
-    // Check if user already exists
-    const existingUser = await convexClient.query(api.users.getByEmail, {
-      email: validatedData.email,
-    });
+    // Verifier si l'utilisateur existe deja
+    const existingUser = await findUserByEmail(validatedData.email);
 
     if (existingUser) {
       return NextResponse.json(
@@ -34,11 +31,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hash password with bcrypt (cost 12)
+    // Hasher le mot de passe (cost 12)
     const hashedPassword = await hash(validatedData.password, 12);
 
-    // Create user via Convex
-    const userId = await convexClient.mutation(api.users.register, {
+    // Creer l'utilisateur via Prisma
+    const user = await createUser({
       email: validatedData.email,
       name: `${validatedData.firstName} ${validatedData.lastName}`,
       password: hashedPassword,
@@ -48,9 +45,9 @@ export async function POST(request: Request) {
       {
         success: true,
         user: {
-          id: userId,
-          email: validatedData.email,
-          name: `${validatedData.firstName} ${validatedData.lastName}`,
+          id: user.id,
+          email: user.email,
+          name: user.name,
         },
       },
       { status: 201 }

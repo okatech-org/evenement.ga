@@ -10,6 +10,8 @@ import {
   Link2,
   X,
   Eye,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 // WhatsApp SVG icon component
@@ -78,6 +80,8 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
   const [emailSentId, setEmailSentId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [page, setPage] = useState(0);
+  const CARDS_PER_PAGE = 12; // 4 colonnes × 3 lignes
   // WhatsApp phone modal state
   const [whatsappModal, setWhatsappModal] = useState<{ guest: GuestData; phone: string } | null>(null);
   const [newGuest, setNewGuest] = useState({
@@ -100,6 +104,14 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
     }
     return true;
   });
+
+  // Reset page quand filtre ou recherche change
+  const filteredKey = `${filter}-${search}`;
+  const [prevFilteredKey, setPrevFilteredKey] = useState(filteredKey);
+  if (filteredKey !== prevFilteredKey) {
+    setPrevFilteredKey(filteredKey);
+    setPage(0);
+  }
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -327,7 +339,7 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col h-full gap-3">
       {/* Toast Notification */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
@@ -518,142 +530,128 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
           </button>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                <th className="px-4 py-3 text-left font-semibold text-gray-500 dark:text-gray-400">Invité</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-500 dark:text-gray-400">Statut</th>
-                <th className="px-4 py-3 text-center font-semibold text-gray-500 dark:text-gray-400">Personnes</th>
-                <th className="px-4 py-3 text-center font-semibold text-gray-500 dark:text-gray-400">Lien</th>
-                <th className="px-4 py-3 text-center font-semibold text-gray-500 dark:text-gray-400">Envoyer</th>
-                <th className="px-4 py-3 text-center font-semibold text-gray-500 dark:text-gray-400">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-              {filtered.map((g) => (
-                <tr key={g.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
-                  <td className="px-4 py-3">
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white">
-                        {g.firstName} {g.lastName}
-                      </p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500">
-                        {g.email || g.phone || "Pas de contact"}
-                      </p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${g.statusColor}`}>
-                      {g.statusLabel}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-400">
-                    {g.adultCount > 0 ? `${g.adultCount}A` : "—"}
-                    {g.childrenCount > 0 ? ` + ${g.childrenCount}E` : ""}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {g.inviteToken ? (
-                      <div className="flex items-center justify-center gap-1">
-                        <a
-                          href={getInviteUrl(g.inviteToken)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="rounded-lg p-1.5 text-[#7A3A50] dark:text-[#C48B90] hover:bg-[#7A3A50]/10 dark:hover:bg-[#7A3A50]/20 transition"
-                          title={`Aperçu invitation de ${g.firstName}`}
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </a>
-                        <button
-                          onClick={() => handleCopyLink(g.id, g.inviteToken)}
-                          className="rounded-lg p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                          title="Copier le lien"
-                        >
-                          {copiedId === g.id ? (
-                            <Check className="h-3.5 w-3.5 text-green-500" />
-                          ) : (
-                            <Link2 className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => handleGenerateToken(g.id)}
-                        disabled={generatingId === g.id}
-                        className="inline-flex items-center gap-1 rounded-lg border border-dashed border-[#7A3A50]/30 dark:border-[#C48B90]/30 px-2.5 py-1 text-[11px] font-medium text-[#7A3A50] dark:text-[#C48B90] hover:bg-[#7A3A50]/5 dark:hover:bg-[#7A3A50]/10 transition"
-                        title="Générer un lien personnalisé"
-                      >
-                        {generatingId === g.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Link2 className="h-3 w-3" />
-                        )}
-                        Générer
-                      </button>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      {/* WhatsApp — always visible */}
-                      <button
-                        onClick={() => handleShareWhatsApp(g)}
-                        className="rounded-lg p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30 transition"
-                        title={g.phone ? `WhatsApp ${g.phone}` : "Envoyer via WhatsApp"}
-                      >
-                        <WhatsAppIcon className="h-4 w-4" />
-                      </button>
-                      {/* Email — real sending */}
-                      {g.email && (
-                        <button
-                          onClick={() => handleSendEmail(g)}
-                          disabled={sendingEmailId === g.id}
-                          className={`rounded-lg p-1.5 transition ${
-                            emailSentId === g.id
-                              ? "text-green-500"
-                              : "text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
-                          }`}
-                          title={emailSentId === g.id ? "Email envoyé !" : `Envoyer par email à ${g.email}`}
-                        >
-                          {sendingEmailId === g.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : emailSentId === g.id ? (
-                            <Check className="h-3.5 w-3.5" />
-                          ) : (
-                            <Mail className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                      )}
-                      {!g.email && (
-                        <span className="rounded-lg p-1.5 text-gray-300 dark:text-gray-600" title="Pas d'email">
-                          <Mail className="h-3.5 w-3.5" />
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => handleDelete(g.id)}
-                      disabled={deletingId === g.id}
-                      className="rounded-lg p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition disabled:opacity-50"
-                      title="Supprimer l'invité"
-                    >
-                      {deletingId === g.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+        (() => {
+          const totalPages = Math.ceil(filtered.length / CARDS_PER_PAGE);
+          const safePage = Math.min(page, totalPages - 1);
+          const pageGuests = filtered.slice(safePage * CARDS_PER_PAGE, (safePage + 1) * CARDS_PER_PAGE);
 
-      <p className="text-center text-xs text-gray-400 dark:text-gray-500">
-        {filtered.length} invité{filtered.length !== 1 ? "s" : ""} affiché{filtered.length !== 1 ? "s" : ""}
-      </p>
+          return (
+            <div className="flex-1 min-h-0 flex flex-col">
+              {/* Grille paginee — 4 cols × 3 lignes */}
+              <div className="flex-1 min-h-0">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-3 h-full" style={{ gridTemplateRows: "repeat(3, 1fr)" }}>
+                  {pageGuests.map((g) => {
+                    const initials = `${g.firstName?.[0] || ""}${g.lastName?.[0] || ""}`.toUpperCase();
+                    return (
+                      <div
+                        key={g.id}
+                        className="flex flex-col rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm hover:shadow-md transition overflow-hidden min-h-0"
+                      >
+                        {/* Header */}
+                        <div className="flex items-center gap-2.5 px-3 py-2">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#7A3A50]/10 dark:bg-[#7A3A50]/20 text-[10px] font-bold text-[#7A3A50] dark:text-[#C48B90]">
+                            {initials}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">
+                              {g.firstName} {g.lastName}
+                            </p>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
+                              {g.email || g.phone || "Pas de contact"}
+                            </p>
+                          </div>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 ${g.statusColor}`}>
+                            {g.statusLabel}
+                          </span>
+                        </div>
+
+                        {/* Infos RSVP */}
+                        {g.adultCount > 0 && (
+                          <div className="flex items-center gap-2 px-3 pb-1 text-[10px] text-gray-500 dark:text-gray-400">
+                            <span>👤 {g.adultCount}A{g.childrenCount > 0 ? ` + ${g.childrenCount}E` : ""}</span>
+                            {g.menuChoice && <span>· 🍽️ {g.menuChoice}</span>}
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-between border-t border-gray-50 dark:border-gray-800 px-2 py-1 mt-auto">
+                          <div className="flex items-center">
+                            {g.inviteToken ? (
+                              <>
+                                <a href={getInviteUrl(g.inviteToken)} target="_blank" rel="noopener noreferrer" className="rounded-lg p-1 text-[#7A3A50] dark:text-[#C48B90] hover:bg-[#7A3A50]/10 transition" title="Aperçu">
+                                  <Eye className="h-3.5 w-3.5" />
+                                </a>
+                                <button onClick={() => handleCopyLink(g.id, g.inviteToken)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition" title="Copier le lien">
+                                  {copiedId === g.id ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Link2 className="h-3.5 w-3.5" />}
+                                </button>
+                              </>
+                            ) : (
+                              <button onClick={() => handleGenerateToken(g.id)} disabled={generatingId === g.id} className="rounded-lg p-1 text-[#7A3A50] dark:text-[#C48B90] hover:bg-[#7A3A50]/10 transition" title="Générer un lien">
+                                {generatingId === g.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
+                              </button>
+                            )}
+                          </div>
+                          <div className="flex items-center">
+                            <button onClick={() => handleShareWhatsApp(g)} className="rounded-lg p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30 transition" title="WhatsApp">
+                              <WhatsAppIcon className="h-3.5 w-3.5" />
+                            </button>
+                            {g.email ? (
+                              <button onClick={() => handleSendEmail(g)} disabled={sendingEmailId === g.id} className={`rounded-lg p-1 transition ${emailSentId === g.id ? "text-green-500" : "text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"}`} title={emailSentId === g.id ? "Envoyé !" : "Email"}>
+                                {sendingEmailId === g.id ? <Loader2 className="h-3 w-3 animate-spin" /> : emailSentId === g.id ? <Check className="h-3.5 w-3.5" /> : <Mail className="h-3.5 w-3.5" />}
+                              </button>
+                            ) : (
+                              <span className="rounded-lg p-1 text-gray-300 dark:text-gray-600"><Mail className="h-3.5 w-3.5" /></span>
+                            )}
+                            <button onClick={() => handleDelete(g.id)} disabled={deletingId === g.id} className="rounded-lg p-1 text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition disabled:opacity-50" title="Supprimer">
+                              {deletingId === g.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between pt-2 shrink-0">
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  {filtered.length} invité{filtered.length !== 1 ? "s" : ""} · Page {safePage + 1}/{totalPages}
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setPage(Math.max(0, safePage - 1))}
+                    disabled={safePage === 0}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setPage(i)}
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition ${
+                        i === safePage
+                          ? "bg-[#7A3A50] text-white"
+                          : "border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setPage(Math.min(totalPages - 1, safePage + 1))}
+                    disabled={safePage >= totalPages - 1}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()
+      )}
     </div>
   );
 }

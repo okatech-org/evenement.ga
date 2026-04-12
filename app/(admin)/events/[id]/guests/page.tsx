@@ -48,9 +48,9 @@ export default async function EventGuestsPage({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-full gap-3 lg:gap-4 overflow-hidden">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
+      <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 shrink-0">
         <Link href="/events" className="hover:text-[#7A3A50] dark:hover:text-[#C48B90]">Événements</Link>
         <span>/</span>
         <Link href={`/events/${event.id}`} className="hover:text-[#7A3A50] dark:hover:text-[#C48B90]">{event.title}</Link>
@@ -59,17 +59,17 @@ export default async function EventGuestsPage({
       </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">👥 Gestion des invités</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <h1 className="text-lg lg:text-2xl font-bold text-gray-900 dark:text-white">👥 Gestion des invités</h1>
+          <p className="text-xs lg:text-sm text-gray-500 dark:text-gray-400">
             {statusCounts.total} invité{statusCounts.total !== 1 ? "s" : ""} · Ajoutez des invités et envoyez-leur un lien personnalisé
           </p>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      {/* Stats — compact */}
+      <div className="grid gap-2 lg:gap-3 grid-cols-3 lg:grid-cols-6 shrink-0">
         {[
           { label: "Total", value: statusCounts.total, icon: "👥", color: "bg-gray-50 dark:bg-gray-800" },
           { label: "Confirmés", value: statusCounts.confirmed, icon: "✅", color: "bg-green-50 dark:bg-green-900/20" },
@@ -78,38 +78,40 @@ export default async function EventGuestsPage({
           { label: "Adultes", value: statusCounts.totalAdults, icon: "🧑", color: "bg-blue-50 dark:bg-blue-900/20" },
           { label: "Enfants", value: statusCounts.totalChildren, icon: "👶", color: "bg-purple-50 dark:bg-purple-900/20" },
         ].map((stat) => (
-          <div key={stat.label} className={`rounded-xl ${stat.color} p-4 shadow-sm`}>
+          <div key={stat.label} className={`rounded-xl ${stat.color} p-2.5 lg:p-3 shadow-sm`}>
             <div className="flex items-center justify-between">
-              <span>{stat.icon}</span>
-              <span className="text-xl font-bold text-gray-900 dark:text-white">{stat.value}</span>
+              <span className="text-sm">{stat.icon}</span>
+              <span className="text-lg lg:text-xl font-bold text-gray-900 dark:text-white">{stat.value}</span>
             </div>
-            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">{stat.label}</p>
+            <p className="mt-0.5 text-[10px] lg:text-xs text-gray-600 dark:text-gray-400">{stat.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Guest Table */}
-      <GuestTable
-        eventId={event.id}
-        eventSlug={event.slug}
-        guests={guests.map((g) => ({
-          id: g.id,
-          firstName: g.firstName,
-          lastName: g.lastName,
-          email: g.email || "",
-          phone: g.phone,
-          status: g.status,
-          statusLabel: GUEST_STATUS_LABELS[g.status as keyof typeof GUEST_STATUS_LABELS]?.label || g.status,
-          statusColor: statusColor[g.status],
-          inviteToken: g.inviteToken,
-          presence: g.rsvp?.presence ?? null,
-          adultCount: g.rsvp?.adultCount ?? 0,
-          childrenCount: g.rsvp?.childrenCount ?? 0,
-          menuChoice: g.rsvp?.menuChoice ?? null,
-          allergies: g.rsvp?.allergies ?? [],
-          message: g.rsvp?.message ?? null,
-        }))}
-      />
+      {/* Guest Table — prend l'espace restant */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <GuestTable
+          eventId={event.id}
+          eventSlug={event.slug}
+          guests={guests.map((g) => ({
+            id: g.id,
+            firstName: g.firstName,
+            lastName: g.lastName,
+            email: g.email || "",
+            phone: g.phone,
+            status: g.status,
+            statusLabel: GUEST_STATUS_LABELS[g.status as keyof typeof GUEST_STATUS_LABELS]?.label || g.status,
+            statusColor: statusColor[g.status],
+            inviteToken: g.inviteToken,
+            presence: g.rsvp?.presence ?? null,
+            adultCount: g.rsvp?.adultCount ?? 0,
+            childrenCount: g.rsvp?.childrenCount ?? 0,
+            menuChoice: g.rsvp?.menuChoice ?? null,
+            allergies: g.rsvp?.allergies ?? [],
+            message: g.rsvp?.message ?? null,
+          }))}
+        />
+      </div>
     </div>
   );
 }

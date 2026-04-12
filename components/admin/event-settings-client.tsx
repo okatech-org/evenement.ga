@@ -101,9 +101,9 @@ export function EventSettingsClient({ event }: SettingsClientProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-full gap-3 lg:gap-4 overflow-hidden">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
+      <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 shrink-0">
         <Link href="/events" className="hover:text-[#7A3A50] dark:hover:text-[#C48B90]">
           Événements
         </Link>
@@ -115,10 +115,13 @@ export function EventSettingsClient({ event }: SettingsClientProps) {
         <span className="text-gray-700 dark:text-gray-300">Paramètres</span>
       </div>
 
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">⚙️ Paramètres</h1>
+      <h1 className="text-lg lg:text-2xl font-bold text-gray-900 dark:text-white shrink-0">⚙️ Paramètres</h1>
+
+      {/* Scrollable content */}
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
 
       {/* Event Info */}
-      <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm space-y-4">
+      <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 lg:p-6 shadow-sm space-y-3">
         <h2 className="font-semibold text-gray-900 dark:text-white">Informations</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -162,7 +165,7 @@ export function EventSettingsClient({ event }: SettingsClientProps) {
       </div>
 
       {/* Visibility */}
-      <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm space-y-4">
+      <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 lg:p-6 shadow-sm space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-semibold text-gray-900 dark:text-white">Visibilité</h2>
@@ -232,7 +235,7 @@ export function EventSettingsClient({ event }: SettingsClientProps) {
       </div>
 
       {/* Quick Actions */}
-      <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm space-y-4">
+      <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 lg:p-6 shadow-sm space-y-3">
         <h2 className="font-semibold text-gray-900 dark:text-white">Actions rapides</h2>
         <div className="flex flex-wrap gap-3">
           <button
@@ -251,12 +254,12 @@ export function EventSettingsClient({ event }: SettingsClientProps) {
       </div>
 
       {/* Controller Links */}
-      <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm">
+      <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 lg:p-6 shadow-sm">
         <ControllerLinks eventId={event.id} />
       </div>
 
       {/* Danger Zone */}
-      <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20 p-6 space-y-4">
+      <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20 p-4 lg:p-6 space-y-3">
         <h2 className="font-semibold text-red-800 dark:text-red-400">Zone de danger</h2>
 
         {/* Archive */}
@@ -322,6 +325,8 @@ export function EventSettingsClient({ event }: SettingsClientProps) {
             </div>
           )}
         </div>
+      </div>
+
       </div>
     </div>
   );

@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { sendRSVPConfirmationEmail } from "@/lib/email";
+import { formatDate } from "@/lib/utils";
 import QRCode from "qrcode";
 
 /**
@@ -13,6 +16,16 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  // Rate limiting: 10 RSVP par IP par heure
+  const ip = getClientIp(request);
+  const rl = rateLimit(`rsvp:${ip}`, 10, 60 * 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Trop de soumissions. Réessayez plus tard." },
+      { status: 429 }
+    );
+  }
+
   try {
     const event = await prisma.event.findUnique({
       where: { id: params.id },
@@ -164,6 +177,31 @@ export async function POST(
         });
       } catch {
         console.error("QR generation failed");
+      }
+    }
+
+    // ── Envoyer email de confirmation RSVP ──
+    if (presence && guest.email) {
+      const baseUrl = process.env.NEXTAUTH_URL || "https://evenement.ga";
+      const fullEvent = await prisma.event.findUnique({
+        where: { id: event.id },
+        select: { title: true, date: true, location: true, slug: true },
+      });
+      if (fullEvent) {
+        try {
+          await sendRSVPConfirmationEmail({
+            to: guest.email,
+            guestName: `${guest.firstName} ${guest.lastName ?? ""}`.trim(),
+            eventTitle: fullEvent.title,
+            eventDate: formatDate(fullEvent.date),
+            eventLocation: fullEvent.location ?? undefined,
+            qrDataUrl: qrDataUrl ?? undefined,
+            eventUrl: `${baseUrl}/${fullEvent.slug}`,
+          });
+        } catch {
+          // Non-bloquant: l'echec email ne casse pas le RSVP
+          console.error("Failed to send RSVP confirmation email");
+        }
       }
     }
 

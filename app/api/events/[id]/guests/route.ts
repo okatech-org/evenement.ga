@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { checkGuestLimit } from "@/lib/plan-guard";
+import { AddGuestSchema } from "@/lib/validations";
+import { z } from "zod";
 import { randomBytes } from "crypto";
 import QRCode from "qrcode";
+import type { Plan } from "@prisma/client";
 
 /**
  * GET /api/events/[id]/guests — List all guests
@@ -82,12 +86,21 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { firstName, lastName, email, phone, group } = body;
+    const validatedGuest = AddGuestSchema.parse(body);
+    const { firstName, lastName } = validatedGuest;
+    const email = validatedGuest.email || null;
+    const phone = validatedGuest.phone || null;
+    const group = validatedGuest.group || null;
 
-    if (!firstName || !lastName) {
+    // Verifier la limite d'invites du plan
+    const guestCheck = await checkGuestLimit(
+      event.id,
+      (session.user.plan ?? "FREE") as Plan
+    );
+    if (!guestCheck.allowed) {
       return NextResponse.json(
-        { error: "Prénom et nom requis" },
-        { status: 400 }
+        { error: guestCheck.reason, requiredPlan: guestCheck.requiredPlan },
+        { status: 403 }
       );
     }
 
@@ -134,6 +147,12 @@ export async function POST(
       },
     }, { status: 201 });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Données invalides", details: error.issues },
+        { status: 400 }
+      );
+    }
     console.error("Guest create error:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }

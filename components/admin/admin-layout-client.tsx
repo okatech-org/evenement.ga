@@ -17,16 +17,16 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
   const isEditPage = /\/events\/[^/]+\/edit/.test(pathname);
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
       <AdminSidebar user={user} />
 
-      {/* Main content — full-bleed on edit pages for split-pane layout */}
-      <div className="flex flex-1 flex-col min-w-0">
-        <main className={`flex-1 ${isEditPage ? "p-6 lg:p-8 pt-20 lg:pt-8" : "p-6 lg:p-8 pt-20 lg:pt-8"}`}>
+      {/* Main content — contraint au viewport, pas de scroll de page */}
+      <div className="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
+        <main className={`flex-1 min-h-0 overflow-hidden ${isEditPage ? "p-4 lg:p-6 pt-16 lg:pt-6" : "p-4 lg:p-6 pt-16 lg:pt-6"}`}>
           {isEditPage ? (
-            <div>{children}</div>
+            <div className="h-full">{children}</div>
           ) : (
-            <div className="mx-auto max-w-6xl">{children}</div>
+            <div className="mx-auto max-w-6xl h-full">{children}</div>
           )}
         </main>
       </div>

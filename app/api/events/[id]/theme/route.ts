@@ -1,9 +1,36 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { z } from "zod";
+
+// Whitelist des champs autorises pour le theme
+const ThemeUpdateSchema = z.object({
+  preset: z.string().optional(),
+  entryEffect: z.string().optional(),
+  ambientEffect: z.string().nullable().optional(),
+  ambientIntensity: z.number().min(0).max(1).optional(),
+  scrollReveal: z.string().optional(),
+  cursorEffect: z.string().nullable().optional(),
+  soundEnabled: z.boolean().optional(),
+  soundUrl: z.string().nullable().optional(),
+  colorPrimary: z.string().optional(),
+  colorSecondary: z.string().optional(),
+  colorAccent: z.string().optional(),
+  colorBackground: z.string().optional(),
+  colorText: z.string().optional(),
+  colorSurface: z.string().optional(),
+  colorMuted: z.string().optional(),
+  colorBorder: z.string().optional(),
+  fontDisplay: z.string().optional(),
+  fontBody: z.string().optional(),
+  fontSizeTitle: z.string().optional(),
+  fontSizeBody: z.string().optional(),
+  letterSpacing: z.string().optional(),
+  lineHeight: z.string().optional(),
+}).strict();
 
 /**
- * GET /api/events/[id]/theme — Get theme data
+ * GET /api/events/[id]/theme — Recuperer le theme
  */
 export async function GET(
   _request: Request,
@@ -27,7 +54,7 @@ export async function GET(
 }
 
 /**
- * PUT /api/events/[id]/theme — Update theme
+ * PUT /api/events/[id]/theme — Mettre a jour le theme (whitelist Zod)
  */
 export async function PUT(
   request: Request,
@@ -48,15 +75,22 @@ export async function PUT(
     }
 
     const body = await request.json();
+    const validatedData = ThemeUpdateSchema.parse(body);
 
     const theme = await prisma.eventTheme.upsert({
       where: { eventId: event.id },
-      update: { ...body },
-      create: { eventId: event.id, ...body },
+      update: validatedData,
+      create: { eventId: event.id, ...validatedData },
     });
 
     return NextResponse.json({ success: true, data: theme });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Données de thème invalides", details: error.issues },
+        { status: 400 }
+      );
+    }
     console.error("Update theme error:", error);
     return NextResponse.json(
       { error: "Erreur interne du serveur" },

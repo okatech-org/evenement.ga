@@ -2,8 +2,13 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import Apple from "next-auth/providers/apple";
-import { convexClient } from "@/lib/convex-server";
-import { api } from "@/convex/_generated/api";
+import {
+  findUserByEmail,
+  upsertOAuthUser,
+  verifyOtp,
+  markOtpUsed,
+  getOrCreateByPhone,
+} from "@/lib/auth-queries";
 
 async function verifyPassword(plain: string, hashed: string): Promise<boolean> {
   const { compare } = await import("bcryptjs");
@@ -14,7 +19,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60, // 30 jours
   },
   pages: {
     signIn: "/login",
@@ -41,9 +46,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new Error("Email et mot de passe requis");
         }
 
-        const user = await convexClient.query(api.auth.getUserForAuth, {
-          email: credentials.email as string,
-        });
+        const user = await findUserByEmail(credentials.email as string);
 
         if (!user || !user.password) {
           throw new Error("Email ou mot de passe incorrect");
@@ -59,7 +62,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         return {
-          id: user._id,
+          id: user.id,
           email: user.email,
           name: user.name,
           image: user.image,
@@ -83,32 +86,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const phone = credentials.phone as string;
         const otp = credentials.otp as string;
 
-        // Verify OTP via Convex
-        const otpRecord = await convexClient.query(api.auth.verifyOtp, {
-          phone,
-          code: otp,
-        });
+        // Verifier l'OTP via Prisma
+        const otpRecord = await verifyOtp(phone, otp);
 
         if (!otpRecord) {
           throw new Error("Code OTP invalide ou expiré");
         }
 
-        // Mark OTP as used
-        await convexClient.mutation(api.users.markOtpUsed, {
-          otpId: otpRecord._id,
-        });
+        // Marquer l'OTP comme utilise
+        await markOtpUsed(otpRecord.id);
 
-        // Find or create user by phone
-        const user = await convexClient.mutation(api.users.getOrCreateByPhone, {
-          phone,
-        });
+        // Trouver ou creer l'utilisateur par telephone
+        const user = await getOrCreateByPhone(phone);
 
         if (!user) {
           throw new Error("Erreur lors de la création du compte");
         }
 
         return {
-          id: user._id,
+          id: user.id,
           email: user.email,
           name: user.name,
           image: user.image,
@@ -121,7 +117,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider === "google" || account?.provider === "apple") {
-        await convexClient.mutation(api.users.upsertFromOAuth, {
+        await upsertOAuthUser({
           email: user.email!,
           name: user.name ?? undefined,
           image: user.image ?? undefined,
@@ -131,11 +127,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async jwt({ token, user }) {
       if (user) {
-        const dbUser = await convexClient.query(api.auth.getUserForAuth, {
-          email: token.email!,
-        });
+        const dbUser = await findUserByEmail(token.email!);
         if (dbUser) {
-          token.id = dbUser._id;
+          token.id = dbUser.id;
           token.role = dbUser.role;
           token.plan = dbUser.plan;
           token.isDemoAccount = dbUser.isDemoAccount;

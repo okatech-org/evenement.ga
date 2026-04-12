@@ -160,15 +160,15 @@ function ProgrammeContent({
   const items = currentDay?.items || currentDay?.steps || currentDay?.events || [];
 
   return (
-    <div className="w-full">
+    <div className="w-full flex flex-col min-h-0 overflow-hidden">
       {/* Day selector */}
       {days.length > 1 && (
-        <div className="flex gap-2 mb-4 justify-center">
+        <div className="flex gap-2 mb-2 sm:mb-4 justify-center shrink-0">
           {days.map((day: { label?: string; date?: string }, i: number) => (
             <button
               key={i}
               onClick={() => setActiveDay(i)}
-              className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+              className="px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-medium transition-all"
               style={{
                 backgroundColor: activeDay === i ? colors.primary : colors.surface,
                 color: activeDay === i ? "#fff" : colors.text,
@@ -182,32 +182,32 @@ function ProgrammeContent({
       )}
 
       {/* Timeline */}
-      <div className="space-y-0">
+      <div className="space-y-0 flex-1 min-h-0 overflow-hidden">
         {items.map((item: { time?: string; title?: string; description?: string; icon?: string }, idx: number) => (
-          <div key={idx} className="flex gap-3 items-start">
-            <div className="flex flex-col items-center w-14 shrink-0">
-              <span className="text-[11px] font-semibold tabular-nums" style={{ color: colors.primary }}>
+          <div key={idx} className="flex gap-2 sm:gap-3 items-start">
+            <div className="flex flex-col items-center w-12 sm:w-14 shrink-0">
+              <span className="text-[10px] sm:text-[11px] font-semibold tabular-nums" style={{ color: colors.primary }}>
                 {item.time || "—"}
               </span>
               {idx < items.length - 1 && (
                 <div
-                  className="w-px flex-1 min-h-[30px] mt-1"
+                  className="w-px flex-1 min-h-[16px] sm:min-h-[24px] mt-0.5"
                   style={{ backgroundColor: colors.border }}
                 />
               )}
             </div>
             <div
-              className="flex-1 rounded-lg p-2.5 mb-2"
+              className="flex-1 rounded-lg p-1.5 sm:p-2.5 mb-1 sm:mb-2"
               style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}
             >
-              <div className="flex items-center gap-2">
-                {item.icon && <span className="text-sm">{item.icon}</span>}
-                <h4 className="text-sm font-semibold" style={{ fontFamily: `'${fontDisplay}', serif`, color: colors.text }}>
+              <div className="flex items-center gap-1.5">
+                {item.icon && <span className="text-xs sm:text-sm">{item.icon}</span>}
+                <h4 className="text-xs sm:text-sm font-semibold" style={{ fontFamily: `'${fontDisplay}', serif`, color: colors.text }}>
                   {item.title}
                 </h4>
               </div>
               {item.description && (
-                <p className="mt-1 text-xs leading-relaxed" style={{ color: colors.muted }}>
+                <p className="mt-0.5 text-[10px] sm:text-xs leading-tight line-clamp-1 sm:line-clamp-2" style={{ color: colors.muted }}>
                   {item.description}
                 </p>
               )}
@@ -239,15 +239,15 @@ function MenuContent({
   }
 
   return (
-    <div className="w-full space-y-3">
+    <div className="w-full space-y-1.5 sm:space-y-3 overflow-hidden">
       {courses.map((course: { name?: string; items?: string[]; icon?: string }, idx: number) => (
         <div
           key={idx}
-          className="rounded-lg p-3"
+          className="rounded-lg p-2 sm:p-3"
           style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}
         >
           <h4
-            className="text-sm font-semibold mb-1.5"
+            className="text-xs sm:text-sm font-semibold mb-1"
             style={{ fontFamily: `'${fontDisplay}', serif`, color: colors.primary }}
           >
             {course.icon || "🍽️"} {course.name}
@@ -255,7 +255,7 @@ function MenuContent({
           {course.items && (
             <ul className="space-y-0.5">
               {course.items.map((item: string, i: number) => (
-                <li key={i} className="text-xs flex items-center gap-1.5" style={{ color: colors.text }}>
+                <li key={i} className="text-[10px] sm:text-xs flex items-center gap-1.5" style={{ color: colors.text }}>
                   <span className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: colors.accent }} />
                   {item}
                 </li>
@@ -288,28 +288,28 @@ function LogisticsContent({
   }
 
   return (
-    <div className="w-full space-y-3">
+    <div className="w-full space-y-1.5 sm:space-y-3 overflow-hidden">
       {sections.map((section: { title?: string; description?: string; items?: string[]; icon?: string }, idx: number) => (
         <div
           key={idx}
-          className="rounded-lg p-3"
+          className="rounded-lg p-2 sm:p-3"
           style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}
         >
           <h4
-            className="text-sm font-semibold mb-1"
+            className="text-xs sm:text-sm font-semibold mb-1"
             style={{ fontFamily: `'${fontDisplay}', serif`, color: colors.primary }}
           >
             {section.icon || "📍"} {section.title}
           </h4>
           {section.description && (
-            <p className="text-xs leading-relaxed" style={{ color: colors.text }}>
+            <p className="text-[10px] sm:text-xs leading-tight line-clamp-2" style={{ color: colors.text }}>
               {section.description}
             </p>
           )}
           {section.items && (
-            <ul className="mt-1.5 space-y-0.5">
+            <ul className="mt-1 space-y-0.5">
               {section.items.map((item: string, i: number) => (
-                <li key={i} className="text-xs flex items-center gap-1.5" style={{ color: colors.muted }}>
+                <li key={i} className="text-[10px] sm:text-xs flex items-center gap-1.5" style={{ color: colors.muted }}>
                   <span className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: colors.accent }} />
                   {item}
                 </li>
@@ -341,13 +341,13 @@ function GalleryContent({
   }
 
   return (
-    <div className="w-full">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+    <div className="w-full h-full min-h-0 overflow-hidden">
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 h-full" style={{ gridAutoRows: "1fr" }}>
         {photos.map((photo: { url?: string; caption?: string }, i: number) => (
           <button
             key={i}
             onClick={() => setSelected(selected === i ? null : i)}
-            className="relative overflow-hidden rounded-xl aspect-square transition-all hover:scale-[1.02]"
+            className="relative overflow-hidden rounded-lg transition-all hover:scale-[1.02] min-h-0"
             style={{ border: `2px solid ${selected === i ? colors.primary : "transparent"}` }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -358,7 +358,7 @@ function GalleryContent({
             />
             {photo.caption && selected === i && (
               <div
-                className="absolute inset-x-0 bottom-0 px-2 py-1.5 text-[10px]"
+                className="absolute inset-x-0 bottom-0 px-2 py-1 text-[10px]"
                 style={{
                   background: `linear-gradient(transparent, ${colors.background})`,
                   color: colors.text,
@@ -376,9 +376,9 @@ function GalleryContent({
 
 // ─── Section Divider ────────────────────────────────────────
 
-function SectionDivider({ colors }: { colors: InvitationCardProps["theme"]["colors"] }) {
+function SectionDivider({ colors, compact = false }: { colors: InvitationCardProps["theme"]["colors"]; compact?: boolean }) {
   return (
-    <div className="flex items-center gap-3 my-6">
+    <div className={`flex items-center gap-3 shrink-0 ${compact ? "my-2 sm:my-3" : "my-6"}`}>
       <div className="flex-1 h-px" style={{ backgroundColor: colors.border }} />
       <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: colors.accent }} />
       <div className="flex-1 h-px" style={{ backgroundColor: colors.border }} />
@@ -608,7 +608,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
                       {event.title}
                     </h1>
 
-                    <div className="mt-6 flex flex-col items-center gap-2">
+                    <div className="mt-3 sm:mt-6 flex flex-col items-center gap-1 sm:gap-2">
                       <p className="text-sm sm:text-base" style={{ color: theme.colors.muted }}>
                         📅 {formattedDate}
                       </p>
@@ -622,7 +622,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
                       )}
                     </div>
 
-                    <div className="mt-6">
+                    <div className="mt-3 sm:mt-6">
                       <Countdown targetDate={event.date} colors={theme.colors} />
                     </div>
 
@@ -631,7 +631,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
                       <>
                         <SectionDivider colors={theme.colors} />
                         <p
-                          className="text-sm sm:text-base leading-relaxed max-w-xl mx-auto"
+                          className="text-xs sm:text-sm lg:text-base leading-relaxed max-w-xl mx-auto line-clamp-3 sm:line-clamp-5"
                           style={{ color: theme.colors.text, lineHeight: 1.8 }}
                         >
                           {event.description}
@@ -659,45 +659,49 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
 
               {/* ═══════════════ PAGE 2 — L'ÉVÉNEMENT ═══════════════ */}
               {page.id === "evenement" && (
-                <div className="h-full overflow-y-auto flex flex-col items-center px-6 py-16">
-                  <div className="w-full max-w-2xl">
+                <div className="h-full overflow-hidden flex flex-col items-center px-4 sm:px-6 pt-3 sm:pt-6 pb-[70px]">
+                  <div className="w-full max-w-2xl flex-1 min-h-0 flex flex-col overflow-hidden">
                     {/* Programme section */}
                     {hasProgramme && modulesData.programme && (
-                      <>
+                      <div className={`flex flex-col min-h-0 overflow-hidden ${hasMenu ? "flex-1" : ""}`}>
                         <h2
-                          className="text-xl sm:text-2xl font-bold mb-4 text-center"
+                          className="text-base sm:text-xl font-bold mb-2 sm:mb-3 text-center shrink-0"
                           style={{ fontFamily: `'${theme.fontDisplay}', serif`, color: theme.colors.primary }}
                         >
                           📋 Programme
                         </h2>
-                        <ProgrammeContent
-                          config={modulesData.programme}
-                          colors={theme.colors}
-                          fontDisplay={theme.fontDisplay}
-                        />
-                      </>
+                        <div className="flex-1 min-h-0 overflow-hidden">
+                          <ProgrammeContent
+                            config={modulesData.programme}
+                            colors={theme.colors}
+                            fontDisplay={theme.fontDisplay}
+                          />
+                        </div>
+                      </div>
                     )}
 
-                    {/* Divider between sections */}
+                    {/* Divider compact */}
                     {hasProgramme && hasMenu && (
-                      <SectionDivider colors={theme.colors} />
+                      <SectionDivider colors={theme.colors} compact />
                     )}
 
                     {/* Menu section */}
                     {hasMenu && modulesData.menu && (
-                      <>
+                      <div className={`flex flex-col min-h-0 overflow-hidden ${hasProgramme ? "flex-1" : ""}`}>
                         <h2
-                          className="text-xl sm:text-2xl font-bold mb-4 text-center"
+                          className="text-base sm:text-xl font-bold mb-2 sm:mb-3 text-center shrink-0"
                           style={{ fontFamily: `'${theme.fontDisplay}', serif`, color: theme.colors.primary }}
                         >
                           🍽️ Menu
                         </h2>
-                        <MenuContent
-                          config={modulesData.menu}
-                          colors={theme.colors}
-                          fontDisplay={theme.fontDisplay}
-                        />
-                      </>
+                        <div className="flex-1 min-h-0 overflow-hidden">
+                          <MenuContent
+                            config={modulesData.menu}
+                            colors={theme.colors}
+                            fontDisplay={theme.fontDisplay}
+                          />
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -705,41 +709,45 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
 
               {/* ═══════════════ PAGE 3 — INFOS & MOMENTS ═══════════════ */}
               {page.id === "infos" && (
-                <div className="h-full overflow-y-auto flex flex-col items-center px-6 py-16">
-                  <div className="w-full max-w-2xl">
+                <div className="h-full overflow-hidden flex flex-col items-center px-4 sm:px-6 pt-3 sm:pt-6 pb-[70px]">
+                  <div className="w-full max-w-2xl flex-1 min-h-0 flex flex-col overflow-hidden">
                     {/* Logistics section */}
                     {hasLogistics && modulesData.logistics && (
-                      <>
+                      <div className="flex flex-col shrink-0 overflow-hidden">
                         <h2
-                          className="text-xl sm:text-2xl font-bold mb-4 text-center"
+                          className="text-base sm:text-xl font-bold mb-2 sm:mb-3 text-center shrink-0"
                           style={{ fontFamily: `'${theme.fontDisplay}', serif`, color: theme.colors.primary }}
                         >
                           🚗 Infos pratiques
                         </h2>
-                        <LogisticsContent
-                          config={modulesData.logistics}
-                          colors={theme.colors}
-                          fontDisplay={theme.fontDisplay}
-                        />
-                      </>
+                        <div className="overflow-hidden">
+                          <LogisticsContent
+                            config={modulesData.logistics}
+                            colors={theme.colors}
+                            fontDisplay={theme.fontDisplay}
+                          />
+                        </div>
+                      </div>
                     )}
 
-                    {/* Divider */}
+                    {/* Divider compact */}
                     {hasLogistics && hasGallery && (
-                      <SectionDivider colors={theme.colors} />
+                      <SectionDivider colors={theme.colors} compact />
                     )}
 
-                    {/* Gallery section */}
+                    {/* Gallery section — prend l'espace restant */}
                     {hasGallery && modulesData.gallery && (
-                      <>
+                      <div className="flex flex-col min-h-0 flex-1 overflow-hidden">
                         <h2
-                          className="text-xl sm:text-2xl font-bold mb-4 text-center"
+                          className="text-base sm:text-xl font-bold mb-2 sm:mb-3 text-center shrink-0"
                           style={{ fontFamily: `'${theme.fontDisplay}', serif`, color: theme.colors.primary }}
                         >
                           📷 Galerie
                         </h2>
-                        <GalleryContent config={modulesData.gallery} colors={theme.colors} />
-                      </>
+                        <div className="flex-1 min-h-0 overflow-hidden">
+                          <GalleryContent config={modulesData.gallery} colors={theme.colors} />
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -747,17 +755,17 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
 
               {/* ═══════════════ PAGE 4 — CONFIRMATION ═══════════════ */}
               {page.id === "rsvp" && (
-                <div className="h-full overflow-y-auto flex items-center justify-center px-6 py-16">
-                  <div className="w-full max-w-lg">
+                <div className="h-full overflow-hidden flex items-center justify-center px-4 sm:px-6 pt-2 sm:pt-6 pb-[70px]">
+                  <div className="w-full max-w-lg max-h-full overflow-hidden">
                     <div
-                      className="rounded-2xl p-6 sm:p-8"
+                      className="rounded-2xl p-4 sm:p-6 lg:p-8"
                       style={{
                         backgroundColor: theme.colors.surface,
                         border: `1px solid ${theme.colors.border}`,
                       }}
                     >
                       <h2
-                        className="mb-2 text-center text-2xl font-bold"
+                        className="mb-1 text-center text-lg sm:text-2xl font-bold"
                         style={{
                           fontFamily: `'${theme.fontDisplay}', serif`,
                           color: theme.colors.primary,
@@ -766,7 +774,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
                         Confirmer votre présence
                       </h2>
                       <p
-                        className="mb-6 text-center text-sm"
+                        className="mb-2 sm:mb-4 text-center text-xs sm:text-sm"
                         style={{ color: theme.colors.muted }}
                       >
                         Nous serions ravis de vous compter parmi nous

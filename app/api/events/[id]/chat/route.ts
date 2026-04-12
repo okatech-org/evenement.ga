@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { ChatMessageSchema } from "@/lib/validations";
+import { z } from "zod";
 
 /**
  * GET /api/events/[id]/chat — Fetch chat messages (public, no auth)
@@ -84,23 +87,19 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  // Rate limiting: 20 messages par IP par 5 minutes
+  const ip = getClientIp(request);
+  const rl = rateLimit(`chat:${ip}`, 20, 5 * 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { success: false, error: "Trop de messages. Réessayez dans quelques minutes." },
+      { status: 429 }
+    );
+  }
+
   try {
     const body = await request.json();
-    const { senderName, text, replyToId } = body;
-
-    if (!senderName || !text) {
-      return NextResponse.json(
-        { success: false, error: "Nom et message requis" },
-        { status: 400 }
-      );
-    }
-
-    if (text.length > 500) {
-      return NextResponse.json(
-        { success: false, error: "Message trop long (500 caractères max)" },
-        { status: 400 }
-      );
-    }
+    const { senderName, text, replyToId } = ChatMessageSchema.parse(body);
 
     // Verify event exists
     const event = await prisma.event.findUnique({
@@ -172,6 +171,12 @@ export async function POST(
       },
     });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { success: false, error: "Données invalides", details: error.issues },
+        { status: 400 }
+      );
+    }
     console.error("Chat send error:", error);
     return NextResponse.json(
       { success: false, error: "Erreur serveur" },

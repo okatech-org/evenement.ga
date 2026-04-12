@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { EventUpdateSchema } from "@/lib/validations";
+import { z } from "zod";
+import {
+  uploadFile,
+  FILE_LIMITS,
+  ALLOWED_IMAGE_TYPES,
+  ALLOWED_VIDEO_TYPES,
+} from "@/lib/storage";
 
 /**
  * PUT /api/events/[id] — Update event details
@@ -26,25 +32,31 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { title, description, date, location, visibility, password, coverImage, coverVideo } = body;
+    const validatedData = EventUpdateSchema.parse(body);
 
     const updated = await prisma.event.update({
       where: { id: params.id },
       data: {
-        ...(title !== undefined && { title }),
-        ...(description !== undefined && { description }),
-        ...(date !== undefined && { date: new Date(date) }),
-        ...(location !== undefined && { location }),
-        ...(visibility !== undefined && { visibility }),
-        ...(password !== undefined && { password }),
-        ...(coverImage !== undefined && { coverImage }),
-        ...(coverVideo !== undefined && { coverVideo }),
+        ...(validatedData.title !== undefined && { title: validatedData.title }),
+        ...(validatedData.description !== undefined && { description: validatedData.description }),
+        ...(validatedData.date !== undefined && { date: new Date(validatedData.date) }),
+        ...(validatedData.location !== undefined && { location: validatedData.location }),
+        ...(validatedData.visibility !== undefined && { visibility: validatedData.visibility }),
+        ...(validatedData.password !== undefined && { password: validatedData.password }),
+        ...(validatedData.coverImage !== undefined && { coverImage: validatedData.coverImage }),
+        ...(validatedData.coverVideo !== undefined && { coverVideo: validatedData.coverVideo }),
       },
       include: { theme: true },
     });
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Données invalides", details: error.issues },
+        { status: 400 }
+      );
+    }
     console.error("Update event error:", error);
     return NextResponse.json({ error: "Erreur interne" }, { status: 500 });
   }
@@ -109,16 +121,16 @@ export async function POST(
       return NextResponse.json({ error: "Fichier requis" }, { status: 400 });
     }
 
-    // Validate file type
-    const isImage = file.type.startsWith("image/");
-    const isVideo = file.type.startsWith("video/");
+    // Valider le type de fichier
+    const isImage = ALLOWED_IMAGE_TYPES.includes(file.type);
+    const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
 
     if (!isImage && !isVideo) {
       return NextResponse.json({ error: "Type de fichier non supporté" }, { status: 400 });
     }
 
-    // Limit file size (10MB images, 50MB videos)
-    const maxSize = isImage ? 10 * 1024 * 1024 : 50 * 1024 * 1024;
+    // Limiter la taille
+    const maxSize = isImage ? FILE_LIMITS.image : FILE_LIMITS.video;
     if (file.size > maxSize) {
       return NextResponse.json(
         { error: `Fichier trop volumineux (max ${isImage ? "10" : "50"}MB)` },
@@ -126,18 +138,14 @@ export async function POST(
       );
     }
 
-    // Save file
-    const ext = file.name.split(".").pop() || (isImage ? "jpg" : "mp4");
-    const filename = `${type || (isImage ? "cover" : "video")}-${Date.now()}.${ext}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "events", params.id);
-
-    await mkdir(uploadDir, { recursive: true });
-
+    // Upload vers S3/R2 ou local
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(path.join(uploadDir, filename), buffer);
-
-    const url = `/uploads/events/${params.id}/${filename}`;
+    const url = await uploadFile(buffer, {
+      folder: `events/${params.id}`,
+      filename: file.name,
+      contentType: file.type,
+    });
 
     // Update event
     const field = (type === "video" || isVideo) ? "coverVideo" : "coverImage";
