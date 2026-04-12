@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { verifyCsrf } from "@/lib/api-guards";
 import {
   sendEventNotificationEmail,
   checkEmailRateLimit,
   recordEmailSent,
 } from "@/lib/email";
+import { logSystem } from "@/lib/superadmin/logger";
 
 /**
  * POST /api/events/[id]/notify — Envoyer un email de notification aux invites
@@ -15,6 +17,9 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const csrfError = verifyCsrf(request);
+  if (csrfError) return csrfError;
+
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -116,6 +121,8 @@ export async function POST(
         }),
       },
     });
+
+    logSystem("INFO", "EVENT", "NOTIFICATION_SENT", { actorId: session.user.id, targetId: params.id, metadata: { sentCount, failedCount, totalRecipients: recipientEmails.length } });
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { verifyCsrf } from "@/lib/api-guards";
 import {
   sendInvitationEmail,
   checkEmailRateLimit,
@@ -22,6 +23,10 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  // ─── CSRF ─────────────────────────────────────────
+  const csrfError = verifyCsrf(request);
+  if (csrfError) return csrfError;
+
   // ─── Auth ─────────────────────────────────────────
   const session = await auth();
   if (!session?.user?.id) {

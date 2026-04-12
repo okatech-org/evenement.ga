@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useI18n, LOCALES, type Locale } from "@/lib/i18n";
 import { useTheme } from "@/components/providers/theme-provider";
@@ -51,6 +51,7 @@ interface EventContext {
 
 export function AdminSidebar({ user }: AdminSidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { t, locale, setLocale } = useI18n();
   const { theme, toggleTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
@@ -154,14 +155,10 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
     if (["accueil", "evenement", "infos", "confirmation"].includes(key)) {
       if (activeSubPage !== "edit") return false;
       const stepMap: Record<string, string> = { accueil: "0", evenement: "1", infos: "2", confirmation: "3" };
-      // Check URL search params for step
-      if (typeof window !== "undefined") {
-        const params = new URLSearchParams(window.location.search);
-        const step = params.get("step");
-        if (step === stepMap[key]) return true;
-        // Default to accueil if no step param and we're on edit
-        if (!step && key === "accueil") return true;
-      }
+      const step = searchParams.get("step");
+      if (step === stepMap[key]) return true;
+      // Default to accueil if no step param and we're on edit
+      if (!step && key === "accueil") return true;
       return false;
     }
     return activeSubPage === key || (key === "overview" && activeSubPage === "overview");

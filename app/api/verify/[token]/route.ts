@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * GET /api/verify/[token] — Get event info for a controller link (public, no auth)
@@ -138,6 +139,16 @@ export async function POST(
       }, { status: 403 });
     }
 
+    // Rate limiting: 30 requetes par minute par IP
+    const ip = getClientIp(request);
+    const rl = await rateLimit(`verify:${ip}`, 30, 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Trop de requêtes. Réessayez dans quelques instants." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { query, action } = body;
 
@@ -186,19 +197,25 @@ export async function POST(
       }
     }
 
-    // 3. Try by name search (last resort)
+    // 3. Try by name search (last resort) — requete DB au lieu de charger tous les invites
     if (!guest) {
-      const words = trimmedQuery.toLowerCase().split(/\s+/);
+      const words = trimmedQuery.toLowerCase().split(/\s+/).filter(Boolean);
       if (words.length >= 1) {
-        const allGuests = await prisma.guest.findMany({
-          where: { eventId },
+        // Construire les conditions AND pour chaque mot
+        const nameConditions = words.map((word) => ({
+          OR: [
+            { firstName: { contains: word, mode: "insensitive" as const } },
+            { lastName: { contains: word, mode: "insensitive" as const } },
+          ],
+        }));
+
+        guest = await prisma.guest.findFirst({
+          where: {
+            eventId,
+            AND: nameConditions,
+          },
           include: { rsvp: true, qrScans: true },
         });
-
-        guest = allGuests.find((g) => {
-          const fullName = `${g.firstName} ${g.lastName}`.toLowerCase();
-          return words.every((w) => fullName.includes(w));
-        }) || null;
       }
     }
 

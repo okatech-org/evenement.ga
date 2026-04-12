@@ -27,7 +27,9 @@ const ThemeUpdateSchema = z.object({
   fontSizeBody: z.string().optional(),
   letterSpacing: z.string().optional(),
   lineHeight: z.string().optional(),
-}).strict();
+  pageMedia: z.any().optional(),
+  pageThemes: z.any().optional(),
+});
 
 /**
  * GET /api/events/[id]/theme — Recuperer le theme
@@ -54,7 +56,7 @@ export async function GET(
 }
 
 /**
- * PUT /api/events/[id]/theme — Mettre a jour le theme (whitelist Zod)
+ * PUT /api/events/[id]/theme — Mettre a jour le theme
  */
 export async function PUT(
   request: Request,

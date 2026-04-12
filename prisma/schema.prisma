@@ -123,6 +123,8 @@ model User {
   notifications Notification[]
   qrScans       QRScan[]       @relation("ScannedBy")
 
+  @@index([role, createdAt])
+  @@index([plan, createdAt])
   @@map("users")
 }
 
@@ -167,6 +169,7 @@ model Event {
 
   @@index([userId])
   @@index([slug])
+  @@index([status, userId])
   @@map("events")
 }
 
@@ -195,6 +198,8 @@ model EventTheme {
   fontSizeBody     String  @default("base")
   letterSpacing    String  @default("normal")
   lineHeight       String  @default("normal")
+  pageMedia        Json    @default("{}")
+  pageThemes       Json    @default("{}")
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
@@ -237,6 +242,7 @@ model Guest {
 
   @@index([eventId])
   @@index([email])
+  @@index([status, eventId])
   @@map("guests")
 }
 
@@ -313,6 +319,7 @@ model ChatMessage {
   user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([eventId, channel])
+  @@index([eventId, createdAt])
   @@map("chat_messages")
 }
 

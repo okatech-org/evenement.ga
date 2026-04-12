@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { verifyCsrf } from "@/lib/api-guards";
 import { EventUpdateSchema } from "@/lib/validations";
 import { z } from "zod";
 import {
@@ -9,6 +10,41 @@ import {
   ALLOWED_IMAGE_TYPES,
   ALLOWED_VIDEO_TYPES,
 } from "@/lib/storage";
+import { logSystem } from "@/lib/superadmin/logger";
+
+// Magic-number validation pour verifier le contenu reel du fichier
+const FILE_SIGNATURES: Record<string, number[][]> = {
+  "image/jpeg": [[0xFF, 0xD8, 0xFF]],
+  "image/png": [[0x89, 0x50, 0x4E, 0x47]],
+  "image/webp": [[0x52, 0x49, 0x46, 0x46]], // RIFF header
+  "image/gif": [[0x47, 0x49, 0x46, 0x38]],
+  "video/mp4": [], // ftyp at offset 4
+  "video/quicktime": [], // ftyp at offset 4
+  "video/webm": [[0x1A, 0x45, 0xDF, 0xA3]],
+};
+
+function validateFileSignature(buffer: Buffer, declaredType: string): boolean {
+  if (buffer.length < 12) return false;
+
+  // MP4/MOV: "ftyp" at bytes 4-7
+  if (declaredType === "video/mp4" || declaredType === "video/quicktime") {
+    return buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70;
+  }
+
+  // WebP: RIFF at 0-3, then WEBP at 8-11
+  if (declaredType === "image/webp") {
+    const riff = buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46;
+    const webp = buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
+    return riff && webp;
+  }
+
+  const signatures = FILE_SIGNATURES[declaredType];
+  if (!signatures || signatures.length === 0) return true; // Type inconnu, accepter
+
+  return signatures.some((sig) =>
+    sig.every((byte, i) => buffer[i] === byte)
+  );
+}
 
 /**
  * PUT /api/events/[id] — Update event details
@@ -17,6 +53,9 @@ export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const csrfError = verifyCsrf(request);
+  if (csrfError) return csrfError;
+
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -66,9 +105,12 @@ export async function PUT(
  * DELETE /api/events/[id] — Delete an event
  */
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
+  const csrfError = verifyCsrf(request);
+  if (csrfError) return csrfError;
+
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -85,6 +127,8 @@ export async function DELETE(
 
     await prisma.event.delete({ where: { id: params.id } });
 
+    logSystem("WARNING", "EVENT", "EVENT_DELETED", { actorId: session.user.id, targetId: params.id, metadata: { title: event.title } });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Delete event error:", error);
@@ -99,6 +143,9 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const csrfError = verifyCsrf(request);
+  if (csrfError) return csrfError;
+
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -141,6 +188,14 @@ export async function POST(
     // Upload vers S3/R2 ou local
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+
+    // Valider le contenu reel du fichier via magic numbers
+    if (!validateFileSignature(buffer, file.type)) {
+      return NextResponse.json(
+        { error: "Le contenu du fichier ne correspond pas au type déclaré" },
+        { status: 400 }
+      );
+    }
     const url = await uploadFile(buffer, {
       folder: `events/${params.id}`,
       filename: file.name,

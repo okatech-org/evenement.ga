@@ -1,15 +1,19 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { verifyCsrf } from "@/lib/api-guards";
 import { slugify } from "@/lib/utils";
 
 /**
  * POST /api/events/[id]/duplicate — Duplicate an event
  */
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
+  const csrfError = verifyCsrf(request);
+  if (csrfError) return csrfError;
+
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });

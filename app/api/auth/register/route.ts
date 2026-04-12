@@ -3,6 +3,8 @@ import { hash } from "bcryptjs";
 import { z } from "zod";
 import { findUserByEmail, createUser } from "@/lib/auth-queries";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { checkRegistrationAllowed } from "@/lib/global-config";
+import { logSystem } from "@/lib/superadmin/logger";
 
 const RegisterSchema = z.object({
   firstName: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
@@ -19,9 +21,13 @@ const RegisterSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    // Verifier si les inscriptions sont autorisees
+    const regBlock = await checkRegistrationAllowed();
+    if (regBlock) return regBlock;
+
     // Rate limiting: 5 inscriptions par IP par heure
     const ip = getClientIp(request);
-    const rl = rateLimit(`register:${ip}`, 5, 60 * 60 * 1000);
+    const rl = await rateLimit(`register:${ip}`, 5, 60 * 60 * 1000);
     if (!rl.allowed) {
       return NextResponse.json(
         { error: "Trop de tentatives d'inscription. Réessayez plus tard." },
@@ -51,6 +57,8 @@ export async function POST(request: Request) {
       name: `${validatedData.firstName} ${validatedData.lastName}`,
       password: hashedPassword,
     });
+
+    logSystem("INFO", "AUTH", "USER_REGISTERED", { actorId: user.id, metadata: { email: validatedData.email } });
 
     return NextResponse.json(
       {

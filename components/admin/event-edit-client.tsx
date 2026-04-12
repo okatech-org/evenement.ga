@@ -24,6 +24,7 @@ import {
 import { DevicePreviewFrame, DEVICE_PRESETS, type DevicePreset } from "./device-preview-frame";
 import { DeviceSwitcher } from "./device-switcher";
 import { InvitationCard } from "@/components/public/invitation-card";
+import { Palette } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -54,6 +55,8 @@ interface ThemeData {
   ambientEffect: string | null;
   ambientIntensity: number;
   scrollReveal: string;
+  pageMedia: Record<string, unknown>;
+  pageThemes: Record<string, unknown>;
   colors: ThemeColors;
 }
 
@@ -84,6 +87,20 @@ const STEPS = [
   { id: "infos", label: "Infos & Moments", icon: "📍", desc: "Logistique & Galerie", previewPage: 2 },
   { id: "rsvp", label: "Confirmation", icon: "✅", desc: "RSVP & Paramètres", previewPage: 3 },
 ];
+
+const PAGE_KEYS = ["accueil", "evenement", "infos", "rsvp"] as const;
+type PageKey = typeof PAGE_KEYS[number];
+
+interface PageMediaData {
+  images: string[];
+  video: string | null;
+}
+
+interface PageThemeOverride {
+  colorBackground?: string;
+  colorText?: string;
+  colorPrimary?: string;
+}
 
 // ─── Collapsible Section ─────────────────────────────────
 
@@ -171,8 +188,39 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
   const [description, setDescription] = useState(event.description || "");
   const [date, setDate] = useState(event.date.split("T")[0]);
   const [location, setLocation] = useState(event.location || "");
-  const [coverImage, setCoverImage] = useState(event.coverImage);
-  const [coverVideo, setCoverVideo] = useState(event.coverVideo);
+  // coverImage/coverVideo: read-only state for preview (per-page media system replaces the editor)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [coverImage, _setCoverImage] = useState(event.coverImage);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [coverVideo, _setCoverVideo] = useState(event.coverVideo);
+
+  // ── Per-page media & theme overrides ──
+  const initPageMedia = (raw: Record<string, unknown>): Record<PageKey, PageMediaData> => {
+    const result = {} as Record<PageKey, PageMediaData>;
+    for (const key of PAGE_KEYS) {
+      const d = (raw[key] || {}) as Partial<PageMediaData>;
+      result[key] = { images: d.images || [], video: d.video || null };
+    }
+    return result;
+  };
+  const initPageThemes = (raw: Record<string, unknown>): Record<PageKey, PageThemeOverride | null> => {
+    const result = {} as Record<PageKey, PageThemeOverride | null>;
+    for (const key of PAGE_KEYS) {
+      result[key] = (raw[key] as PageThemeOverride) || null;
+    }
+    return result;
+  };
+
+  const [pageMedia, setPageMedia] = useState(() => initPageMedia(theme.pageMedia));
+  const [pageThemes, setPageThemes] = useState(() => initPageThemes(theme.pageThemes));
+
+  const updatePageMedia = (pageKey: PageKey, data: Partial<PageMediaData>) => {
+    setPageMedia(prev => ({ ...prev, [pageKey]: { ...prev[pageKey], ...data } }));
+  };
+
+  const updatePageTheme = (pageKey: PageKey, data: PageThemeOverride | null) => {
+    setPageThemes(prev => ({ ...prev, [pageKey]: data }));
+  };
 
   // ── Module configs ──
   const [modules, setModules] = useState<ModuleData[]>(event.modules);
@@ -197,8 +245,11 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const imageRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLInputElement>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const pageMediaImageRef = useRef<HTMLInputElement>(null);
+  const pageMediaVideoRef = useRef<HTMLInputElement>(null);
+  const [pendingUploadPage, setPendingUploadPage] = useState<PageKey | null>(null);
 
   async function handleSave() {
     setIsSaving(true);
@@ -223,6 +274,13 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
         });
       }
 
+      // Save per-page media & themes
+      await fetch(`/api/events/${event.id}/theme`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pageMedia, pageThemes }),
+      });
+
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
@@ -232,8 +290,12 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
     }
   }
 
-  async function handleUpload(file: File, type: "image" | "video") {
+
+
+  // ── Per-page media upload ──
+  async function handlePageMediaUpload(file: File, type: "image" | "video", pageKey: PageKey) {
     setIsUploading(true);
+    setUploadError(null);
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -244,31 +306,40 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
         body: formData,
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (type === "image") setCoverImage(data.url);
-        else setCoverVideo(data.url);
+      const data = await res.json();
+
+      if (res.ok && data.url) {
+        if (type === "image") {
+          const current = pageMedia[pageKey].images;
+          if (current.length < 5) {
+            updatePageMedia(pageKey, { images: [...current, data.url] });
+          }
+        } else {
+          updatePageMedia(pageKey, { video: data.url, images: [] });
+        }
+      } else {
+        const errorMsg = data.error || `Erreur ${res.status}`;
+        setUploadError(errorMsg);
+        setTimeout(() => setUploadError(null), 5000);
       }
     } catch (error) {
-      console.error("Upload error:", error);
+      console.error("Page media upload error:", error);
+      setUploadError("Erreur réseau lors de l'upload");
+      setTimeout(() => setUploadError(null), 5000);
     } finally {
       setIsUploading(false);
+      setPendingUploadPage(null);
     }
   }
 
-  async function handleRemoveMedia(type: "image" | "video") {
-    try {
-      const field = type === "image" ? "coverImage" : "coverVideo";
-      await fetch(`/api/events/${event.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [field]: null }),
-      });
-      if (type === "image") setCoverImage(null);
-      else setCoverVideo(null);
-    } catch (error) {
-      console.error("Remove media error:", error);
-    }
+  function removePageMediaImage(pageKey: PageKey, index: number) {
+    const current = [...pageMedia[pageKey].images];
+    current.splice(index, 1);
+    updatePageMedia(pageKey, { images: current });
+  }
+
+  function removePageMediaVideo(pageKey: PageKey) {
+    updatePageMedia(pageKey, { video: null });
   }
 
   // ── Programme helpers ──
@@ -278,7 +349,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
   function addProgrammeItem(dayIndex: number) {
     const newDays = [...programmeDays];
     if (!newDays[dayIndex].items) newDays[dayIndex].items = [];
-    newDays[dayIndex].items.push({ time: "", title: "", description: "", icon: "🎉" });
+    newDays[dayIndex].items.push({ time: "", title: "", description: "", icon: "🎉", location: "", address: "" });
     updateModuleConfig("MOD_PROGRAMME", { days: newDays });
   }
 
@@ -296,8 +367,63 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
 
   // ── Menu helpers ──
   const menuConfig = getConfig("MOD_MENU");
+  const menuSections = menuConfig?.sections || (menuConfig?.courses ? [{ label: "", courses: menuConfig.courses }] : []);
   const menuCourses = menuConfig?.courses || [];
 
+  // Flat programme items for linking menus
+  const allProgrammeItems = programmeDays.flatMap(
+    (day: { items?: { time: string; title: string }[] }) =>
+      (day.items || []).filter((it: { title: string }) => it.title)
+  );
+
+  function addMenuSection() {
+    const newSections = [...menuSections, { label: "", programmeRef: "", courses: [{ name: "", items: [""], icon: "🍽️" }] }];
+    updateModuleConfig("MOD_MENU", { sections: newSections, courses: undefined });
+  }
+
+  function updateMenuSectionLabel(sectionIdx: number, field: string, value: string) {
+    const newSections = [...menuSections];
+    newSections[sectionIdx][field] = value;
+    updateModuleConfig("MOD_MENU", { sections: newSections });
+  }
+
+  function removeMenuSection(sectionIdx: number) {
+    const newSections = [...menuSections];
+    newSections.splice(sectionIdx, 1);
+    updateModuleConfig("MOD_MENU", { sections: newSections });
+  }
+
+  function addMenuCourseInSection(sectionIdx: number) {
+    const newSections = [...menuSections];
+    newSections[sectionIdx].courses.push({ name: "", items: [""], icon: "🍽️" });
+    updateModuleConfig("MOD_MENU", { sections: newSections });
+  }
+
+  function updateMenuCourseInSection(sectionIdx: number, courseIdx: number, field: string, value: string) {
+    const newSections = [...menuSections];
+    newSections[sectionIdx].courses[courseIdx][field] = value;
+    updateModuleConfig("MOD_MENU", { sections: newSections });
+  }
+
+  function addMenuItemInSection(sectionIdx: number, courseIdx: number) {
+    const newSections = [...menuSections];
+    newSections[sectionIdx].courses[courseIdx].items.push("");
+    updateModuleConfig("MOD_MENU", { sections: newSections });
+  }
+
+  function updateMenuItemInSection(sectionIdx: number, courseIdx: number, itemIdx: number, value: string) {
+    const newSections = [...menuSections];
+    newSections[sectionIdx].courses[courseIdx].items[itemIdx] = value;
+    updateModuleConfig("MOD_MENU", { sections: newSections });
+  }
+
+  function removeMenuCourseInSection(sectionIdx: number, courseIdx: number) {
+    const newSections = [...menuSections];
+    newSections[sectionIdx].courses.splice(courseIdx, 1);
+    updateModuleConfig("MOD_MENU", { sections: newSections });
+  }
+
+  // Legacy flat helpers (kept for backwards compat)
   function addMenuCourse() {
     const newCourses = [...menuCourses, { name: "", items: [""], icon: "🍽️" }];
     updateModuleConfig("MOD_MENU", { courses: newCourses });
@@ -439,6 +565,102 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
     coverVideo,
   }), [event.id, event.slug, event.type, event.organizer, event.guestCount, title, date, location, description, coverImage, coverVideo]);
 
+  // ── Per-page media/theme editor helper (reusable across steps) ──
+  const STEP_LABELS: Record<PageKey, string> = { accueil: "l'accueil", evenement: "l'événement", infos: "Infos & Moments", rsvp: "Confirmation" };
+
+  function renderPageMediaEditor(pageKey: PageKey) {
+    const media = pageMedia[pageKey];
+    const themeOverride = pageThemes[pageKey];
+    const label = STEP_LABELS[pageKey];
+
+    return (
+      <>
+        {/* Per-page Media */}
+        <EditorSection title="Fond de page" icon={<ImageIcon className="h-3.5 w-3.5 text-[#7A3A50]" />}>
+          {media.video ? (
+            <div className="relative group">
+              <video src={media.video} className="w-full h-24 object-cover rounded-lg" controls />
+              <button onClick={() => removePageMediaVideo(pageKey)} className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition" aria-label="Supprimer la vidéo">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <>
+              {media.images.length > 0 && (
+                <div className="grid grid-cols-3 gap-1.5">
+                  {media.images.map((url, idx) => (
+                    <div key={idx} className="relative group">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt={`Slide ${idx + 1}`} className="w-full h-16 object-cover rounded-md" />
+                      <button title="Supprimer" aria-label={`Supprimer l'image ${idx + 1}`} onClick={() => removePageMediaImage(pageKey, idx)} className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition">
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setPendingUploadPage(pageKey); pageMediaImageRef.current?.click(); }}
+                  disabled={isUploading || media.images.length >= 5}
+                  className="flex-1 flex flex-col items-center gap-1 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 p-3 text-gray-400 dark:text-gray-500 transition hover:border-[#7A3A50]/40 hover:text-[#7A3A50] disabled:opacity-40"
+                >
+                  {isUploading && pendingUploadPage === pageKey ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  <span className="text-[9px] font-medium">Image ({media.images.length}/5)</span>
+                </button>
+                <button
+                  onClick={() => { setPendingUploadPage(pageKey); pageMediaVideoRef.current?.click(); }}
+                  disabled={isUploading}
+                  className="flex-1 flex flex-col items-center gap-1 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 p-3 text-gray-400 dark:text-gray-500 transition hover:border-[#7A3A50]/40 hover:text-[#7A3A50] disabled:opacity-40"
+                >
+                  <Video className="h-4 w-4" />
+                  <span className="text-[9px] font-medium">Vidéo</span>
+                </button>
+              </div>
+            </>
+          )}
+          <p className="text-[10px] text-gray-400 dark:text-gray-500">
+            {media.images.length > 1 ? "Les images défilent automatiquement (carousel)" : "Ajoutez jusqu'à 5 images (carousel) ou 1 vidéo"}
+          </p>
+        </EditorSection>
+
+        {/* Per-page Theme Override */}
+        <EditorSection title={`Thème de ${label}`} icon={<Palette className="h-3.5 w-3.5 text-[#7A3A50]" />} defaultOpen={false}>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label htmlFor={`theme-bg-${pageKey}`} className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">Fond</label>
+              <input id={`theme-bg-${pageKey}`} title="Couleur de fond" type="color" value={themeOverride?.colorBackground || theme.colors.background} onChange={(e) => updatePageTheme(pageKey, { ...themeOverride, colorBackground: e.target.value })} className="w-full h-8 rounded cursor-pointer border border-gray-200 dark:border-gray-700" />
+            </div>
+            <div>
+              <label htmlFor={`theme-text-${pageKey}`} className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">Texte</label>
+              <input id={`theme-text-${pageKey}`} title="Couleur du texte" type="color" value={themeOverride?.colorText || theme.colors.text} onChange={(e) => updatePageTheme(pageKey, { ...themeOverride, colorText: e.target.value })} className="w-full h-8 rounded cursor-pointer border border-gray-200 dark:border-gray-700" />
+            </div>
+            <div>
+              <label htmlFor={`theme-accent-${pageKey}`} className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">Accent</label>
+              <input id={`theme-accent-${pageKey}`} title="Couleur d'accent" type="color" value={themeOverride?.colorPrimary || theme.colors.primary} onChange={(e) => updatePageTheme(pageKey, { ...themeOverride, colorPrimary: e.target.value })} className="w-full h-8 rounded cursor-pointer border border-gray-200 dark:border-gray-700" />
+            </div>
+          </div>
+          {themeOverride && (
+            <button onClick={() => updatePageTheme(pageKey, null)} className="text-[10px] text-[#7A3A50] hover:underline">
+              Réinitialiser au thème global
+            </button>
+          )}
+        </EditorSection>
+
+        {/* Upload error feedback */}
+        {uploadError && (
+          <div className="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-3 py-2">
+            <span className="text-red-500 text-sm">⚠️</span>
+            <span className="text-xs text-red-600 dark:text-red-400 flex-1">{uploadError}</span>
+            <button onClick={() => setUploadError(null)} className="text-red-400 hover:text-red-600" aria-label="Fermer l'erreur">
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+      </>
+    );
+  }
+
   // ═════════════════════════════════════════════════════════
   // RENDER
   // ═════════════════════════════════════════════════════════
@@ -528,59 +750,8 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                 </div>
               </EditorSection>
 
-              {/* Cover Media */}
-              <div className="grid gap-3 grid-cols-2">
-                <EditorSection title="Image" icon={<ImageIcon className="h-3.5 w-3.5 text-[#7A3A50]" />}>
-                  {coverImage ? (
-                    <div className="relative group">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={coverImage} alt="Cover" className="w-full h-24 object-cover rounded-lg" />
-                      <button
-                        onClick={() => handleRemoveMedia("image")}
-                        className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition"
-                        aria-label="Supprimer l'image"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => imageRef.current?.click()}
-                      disabled={isUploading}
-                      className="flex w-full flex-col items-center gap-1.5 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 p-4 text-gray-400 dark:text-gray-500 transition hover:border-[#7A3A50]/40 hover:text-[#7A3A50]"
-                    >
-                      {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
-                      <span className="text-[10px] font-medium">{isUploading ? "Upload..." : "Choisir"}</span>
-                    </button>
-                  )}
-                  <input ref={imageRef} type="file" accept="image/*" className="hidden" aria-label="Choisir une image" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f, "image"); }} />
-                </EditorSection>
-
-                <EditorSection title="Vidéo" icon={<Video className="h-3.5 w-3.5 text-[#7A3A50]" />}>
-                  {coverVideo ? (
-                    <div className="relative group">
-                      <video src={coverVideo} className="w-full h-24 object-cover rounded-lg" controls />
-                      <button
-                        onClick={() => handleRemoveMedia("video")}
-                        className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition"
-                        aria-label="Supprimer la vidéo"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => videoRef.current?.click()}
-                      disabled={isUploading}
-                      className="flex w-full flex-col items-center gap-1.5 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 p-4 text-gray-400 dark:text-gray-500 transition hover:border-[#7A3A50]/40 hover:text-[#7A3A50]"
-                    >
-                      {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
-                      <span className="text-[10px] font-medium">{isUploading ? "Upload..." : "Choisir"}</span>
-                    </button>
-                  )}
-                  <input ref={videoRef} type="file" accept="video/*" className="hidden" aria-label="Choisir une vidéo" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f, "video"); }} />
-                </EditorSection>
-              </div>
+              {/* ── Per-page Media & Theme ── */}
+              {renderPageMediaEditor("accueil")}
             </>
           )}
 
@@ -594,31 +765,57 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
               >
                 {getModule("MOD_PROGRAMME")?.active && (
                   <div className="space-y-2">
-                    {programmeDays.map((day: { label: string; items: { time: string; title: string; description: string; icon: string }[] }, dayIdx: number) => (
+                    {programmeDays.map((day: { label: string; items: { time: string; title: string; description: string; icon: string; location?: string; address?: string }[] }, dayIdx: number) => (
                       <div key={dayIdx}>
                         <label className="mb-1 block text-[11px] font-medium text-gray-500">
                           {programmeDays.length > 1 ? day.label || `Jour ${dayIdx + 1}` : "Éléments"}
                         </label>
-                        <div className="space-y-1.5">
-                          {(day.items || []).map((item: { time: string; title: string; description: string; icon: string }, itemIdx: number) => (
-                            <div key={itemIdx} className="flex gap-1.5 items-start">
-                              <input
-                                type="text"
-                                value={item.time}
-                                onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "time", e.target.value)}
-                                className={`${inputClass} w-16 text-xs`}
-                                placeholder="14:00"
-                              />
-                              <input
-                                type="text"
-                                value={item.title}
-                                onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "title", e.target.value)}
-                                className={`${inputClass} flex-1 text-xs`}
-                                placeholder="Titre"
-                              />
-                              <button onClick={() => removeProgrammeItem(dayIdx, itemIdx)} className={btnDanger} aria-label="Supprimer cet élément">
-                                <Trash2 className="h-3 w-3" />
-                              </button>
+                        <div className="space-y-2">
+                          {(day.items || []).map((item: { time: string; title: string; description: string; icon: string; location?: string; address?: string }, itemIdx: number) => (
+                            <div key={itemIdx} className="rounded-lg border border-gray-100 dark:border-gray-800 p-2 space-y-1.5">
+                              {/* Row 1: Time + Title + Delete */}
+                              <div className="flex gap-1.5 items-center">
+                                <div className="relative">
+                                  <Clock className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
+                                  <input
+                                    type="text"
+                                    value={item.time}
+                                    onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "time", e.target.value)}
+                                    className={`${inputClass} w-20 text-xs pl-7`}
+                                    placeholder="14:00"
+                                  />
+                                </div>
+                                <input
+                                  type="text"
+                                  value={item.title}
+                                  onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "title", e.target.value)}
+                                  className={`${inputClass} flex-1 text-xs font-medium`}
+                                  placeholder="Ex: Cérémonie religieuse"
+                                />
+                                <button onClick={() => removeProgrammeItem(dayIdx, itemIdx)} className={btnDanger} aria-label="Supprimer cet élément">
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
+                              {/* Row 2: Location + Address (optional) */}
+                              <div className="flex gap-1.5 items-center">
+                                <div className="relative flex-1">
+                                  <MapPin className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
+                                  <input
+                                    type="text"
+                                    value={item.location || ""}
+                                    onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "location", e.target.value)}
+                                    className={`${inputClass} text-xs pl-7`}
+                                    placeholder="Lieu (optionnel)"
+                                  />
+                                </div>
+                                <input
+                                  type="text"
+                                  value={item.address || ""}
+                                  onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "address", e.target.value)}
+                                  className={`${inputClass} flex-1 text-xs`}
+                                  placeholder="Adresse (optionnel)"
+                                />
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -637,44 +834,145 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                 badge={<ModuleToggle active={getModule("MOD_MENU")?.active ?? false} onToggle={() => toggleModule("MOD_MENU")} />}
               >
                 {getModule("MOD_MENU")?.active && (
-                  <div className="space-y-2">
-                    {menuCourses.map((course: { name: string; items: string[]; icon: string }, courseIdx: number) => (
-                      <div key={courseIdx} className="rounded-lg border border-gray-100 dark:border-gray-800 p-2.5">
-                        <div className="flex gap-1.5 items-center mb-1.5">
-                          <input
-                            type="text"
-                            value={course.name}
-                            onChange={(e) => updateMenuCourse(courseIdx, "name", e.target.value)}
-                            className={`${inputClass} flex-1 text-xs`}
-                            placeholder="Nom du plat"
-                          />
-                          <button onClick={() => removeMenuCourse(courseIdx)} className={btnDanger} aria-label="Supprimer ce plat">
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
-                        <div className="space-y-1 pl-2">
-                          {course.items.map((item: string, itemIdx: number) => (
+                  <div className="space-y-3">
+                    {/* Tip: multiple menu sections */}
+                    {allProgrammeItems.length > 1 && menuSections.length <= 1 && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-2.5 py-1.5">
+                        💡 Vous avez plusieurs programmes — vous pouvez créer un menu différent pour chacun.
+                      </p>
+                    )}
+
+                    {menuSections.length > 0 ? (
+                      /* ── Multi-section menus ── */
+                      menuSections.map((section: { label: string; programmeRef?: string; courses: { name: string; items: string[]; icon: string }[] }, sectionIdx: number) => (
+                        <div key={sectionIdx} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 p-2.5 space-y-2">
+                          {/* Section header */}
+                          <div className="flex gap-1.5 items-center">
                             <input
-                              key={itemIdx}
                               type="text"
-                              value={item}
-                              onChange={(e) => updateMenuItem(courseIdx, itemIdx, e.target.value)}
-                              className={`${inputClass} text-xs`}
-                              placeholder={`Élément ${itemIdx + 1}`}
+                              value={section.label || ""}
+                              onChange={(e) => updateMenuSectionLabel(sectionIdx, "label", e.target.value)}
+                              className={`${inputClass} flex-1 text-xs font-semibold`}
+                              placeholder={menuSections.length > 1 ? `Menu ${sectionIdx + 1} (ex: Cocktail)` : "Titre du menu (optionnel)"}
                             />
+                            {menuSections.length > 1 && (
+                              <button onClick={() => removeMenuSection(sectionIdx)} className={btnDanger} aria-label="Supprimer ce menu">
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Link to programme item */}
+                          {allProgrammeItems.length > 1 && (
+                            <select
+                              value={section.programmeRef || ""}
+                              onChange={(e) => updateMenuSectionLabel(sectionIdx, "programmeRef", e.target.value)}
+                              className={`${inputClass} text-[11px]`}
+                              aria-label="Lier au programme"
+                            >
+                              <option value="">Lié à tout le programme</option>
+                              {allProgrammeItems.map((pi: { time: string; title: string }, piIdx: number) => (
+                                <option key={piIdx} value={pi.title}>{pi.time} — {pi.title}</option>
+                              ))}
+                            </select>
+                          )}
+
+                          {/* Courses in this section */}
+                          {section.courses.map((course: { name: string; items: string[]; icon: string }, courseIdx: number) => (
+                            <div key={courseIdx} className="rounded-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-2">
+                              <div className="flex gap-1.5 items-center mb-1">
+                                <input
+                                  type="text"
+                                  value={course.name}
+                                  onChange={(e) => updateMenuCourseInSection(sectionIdx, courseIdx, "name", e.target.value)}
+                                  className={`${inputClass} flex-1 text-xs`}
+                                  placeholder="Nom du plat"
+                                />
+                                <button onClick={() => removeMenuCourseInSection(sectionIdx, courseIdx)} className={btnDanger} aria-label="Supprimer ce plat">
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
+                              <div className="space-y-1 pl-2">
+                                {course.items.map((item: string, itemIdx: number) => (
+                                  <input
+                                    key={itemIdx}
+                                    type="text"
+                                    value={item}
+                                    onChange={(e) => updateMenuItemInSection(sectionIdx, courseIdx, itemIdx, e.target.value)}
+                                    className={`${inputClass} text-xs`}
+                                    placeholder={`Élément ${itemIdx + 1}`}
+                                  />
+                                ))}
+                                <button onClick={() => addMenuItemInSection(sectionIdx, courseIdx)} className="text-[10px] text-[#7A3A50] dark:text-[#C48B90] hover:underline">
+                                  + Élément
+                                </button>
+                              </div>
+                            </div>
                           ))}
-                          <button onClick={() => addMenuItem(courseIdx)} className="text-[10px] text-[#7A3A50] dark:text-[#C48B90] hover:underline">
-                            + Élément
+                          <button onClick={() => addMenuCourseInSection(sectionIdx)} className={`${btnSecondary} text-[10px]`}>
+                            <Plus className="h-3 w-3" /> Ajouter un plat
                           </button>
                         </div>
-                      </div>
-                    ))}
-                    <button onClick={addMenuCourse} className={`${btnSecondary} text-[11px]`}>
-                      <Plus className="h-3 w-3" /> Ajouter un plat
-                    </button>
+                      ))
+                    ) : (
+                      /* ── Legacy flat menu (no sections yet) ── */
+                      menuCourses.map((course: { name: string; items: string[]; icon: string }, courseIdx: number) => (
+                        <div key={courseIdx} className="rounded-lg border border-gray-100 dark:border-gray-800 p-2.5">
+                          <div className="flex gap-1.5 items-center mb-1.5">
+                            <input
+                              type="text"
+                              value={course.name}
+                              onChange={(e) => updateMenuCourse(courseIdx, "name", e.target.value)}
+                              className={`${inputClass} flex-1 text-xs`}
+                              placeholder="Nom du plat"
+                            />
+                            <button onClick={() => removeMenuCourse(courseIdx)} className={btnDanger} aria-label="Supprimer ce plat">
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
+                          <div className="space-y-1 pl-2">
+                            {course.items.map((item: string, itemIdx: number) => (
+                              <input
+                                key={itemIdx}
+                                type="text"
+                                value={item}
+                                onChange={(e) => updateMenuItem(courseIdx, itemIdx, e.target.value)}
+                                className={`${inputClass} text-xs`}
+                                placeholder={`Élément ${itemIdx + 1}`}
+                              />
+                            ))}
+                            <button onClick={() => addMenuItem(courseIdx)} className="text-[10px] text-[#7A3A50] dark:text-[#C48B90] hover:underline">
+                              + Élément
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+
+                    <div className="flex gap-2">
+                      {menuSections.length > 0 ? (
+                        <button onClick={addMenuSection} className={`${btnSecondary} text-[11px]`}>
+                          <Plus className="h-3 w-3" /> Ajouter un type de menu
+                        </button>
+                      ) : (
+                        <>
+                          <button onClick={addMenuCourse} className={`${btnSecondary} text-[11px]`}>
+                            <Plus className="h-3 w-3" /> Ajouter un plat
+                          </button>
+                          {allProgrammeItems.length > 1 && (
+                            <button onClick={addMenuSection} className={`${btnSecondary} text-[11px] text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-700`}>
+                              <Plus className="h-3 w-3" /> Menu par programme
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
               </EditorSection>
+
+              {/* ── Per-page Media & Theme ── */}
+              {renderPageMediaEditor("evenement")}
             </>
           )}
 
@@ -777,6 +1075,9 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                   </div>
                 )}
               </EditorSection>
+
+              {/* ── Per-page Media & Theme ── */}
+              {renderPageMediaEditor("infos")}
             </>
           )}
 
@@ -803,6 +1104,9 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                 </p>
               </EditorSection>
 
+              {/* ── Per-page Media & Theme ── */}
+              {renderPageMediaEditor("rsvp")}
+
               <div className="grid gap-3 grid-cols-2">
                 <Link
                   href={`/events/${event.id}/theme`}
@@ -810,7 +1114,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                 >
                   <span className="text-lg">🎨</span>
                   <div className="min-w-0">
-                    <h4 className="text-xs font-semibold text-gray-900 dark:text-white truncate">Thème</h4>
+                    <h4 className="text-xs font-semibold text-gray-900 dark:text-white truncate">Thème global</h4>
                     <p className="text-[10px] text-gray-500 dark:text-gray-400">Couleurs, polices</p>
                   </div>
                 </Link>
@@ -829,6 +1133,32 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
           )}
         </div>
       </div>
+
+      {/* Hidden file inputs for per-page media uploads */}
+      <input
+        ref={pageMediaImageRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        aria-label="Choisir une image de page"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f && pendingUploadPage) handlePageMediaUpload(f, "image", pendingUploadPage);
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={pageMediaVideoRef}
+        type="file"
+        accept="video/*"
+        className="hidden"
+        aria-label="Choisir une vidéo de page"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f && pendingUploadPage) handlePageMediaUpload(f, "video", pendingUploadPage);
+          e.target.value = "";
+        }}
+      />
 
       {/* ═══════════ RIGHT: Live Mobile Preview ═══════════ */}
       <div
@@ -857,12 +1187,11 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
           <DevicePreviewFrame device={selectedDevice} scale={previewScale}>
             <InvitationCard
               event={previewEventData}
-              theme={theme}
+              theme={{ ...theme, pageMedia, pageThemes }}
               activeModules={activeModuleTypes}
               modulesData={modulesData}
               chatMessages={[]}
               guestInfo={null}
-              // @ts-expect-error custom prop for preview page sync
               initialPage={previewPage}
             />
           </DevicePreviewFrame>

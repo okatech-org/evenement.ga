@@ -192,6 +192,8 @@ export default async function PublicEventPage({
           ambientEffect,
           ambientIntensity,
           scrollReveal,
+          pageMedia: (event.theme?.pageMedia as Record<string, unknown>) || {},
+          pageThemes: (event.theme?.pageThemes as Record<string, unknown>) || {},
           colors: {
             primary: themeData.colorPrimary,
             secondary: themeData.colorSecondary,

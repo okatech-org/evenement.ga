@@ -8,6 +8,14 @@ import type { GuestStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({ params }: { params: { id: string } }) {
+  const event = await prisma.event.findUnique({
+    where: { id: params.id },
+    select: { title: true },
+  });
+  return { title: event ? `Invités — ${event.title} | EventFlow` : "Invités | EventFlow" };
+}
+
 export default async function EventGuestsPage({
   params,
 }: {

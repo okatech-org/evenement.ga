@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
@@ -6,6 +7,14 @@ import { generateThemeCSS } from "@/lib/themes/presets";
 import { EventEditClient } from "@/components/admin/event-edit-client";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: { id: string } }) {
+  const event = await prisma.event.findUnique({
+    where: { id: params.id },
+    select: { title: true },
+  });
+  return { title: event ? `${event.title} — Modifier | EventFlow` : "Modifier l'événement | EventFlow" };
+}
 
 export default async function EventEditPage({
   params,
@@ -66,6 +75,8 @@ export default async function EventEditPage({
     ambientEffect: event.theme?.ambientEffect ?? preset.ambientEffect,
     ambientIntensity: event.theme?.ambientIntensity ?? preset.ambientIntensity,
     scrollReveal: event.theme?.scrollReveal || preset.scrollReveal,
+    pageMedia: (event.theme?.pageMedia as Record<string, unknown>) || {},
+    pageThemes: (event.theme?.pageThemes as Record<string, unknown>) || {},
     colors: {
       primary: themeColors.colorPrimary,
       secondary: themeColors.colorSecondary,
@@ -79,6 +90,7 @@ export default async function EventEditPage({
   };
 
   return (
+    <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin h-8 w-8 border-4 border-gray-300 border-t-gray-600 rounded-full" /></div>}>
     <EventEditClient
       event={{
         ...event,
@@ -96,5 +108,6 @@ export default async function EventEditPage({
       }}
       theme={themeData}
     />
+    </Suspense>
   );
 }

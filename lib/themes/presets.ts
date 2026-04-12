@@ -220,6 +220,15 @@ export function generateThemeCSS(theme: {
     "--theme-border": hexToHSL(theme.colorBorder),
     "--font-display": theme.fontDisplay,
     "--font-body": theme.fontBody,
+    // Raw hex values for direct CSS usage
+    "--color-primary": theme.colorPrimary,
+    "--color-secondary": theme.colorSecondary,
+    "--color-accent": theme.colorAccent,
+    "--color-background": theme.colorBackground,
+    "--color-text": theme.colorText,
+    "--color-surface": theme.colorSurface,
+    "--color-muted": theme.colorMuted,
+    "--color-border": theme.colorBorder,
   };
 }
 

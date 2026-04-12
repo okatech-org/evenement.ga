@@ -89,7 +89,7 @@ export async function POST(
 ) {
   // Rate limiting: 20 messages par IP par 5 minutes
   const ip = getClientIp(request);
-  const rl = rateLimit(`chat:${ip}`, 20, 5 * 60 * 1000);
+  const rl = await rateLimit(`chat:${ip}`, 20, 5 * 60 * 1000);
   if (!rl.allowed) {
     return NextResponse.json(
       { success: false, error: "Trop de messages. Réessayez dans quelques minutes." },

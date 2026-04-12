@@ -3,9 +3,20 @@ import { Resend } from "resend";
 // ─── Configuration ──────────────────────────────────
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
-// Use custom domain if verified, otherwise Resend's onboarding address
-// Change this to "EventFlow <noreply@evenement.ga>" once domain is verified in Resend
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "EventFlow <onboarding@resend.dev>";
+// Adresse d'envoi — DOIT etre configuree en production
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL;
+
+function getFromEmail(): string {
+  if (!FROM_EMAIL) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "RESEND_FROM_EMAIL is not configured. Email sending requires a verified sender domain."
+      );
+    }
+    return "EventFlow <onboarding@resend.dev>";
+  }
+  return FROM_EMAIL;
+}
 
 // Lazy-init to avoid crash at import time if key is missing
 let _resend: Resend | null = null;
@@ -150,7 +161,7 @@ export async function sendInvitationEmail({
   const resend = getResend();
 
   const { data, error } = await resend.emails.send({
-    from: FROM_EMAIL,
+    from: getFromEmail(),
     to,
     subject: `🎉 ${safeTitle} — Votre invitation personnalisée`,
     html,
@@ -270,7 +281,7 @@ export async function sendRSVPConfirmationEmail({
   const resend = getResend();
 
   const { data, error } = await resend.emails.send({
-    from: FROM_EMAIL,
+    from: getFromEmail(),
     to,
     subject: `Confirmation — ${safeTitle}`,
     html,
@@ -339,7 +350,7 @@ export async function sendEventNotificationEmail({
 </html>`;
 
   const resend = getResend();
-  const { data, error } = await resend.emails.send({ from: FROM_EMAIL, to, subject, html });
+  const { data, error } = await resend.emails.send({ from: getFromEmail(), to, subject, html });
 
   if (error) {
     console.error("Resend notification error:", JSON.stringify(error));

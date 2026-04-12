@@ -246,7 +246,7 @@ export default function OnboardingPage() {
                   required
                   value={data.title}
                   onChange={(e) => setData((prev) => ({ ...prev, title: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
                   placeholder={
                     data.eventType === "MARIAGE"
                       ? "Mariage de Marie & Jean"
@@ -284,13 +284,15 @@ export default function OnboardingPage() {
                         required
                         value={date}
                         onChange={(e) => updateDate(i, e.target.value)}
-                        className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                        className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                        aria-label={`Date du jour ${i + 1}`}
                       />
                       {data.dates.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeDate(i)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                          aria-label={`Supprimer le jour ${i + 1}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -332,6 +334,7 @@ export default function OnboardingPage() {
                           type="button"
                           onClick={() => removeVenue(i)}
                           className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                          aria-label={`Supprimer le lieu ${i + 1}`}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -347,7 +350,7 @@ export default function OnboardingPage() {
                         required
                         value={venue.name}
                         onChange={(e) => updateVenue(i, "name", e.target.value)}
-                        className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                        className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
                         placeholder="Nom du lieu (ex: Château de Versailles)"
                       />
 
@@ -357,7 +360,7 @@ export default function OnboardingPage() {
                         required
                         value={venue.address}
                         onChange={(e) => updateVenue(i, "address", e.target.value)}
-                        className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                        className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
                         placeholder="Adresse complète"
                       />
 
@@ -372,7 +375,8 @@ export default function OnboardingPage() {
                             <select
                               value={venue.date}
                               onChange={(e) => updateVenue(i, "date", e.target.value)}
-                              className="w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-sm outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                              className="w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-sm text-gray-900 outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                              aria-label={`Jour pour le lieu ${i + 1}`}
                             >
                               <option value="">Choisir</option>
                               {validDates.map((d, j) => (
@@ -387,6 +391,7 @@ export default function OnboardingPage() {
                               readOnly
                               value={validDates[0] ? new Date(validDates[0] + "T00:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "—"}
                               className="w-full rounded-lg border border-gray-200 bg-gray-100 px-2 py-2 text-sm text-gray-500"
+                              aria-label="Jour de l'événement"
                             />
                           )}
                         </div>
@@ -401,7 +406,8 @@ export default function OnboardingPage() {
                             required
                             value={venue.startTime}
                             onChange={(e) => updateVenue(i, "startTime", e.target.value)}
-                            className="w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-sm outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                            className="w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-sm text-gray-900 outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                            aria-label={`Heure de début du lieu ${i + 1}`}
                           />
                         </div>
 
@@ -414,7 +420,8 @@ export default function OnboardingPage() {
                             type="time"
                             value={venue.endTime}
                             onChange={(e) => updateVenue(i, "endTime", e.target.value)}
-                            className="w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-sm outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                            className="w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-sm text-gray-900 outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                            aria-label={`Heure de fin du lieu ${i + 1}`}
                           />
                         </div>
                       </div>

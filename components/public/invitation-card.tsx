@@ -1,11 +1,45 @@
 "use client";
 
-import { useEffect, useState, useCallback, type CSSProperties } from "react";
+import { useEffect, useState, useCallback, useRef, type CSSProperties } from "react";
 import { AmbientEffect } from "@/components/effects/ambient-effect";
 import { RsvpForm } from "@/components/public/rsvp-form";
 import { ChatBubble } from "@/components/public/chat-bubble";
 import "@/public/effects/entry-effects.css";
 import "@/public/effects/ambient-effects.css";
+import "@/public/effects/invitation-card.css";
+
+// ─── Types pour les configs de modules ─────────────────
+interface ProgrammeDay {
+  label?: string;
+  date?: string;
+  items?: Array<{ time?: string; title?: string; description?: string; icon?: string }>;
+  steps?: Array<{ time?: string; title?: string; description?: string; icon?: string }>;
+  events?: Array<{ time?: string; title?: string; description?: string; icon?: string }>;
+}
+interface ProgrammeConfig {
+  days?: ProgrammeDay[];
+  programme?: ProgrammeDay[];
+}
+
+interface MenuCourse { name?: string; description?: string; items?: string[] }
+interface MenuSection { label?: string; programmeRef?: string; courses?: MenuCourse[]; description?: string; items?: string[] }
+interface MenuConfig {
+  courses?: MenuCourse[];
+  sections?: MenuSection[];
+  menu?: MenuCourse[];
+}
+
+interface LogisticsSection { title?: string; icon?: string; description?: string; items?: string[] }
+interface LogisticsConfig {
+  sections?: LogisticsSection[];
+  logistics?: LogisticsSection[];
+  items?: LogisticsSection[];
+}
+
+interface GalleryPhoto { url: string; caption?: string }
+interface GalleryConfig {
+  photos?: GalleryPhoto[];
+}
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -50,6 +84,8 @@ interface InvitationCardProps {
     ambientEffect: string | null;
     ambientIntensity: number;
     scrollReveal: string;
+    pageMedia?: Record<string, unknown>;
+    pageThemes?: Record<string, unknown>;
     colors: {
       primary: string;
       secondary: string;
@@ -65,6 +101,7 @@ interface InvitationCardProps {
   modulesData: ModulesData;
   chatMessages: { id: string; senderName: string; senderRole: string; text: string; reactions: Record<string, string[]>; replyTo: { id: string; senderName: string; content: string } | null; sentAt: string }[];
   guestInfo?: GuestInfo | null;
+  initialPage?: number;
 }
 
 interface PageDef {
@@ -75,7 +112,7 @@ interface PageDef {
 
 // ─── Countdown ──────────────────────────────────────────────
 
-function Countdown({ targetDate, colors }: { targetDate: string; colors: InvitationCardProps["theme"]["colors"] }) {
+function Countdown({ targetDate }: { targetDate: string; colors: InvitationCardProps["theme"]["colors"] }) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [mounted, setMounted] = useState(false);
 
@@ -97,12 +134,22 @@ function Countdown({ targetDate, colors }: { targetDate: string; colors: Invitat
     return () => clearInterval(timer);
   }, [targetDate]);
 
-  if (!mounted) return null;
+  if (!mounted) {
+    return (
+      <div className="flex justify-center gap-3 sm:gap-5" suppressHydrationWarning>
+        {["--", "--", "--", "--"].map((v, i) => (
+          <div key={i} className="flex flex-col items-center">
+            <span className="text-xl sm:text-3xl font-bold inv-font-display inv-color-accent tabular-nums">{v}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   const isPast = new Date(targetDate).getTime() <= Date.now();
   if (isPast) {
     return (
-      <p className="text-base font-medium" style={{ fontFamily: "var(--font-display)", color: colors.muted }}>
+      <p className="text-base font-medium inv-font-display inv-color-muted">
         L&apos;événement a eu lieu
       </p>
     );
@@ -118,16 +165,12 @@ function Countdown({ targetDate, colors }: { targetDate: string; colors: Invitat
       ].map(({ value, label }) => (
         <div
           key={label}
-          className="flex flex-col items-center rounded-xl px-3 py-2"
-          style={{ backgroundColor: colors.primary + "10" }}
+          className="flex flex-col items-center rounded-xl px-3 py-2 inv-countdown-box"
         >
-          <span
-            className="text-2xl sm:text-3xl font-bold tabular-nums"
-            style={{ fontFamily: "var(--font-display)", color: colors.primary }}
-          >
+          <span className="text-2xl sm:text-3xl font-bold tabular-nums inv-countdown-value">
             {String(value).padStart(2, "0")}
           </span>
-          <span className="mt-0.5 text-[10px] uppercase tracking-widest" style={{ color: colors.muted }}>
+          <span className="mt-0.5 text-[10px] uppercase tracking-widest inv-color-muted">
             {label}
           </span>
         </div>
@@ -136,24 +179,75 @@ function Countdown({ targetDate, colors }: { targetDate: string; colors: Invitat
   );
 }
 
+// ─── Per-page Background (Carousel / Video) ────────────────
+
+function PageBackground({ pageId, theme }: { pageId: string; theme: InvitationCardProps["theme"] }) {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const pageMediaData = theme.pageMedia?.[pageId] as { images?: string[]; video?: string | null } | undefined;
+  const images = pageMediaData?.images || [];
+  const video = pageMediaData?.video || null;
+
+  // Auto-rotate carousel
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentSlide(prev => (prev + 1) % images.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [images.length]);
+
+  if (video) {
+    return (
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <video src={video} autoPlay loop muted playsInline className="absolute top-1/2 left-1/2 min-w-full min-h-full object-cover" style={{ transform: "translate(-50%, -50%)" }} />
+        <div className="absolute inset-0 inv-cover-gradient" />
+      </div>
+    );
+  }
+
+  if (images.length > 0) {
+    return (
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        {images.map((url, idx) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={idx}
+            src={url}
+            alt=""
+            className="absolute top-1/2 left-1/2 min-w-full min-h-full object-cover"
+            style={{
+              transform: "translate(-50%, -50%)",
+              opacity: idx === currentSlide ? 1 : 0,
+              transition: "opacity 1s ease-in-out",
+            }}
+          />
+        ))}
+        <div className="absolute inset-0 inv-cover-gradient" />
+      </div>
+    );
+  }
+
+  return null;
+}
+
 // ─── Programme Section ──────────────────────────────────────
 
 function ProgrammeContent({
   config,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   colors,
-  fontDisplay,
 }: {
   config: Record<string, unknown>;
   colors: InvitationCardProps["theme"]["colors"];
   fontDisplay: string;
 }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const programme = config as any;
+  const programme = config as ProgrammeConfig;
   const days = programme?.days || programme?.programme || [];
   const [activeDay, setActiveDay] = useState(0);
 
   if (!Array.isArray(days) || days.length === 0) {
-    return <p style={{ color: colors.muted }}>Programme à venir...</p>;
+    return <p className="inv-color-muted">Programme à venir...</p>;
   }
 
   const currentDay = days[activeDay];
@@ -168,12 +262,7 @@ function ProgrammeContent({
             <button
               key={i}
               onClick={() => setActiveDay(i)}
-              className="px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-medium transition-all"
-              style={{
-                backgroundColor: activeDay === i ? colors.primary : colors.surface,
-                color: activeDay === i ? "#fff" : colors.text,
-                border: `1px solid ${activeDay === i ? colors.primary : colors.border}`,
-              }}
+              className={`px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-medium transition-all ${activeDay === i ? "inv-tab-active" : "inv-tab-inactive"}`}
             >
               {day.label || day.date || `Jour ${i + 1}`}
             </button>
@@ -183,33 +272,36 @@ function ProgrammeContent({
 
       {/* Timeline */}
       <div className="space-y-0 flex-1 min-h-0 overflow-hidden">
-        {items.map((item: { time?: string; title?: string; description?: string; icon?: string }, idx: number) => (
+        {items.map((item: { time?: string; title?: string; description?: string; icon?: string; location?: string; address?: string }, idx: number) => (
           <div key={idx} className="flex gap-2 sm:gap-3 items-start">
             <div className="flex flex-col items-center w-12 sm:w-14 shrink-0">
-              <span className="text-[10px] sm:text-[11px] font-semibold tabular-nums" style={{ color: colors.primary }}>
+              <span className="text-[10px] sm:text-[11px] font-semibold tabular-nums inv-color-primary">
                 {item.time || "—"}
               </span>
               {idx < items.length - 1 && (
-                <div
-                  className="w-px flex-1 min-h-[16px] sm:min-h-[24px] mt-0.5"
-                  style={{ backgroundColor: colors.border }}
-                />
+                <div className="w-px flex-1 min-h-[16px] sm:min-h-[24px] mt-0.5 inv-timeline-connector" />
               )}
             </div>
-            <div
-              className="flex-1 rounded-lg p-1.5 sm:p-2.5 mb-1 sm:mb-2"
-              style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}
-            >
+            <div className="flex-1 rounded-lg p-1.5 sm:p-2.5 mb-1 sm:mb-2 inv-surface-card">
               <div className="flex items-center gap-1.5">
                 {item.icon && <span className="text-xs sm:text-sm">{item.icon}</span>}
-                <h4 className="text-xs sm:text-sm font-semibold" style={{ fontFamily: `'${fontDisplay}', serif`, color: colors.text }}>
+                <h4 className="text-xs sm:text-sm font-semibold inv-font-display inv-color-text">
                   {item.title}
                 </h4>
               </div>
               {item.description && (
-                <p className="mt-0.5 text-[10px] sm:text-xs leading-tight line-clamp-1 sm:line-clamp-2" style={{ color: colors.muted }}>
+                <p className="mt-0.5 text-[10px] sm:text-xs leading-tight line-clamp-1 sm:line-clamp-2 inv-color-muted">
                   {item.description}
                 </p>
+              )}
+              {/* Location & Address */}
+              {(item.location || item.address) && (
+                <div className="mt-1 flex items-center gap-1 text-[9px] sm:text-[10px] inv-color-muted">
+                  <span>📍</span>
+                  <span className="truncate">
+                    {item.location}{item.location && item.address ? " — " : ""}{item.address}
+                  </span>
+                </div>
               )}
             </div>
           </div>
@@ -223,40 +315,72 @@ function ProgrammeContent({
 
 function MenuContent({
   config,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   colors,
-  fontDisplay,
 }: {
   config: Record<string, unknown>;
   colors: InvitationCardProps["theme"]["colors"];
   fontDisplay: string;
 }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const menuConfig = config as any;
-  const courses = menuConfig?.courses || menuConfig?.menu || [];
+  const menuConfig = config as MenuConfig;
 
-  if (!Array.isArray(courses) || courses.length === 0) {
-    return <p style={{ color: colors.muted }}>Menu à venir...</p>;
+  // Support both flat courses and multi-section menus
+  const sections = menuConfig?.sections || null;
+  const flatCourses = menuConfig?.courses || menuConfig?.menu || [];
+  const hasMultipleSections = Array.isArray(sections) && sections.length > 1;
+  const [activeSection, setActiveSection] = useState(0);
+
+  // Determine which courses to render
+  const coursesToRender = hasMultipleSections
+    ? (sections[activeSection]?.courses || [])
+    : Array.isArray(sections) && sections.length === 1
+      ? (sections[0]?.courses || flatCourses)
+      : flatCourses;
+
+  if (
+    (!Array.isArray(coursesToRender) || coursesToRender.length === 0) &&
+    (!Array.isArray(sections) || sections.length === 0)
+  ) {
+    return <p className="inv-color-muted">Menu à venir...</p>;
   }
 
   return (
     <div className="w-full space-y-1.5 sm:space-y-3 overflow-hidden">
-      {courses.map((course: { name?: string; items?: string[]; icon?: string }, idx: number) => (
+      {/* Section tabs (if multiple menu types) */}
+      {hasMultipleSections && (
+        <div className="flex gap-2 mb-1 sm:mb-2 justify-center flex-wrap">
+          {sections.map((s: { label?: string; programmeRef?: string }, i: number) => (
+            <button
+              key={i}
+              onClick={() => setActiveSection(i)}
+              className={`px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-medium transition-all ${activeSection === i ? "inv-tab-active" : "inv-tab-inactive"}`}
+            >
+              {s.label || s.programmeRef || `Menu ${i + 1}`}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Single section label (if one section with label) */}
+      {Array.isArray(sections) && sections.length === 1 && sections[0]?.label && (
+        <p className="text-center text-[10px] sm:text-xs font-medium inv-color-muted">
+          {sections[0].label}
+        </p>
+      )}
+
+      {coursesToRender.map((course: { name?: string; items?: string[]; icon?: string }, idx: number) => (
         <div
           key={idx}
-          className="rounded-lg p-2 sm:p-3"
-          style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}
+          className="rounded-lg p-2 sm:p-3 inv-surface-card"
         >
-          <h4
-            className="text-xs sm:text-sm font-semibold mb-1"
-            style={{ fontFamily: `'${fontDisplay}', serif`, color: colors.primary }}
-          >
+          <h4 className="text-xs sm:text-sm font-semibold mb-1 inv-font-display inv-color-primary">
             {course.icon || "🍽️"} {course.name}
           </h4>
           {course.items && (
             <ul className="space-y-0.5">
               {course.items.map((item: string, i: number) => (
-                <li key={i} className="text-[10px] sm:text-xs flex items-center gap-1.5" style={{ color: colors.text }}>
-                  <span className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: colors.accent }} />
+                <li key={i} className="text-[10px] sm:text-xs flex items-center gap-1.5 inv-color-text">
+                  <span className="w-1 h-1 rounded-full shrink-0 inv-dot" />
                   {item}
                 </li>
               ))}
@@ -272,19 +396,18 @@ function MenuContent({
 
 function LogisticsContent({
   config,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   colors,
-  fontDisplay,
 }: {
   config: Record<string, unknown>;
   colors: InvitationCardProps["theme"]["colors"];
   fontDisplay: string;
 }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const logConfig = config as any;
+  const logConfig = config as LogisticsConfig;
   const sections = logConfig?.sections || logConfig?.logistics || logConfig?.items || [];
 
   if (!Array.isArray(sections) || sections.length === 0) {
-    return <p style={{ color: colors.muted }}>Informations à venir...</p>;
+    return <p className="inv-color-muted">Informations à venir...</p>;
   }
 
   return (
@@ -292,25 +415,21 @@ function LogisticsContent({
       {sections.map((section: { title?: string; description?: string; items?: string[]; icon?: string }, idx: number) => (
         <div
           key={idx}
-          className="rounded-lg p-2 sm:p-3"
-          style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}
+          className="rounded-lg p-2 sm:p-3 inv-surface-card"
         >
-          <h4
-            className="text-xs sm:text-sm font-semibold mb-1"
-            style={{ fontFamily: `'${fontDisplay}', serif`, color: colors.primary }}
-          >
+          <h4 className="text-xs sm:text-sm font-semibold mb-1 inv-font-display inv-color-primary">
             {section.icon || "📍"} {section.title}
           </h4>
           {section.description && (
-            <p className="text-[10px] sm:text-xs leading-tight line-clamp-2" style={{ color: colors.text }}>
+            <p className="text-[10px] sm:text-xs leading-tight line-clamp-2 inv-color-text">
               {section.description}
             </p>
           )}
           {section.items && (
             <ul className="mt-1 space-y-0.5">
               {section.items.map((item: string, i: number) => (
-                <li key={i} className="text-[10px] sm:text-xs flex items-center gap-1.5" style={{ color: colors.muted }}>
-                  <span className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: colors.accent }} />
+                <li key={i} className="text-[10px] sm:text-xs flex items-center gap-1.5 inv-color-muted">
+                  <span className="w-1 h-1 rounded-full shrink-0 inv-dot" />
                   {item}
                 </li>
               ))}
@@ -326,29 +445,28 @@ function LogisticsContent({
 
 function GalleryContent({
   config,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   colors,
 }: {
   config: Record<string, unknown>;
   colors: InvitationCardProps["theme"]["colors"];
 }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const galConfig = config as any;
+  const galConfig = config as GalleryConfig;
   const photos = galConfig?.photos || [];
   const [selected, setSelected] = useState<number | null>(null);
 
   if (!Array.isArray(photos) || photos.length === 0) {
-    return <p style={{ color: colors.muted }}>Galerie à venir...</p>;
+    return <p className="inv-color-muted">Galerie à venir...</p>;
   }
 
   return (
     <div className="w-full h-full min-h-0 overflow-hidden">
-      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 h-full" style={{ gridAutoRows: "1fr" }}>
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 h-full inv-gallery-grid">
         {photos.map((photo: { url?: string; caption?: string }, i: number) => (
           <button
             key={i}
             onClick={() => setSelected(selected === i ? null : i)}
-            className="relative overflow-hidden rounded-lg transition-all hover:scale-[1.02] min-h-0"
-            style={{ border: `2px solid ${selected === i ? colors.primary : "transparent"}` }}
+            className={`relative overflow-hidden rounded-lg transition-all hover:scale-[1.02] min-h-0 ${selected === i ? "inv-gallery-selected" : "inv-gallery-unselected"}`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -358,11 +476,7 @@ function GalleryContent({
             />
             {photo.caption && selected === i && (
               <div
-                className="absolute inset-x-0 bottom-0 px-2 py-1 text-[10px]"
-                style={{
-                  background: `linear-gradient(transparent, ${colors.background})`,
-                  color: colors.text,
-                }}
+                className="absolute inset-x-0 bottom-0 px-2 py-1 text-[10px] inv-color-text inv-gallery-caption"
               >
                 {photo.caption}
               </div>
@@ -376,25 +490,48 @@ function GalleryContent({
 
 // ─── Section Divider ────────────────────────────────────────
 
-function SectionDivider({ colors, compact = false }: { colors: InvitationCardProps["theme"]["colors"]; compact?: boolean }) {
+function SectionDivider({ compact = false }: { colors: InvitationCardProps["theme"]["colors"]; compact?: boolean }) {
   return (
     <div className={`flex items-center gap-3 shrink-0 ${compact ? "my-2 sm:my-3" : "my-6"}`}>
-      <div className="flex-1 h-px" style={{ backgroundColor: colors.border }} />
-      <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: colors.accent }} />
-      <div className="flex-1 h-px" style={{ backgroundColor: colors.border }} />
+      <div className="flex-1 h-px inv-bg-border" />
+      <div className="h-1.5 w-1.5 rounded-full inv-dot" />
+      <div className="flex-1 h-px inv-bg-border" />
     </div>
   );
 }
 
 // ─── Main InvitationCard ────────────────────────────────────
 
-export function InvitationCard({ event, theme, activeModules, modulesData, chatMessages, guestInfo }: InvitationCardProps) {
-  const [currentPage, setCurrentPage] = useState(0);
+export function InvitationCard({ event, theme, activeModules, modulesData, chatMessages, guestInfo, initialPage }: InvitationCardProps) {
+  const [currentPage, setCurrentPage] = useState(initialPage ?? 0);
   const [isEntryComplete, setIsEntryComplete] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Sync preview page from editor
+  useEffect(() => {
+    if (initialPage !== undefined && initialPage !== currentPage) {
+      setCurrentPage(initialPage);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPage]);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsEntryComplete(true), 2500);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Remove entry animation class after it completes to prevent CSS filter from
+  // creating a containing block that traps fixed-positioned elements (chat panel)
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const handleEnd = () => {
+      el.style.filter = "none";
+      // Remove the entry-* class
+      el.className = el.className.replace(/entry-[\w-]+/g, "").trim();
+    };
+    el.addEventListener("animationend", handleEnd);
+    return () => el.removeEventListener("animationend", handleEnd);
   }, []);
 
   // Lock html/body scroll
@@ -413,17 +550,28 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
 
   const entryClass = `entry-${theme.entryEffect.replace(/_/g, "-")}`;
 
+  // Formater la date de maniere deterministe pour eviter les hydration mismatches
   const eventDate = new Date(event.date);
-  const formattedDate = eventDate.toLocaleDateString("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  const formattedTime = eventDate.toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const [formattedDate, setFormattedDate] = useState("");
+  const [formattedTime, setFormattedTime] = useState("");
+
+  useEffect(() => {
+    setFormattedDate(
+      eventDate.toLocaleDateString("fr-FR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    );
+    setFormattedTime(
+      eventDate.toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event.date]);
 
   // ═══ Build 3+1 pages ═══
   const pages: PageDef[] = [
@@ -500,15 +648,12 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
   const currentPageDef = pages[currentPage];
   const hasCoverMedia = event.coverImage || event.coverVideo;
 
+
   return (
     <div
-      className={`h-screen overflow-hidden ${entryClass}`}
-      style={{
-        ...theme.cssVars as unknown as CSSProperties,
-        backgroundColor: theme.colors.background,
-        color: theme.colors.text,
-        fontFamily: `'${theme.fontBody}', sans-serif`,
-      }}
+      ref={rootRef}
+      className={`relative h-screen overflow-hidden inv-root ${entryClass}`}
+      style={theme.cssVars as unknown as CSSProperties}
     >
       {/* Ambient Effects */}
       <AmbientEffect
@@ -527,96 +672,54 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
           {pages.map((page, index) => (
             <div
               key={page.id}
-              className="absolute inset-0 flex flex-col"
-              style={{
-                transition: "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
-                transform: index === currentPage
-                  ? "translateY(0)"
+              className={`absolute inset-0 flex flex-col inv-page-transition ${
+                index === currentPage
+                  ? "inv-page-current"
                   : index < currentPage
-                    ? "translateY(-100%)"
-                    : "translateY(100%)",
-                opacity: index === currentPage ? 1 : 0,
-                pointerEvents: index === currentPage ? "auto" : "none",
-                zIndex: index === currentPage ? 1 : 0,
-              }}
+                    ? "inv-page-before"
+                    : "inv-page-after"
+              }`}
             >
               {/* ═══════════════ PAGE 1 — ACCUEIL ═══════════════ */}
               {page.id === "accueil" && (
                 <div className="h-full relative flex flex-col items-center justify-center">
-                  {/* Cover media background */}
-                  {hasCoverMedia && (
+                  {/* Per-page media background (carousel / video) */}
+                  <PageBackground pageId="accueil" theme={theme} />
+                  {/* Legacy fallback: global cover (only if no per-page media) */}
+                  {!(theme.pageMedia?.accueil as { images?: string[]; video?: string | null } | undefined)?.images?.length && !(theme.pageMedia?.accueil as { images?: string[]; video?: string | null } | undefined)?.video && hasCoverMedia && (
                     <div className="absolute inset-0 z-0 overflow-hidden">
                       {event.coverVideo ? (
-                        <video
-                          src={event.coverVideo}
-                          autoPlay
-                          loop
-                          muted
-                          playsInline
-                          className="absolute top-1/2 left-1/2 min-w-full min-h-full object-cover"
-                          style={{
-                            transform: "translate(-50%, -50%)",
-                            width: "auto",
-                            height: "auto",
-                          }}
-                        />
+                        <video src={event.coverVideo} autoPlay loop muted playsInline className="absolute top-1/2 left-1/2 min-w-full min-h-full object-cover inv-cover-media" />
                       ) : event.coverImage ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={event.coverImage}
-                          alt={event.title}
-                          className="absolute top-1/2 left-1/2 min-w-full min-h-full object-cover"
-                          style={{
-                            transform: "translate(-50%, -50%)",
-                            width: "auto",
-                            height: "auto",
-                          }}
-                        />
+                        <img src={event.coverImage} alt={event.title} className="absolute top-1/2 left-1/2 min-w-full min-h-full object-cover inv-cover-media" />
                       ) : null}
-                      {/* Gradient overlay for text readability */}
-                      <div
-                        className="absolute inset-0"
-                        style={{
-                          background: `linear-gradient(to bottom, ${theme.colors.background}90 0%, ${theme.colors.background}40 30%, ${theme.colors.background}60 70%, ${theme.colors.background}95 100%)`,
-                        }}
-                      />
+                      <div className="absolute inset-0 inv-cover-gradient" />
                     </div>
                   )}
 
                   <div className="relative z-10 text-center max-w-2xl px-6">
-                    <p
-                      className="text-xs sm:text-sm uppercase tracking-[0.3em] mb-4"
-                      style={{ color: theme.colors.muted }}
-                    >
+                    <p className="text-xs sm:text-sm uppercase tracking-[0.3em] mb-4 inv-color-muted">
                       Vous êtes invité(e)
                     </p>
                     {guestInfo && (
-                      <p
-                        className="text-lg sm:text-xl font-semibold mb-6"
-                        style={{ color: theme.colors.accent, fontFamily: `'${theme.fontDisplay}', serif` }}
-                      >
+                      <p className="text-lg sm:text-xl font-semibold mb-6 inv-color-accent inv-font-display">
                         Cher(e) {guestInfo.firstName} {guestInfo.lastName}
                       </p>
                     )}
-                    <h1
-                      className="text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight"
-                      style={{
-                        fontFamily: `'${theme.fontDisplay}', serif`,
-                        color: theme.colors.primary,
-                      }}
-                    >
+                    <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight inv-font-display inv-color-primary">
                       {event.title}
                     </h1>
 
                     <div className="mt-3 sm:mt-6 flex flex-col items-center gap-1 sm:gap-2">
-                      <p className="text-sm sm:text-base" style={{ color: theme.colors.muted }}>
+                      <p className="text-sm sm:text-base inv-color-muted">
                         📅 {formattedDate}
                       </p>
-                      <p className="text-sm sm:text-base" style={{ color: theme.colors.muted }}>
+                      <p className="text-sm sm:text-base inv-color-muted">
                         🕐 {formattedTime}
                       </p>
                       {event.location && (
-                        <p className="text-sm sm:text-base" style={{ color: theme.colors.muted }}>
+                        <p className="text-sm sm:text-base inv-color-muted">
                           📍 {event.location}
                         </p>
                       )}
@@ -630,10 +733,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
                     {event.description && (
                       <>
                         <SectionDivider colors={theme.colors} />
-                        <p
-                          className="text-xs sm:text-sm lg:text-base leading-relaxed max-w-xl mx-auto line-clamp-3 sm:line-clamp-5"
-                          style={{ color: theme.colors.text, lineHeight: 1.8 }}
-                        >
+                        <p className="text-xs sm:text-sm lg:text-base leading-relaxed max-w-xl mx-auto line-clamp-3 sm:line-clamp-5 inv-description">
                           {event.description}
                         </p>
                       </>
@@ -648,7 +748,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
                         <svg className="h-6 w-6 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                         </svg>
-                        <span className="text-[10px] uppercase tracking-widest" style={{ color: theme.colors.muted }}>
+                        <span className="text-[10px] uppercase tracking-widest inv-color-muted">
                           Découvrir
                         </span>
                       </button>
@@ -659,15 +759,13 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
 
               {/* ═══════════════ PAGE 2 — L'ÉVÉNEMENT ═══════════════ */}
               {page.id === "evenement" && (
-                <div className="h-full overflow-hidden flex flex-col items-center px-4 sm:px-6 pt-3 sm:pt-6 pb-[70px]">
-                  <div className="w-full max-w-2xl flex-1 min-h-0 flex flex-col overflow-hidden">
+                <div className="h-full overflow-hidden flex flex-col items-center px-4 sm:px-6 pt-3 sm:pt-6 pb-[70px] relative">
+                  <PageBackground pageId="evenement" theme={theme} />
+                  <div className="w-full max-w-2xl flex-1 min-h-0 flex flex-col overflow-hidden relative z-10">
                     {/* Programme section */}
                     {hasProgramme && modulesData.programme && (
                       <div className={`flex flex-col min-h-0 overflow-hidden ${hasMenu ? "flex-1" : ""}`}>
-                        <h2
-                          className="text-base sm:text-xl font-bold mb-2 sm:mb-3 text-center shrink-0"
-                          style={{ fontFamily: `'${theme.fontDisplay}', serif`, color: theme.colors.primary }}
-                        >
+                        <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-3 text-center shrink-0 inv-section-heading">
                           📋 Programme
                         </h2>
                         <div className="flex-1 min-h-0 overflow-hidden">
@@ -688,10 +786,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
                     {/* Menu section */}
                     {hasMenu && modulesData.menu && (
                       <div className={`flex flex-col min-h-0 overflow-hidden ${hasProgramme ? "flex-1" : ""}`}>
-                        <h2
-                          className="text-base sm:text-xl font-bold mb-2 sm:mb-3 text-center shrink-0"
-                          style={{ fontFamily: `'${theme.fontDisplay}', serif`, color: theme.colors.primary }}
-                        >
+                        <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-3 text-center shrink-0 inv-section-heading">
                           🍽️ Menu
                         </h2>
                         <div className="flex-1 min-h-0 overflow-hidden">
@@ -709,15 +804,13 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
 
               {/* ═══════════════ PAGE 3 — INFOS & MOMENTS ═══════════════ */}
               {page.id === "infos" && (
-                <div className="h-full overflow-hidden flex flex-col items-center px-4 sm:px-6 pt-3 sm:pt-6 pb-[70px]">
-                  <div className="w-full max-w-2xl flex-1 min-h-0 flex flex-col overflow-hidden">
+                <div className="h-full overflow-hidden flex flex-col items-center px-4 sm:px-6 pt-3 sm:pt-6 pb-[70px] relative">
+                  <PageBackground pageId="infos" theme={theme} />
+                  <div className="w-full max-w-2xl flex-1 min-h-0 flex flex-col overflow-hidden relative z-10">
                     {/* Logistics section */}
                     {hasLogistics && modulesData.logistics && (
                       <div className="flex flex-col shrink-0 overflow-hidden">
-                        <h2
-                          className="text-base sm:text-xl font-bold mb-2 sm:mb-3 text-center shrink-0"
-                          style={{ fontFamily: `'${theme.fontDisplay}', serif`, color: theme.colors.primary }}
-                        >
+                        <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-3 text-center shrink-0 inv-section-heading">
                           🚗 Infos pratiques
                         </h2>
                         <div className="overflow-hidden">
@@ -738,10 +831,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
                     {/* Gallery section — prend l'espace restant */}
                     {hasGallery && modulesData.gallery && (
                       <div className="flex flex-col min-h-0 flex-1 overflow-hidden">
-                        <h2
-                          className="text-base sm:text-xl font-bold mb-2 sm:mb-3 text-center shrink-0"
-                          style={{ fontFamily: `'${theme.fontDisplay}', serif`, color: theme.colors.primary }}
-                        >
+                        <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-3 text-center shrink-0 inv-section-heading">
                           📷 Galerie
                         </h2>
                         <div className="flex-1 min-h-0 overflow-hidden">
@@ -755,28 +845,14 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
 
               {/* ═══════════════ PAGE 4 — CONFIRMATION ═══════════════ */}
               {page.id === "rsvp" && (
-                <div className="h-full overflow-hidden flex items-center justify-center px-4 sm:px-6 pt-2 sm:pt-6 pb-[70px]">
-                  <div className="w-full max-w-lg max-h-full overflow-hidden">
-                    <div
-                      className="rounded-2xl p-4 sm:p-6 lg:p-8"
-                      style={{
-                        backgroundColor: theme.colors.surface,
-                        border: `1px solid ${theme.colors.border}`,
-                      }}
-                    >
-                      <h2
-                        className="mb-1 text-center text-lg sm:text-2xl font-bold"
-                        style={{
-                          fontFamily: `'${theme.fontDisplay}', serif`,
-                          color: theme.colors.primary,
-                        }}
-                      >
+                <div className="h-full overflow-hidden flex items-center justify-center px-4 sm:px-6 pt-2 sm:pt-6 pb-[70px] relative">
+                  <PageBackground pageId="rsvp" theme={theme} />
+                  <div className="w-full max-w-lg max-h-full overflow-hidden relative z-10">
+                    <div className="rounded-2xl p-4 sm:p-6 lg:p-8 inv-surface-card">
+                      <h2 className="mb-1 text-center text-lg sm:text-2xl font-bold inv-section-heading">
                         Confirmer votre présence
                       </h2>
-                      <p
-                        className="mb-2 sm:mb-4 text-center text-xs sm:text-sm"
-                        style={{ color: theme.colors.muted }}
-                      >
+                      <p className="mb-2 sm:mb-4 text-center text-xs sm:text-sm inv-color-muted">
                         Nous serions ravis de vous compter parmi nous
                       </p>
                       <RsvpForm
@@ -806,22 +882,10 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
                 title={page.label}
               >
                 <div
-                  className="h-2.5 w-2.5 rounded-full transition-all duration-300"
-                  style={{
-                    backgroundColor: index === currentPage ? theme.colors.primary : theme.colors.border,
-                    transform: index === currentPage ? "scale(1.3)" : "scale(1)",
-                    boxShadow: index === currentPage ? `0 0 8px ${theme.colors.primary}60` : "none",
-                  }}
+                  className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${index === currentPage ? "inv-nav-dot-active" : "inv-nav-dot-inactive"}`}
                 />
                 {/* Label tooltip */}
-                <span
-                  className="absolute left-6 whitespace-nowrap text-[10px] font-medium px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                  style={{
-                    backgroundColor: theme.colors.surface,
-                    color: theme.colors.text,
-                    border: `1px solid ${theme.colors.border}`,
-                  }}
-                >
+                <span className="absolute left-6 whitespace-nowrap text-[10px] font-medium px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none inv-nav-tooltip">
                   {page.icon} {page.label}
                 </span>
               </button>
@@ -832,14 +896,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
         {/* Current page label — bottom center */}
         {isEntryComplete && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30">
-            <div
-              className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium backdrop-blur-sm"
-              style={{
-                backgroundColor: theme.colors.surface + "CC",
-                color: theme.colors.muted,
-                border: `1px solid ${theme.colors.border}`,
-              }}
-            >
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium backdrop-blur-sm inv-bottom-pill">
               <span>{currentPageDef.icon}</span>
               <span>{currentPageDef.label}</span>
               <span className="opacity-50">·</span>
@@ -855,12 +912,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
               <button
                 onClick={goPrev}
                 aria-label="Page précédente"
-                className="fixed bottom-6 left-20 z-30 flex h-10 w-10 items-center justify-center rounded-full transition-all hover:scale-110"
-                style={{
-                  backgroundColor: theme.colors.surface,
-                  color: theme.colors.text,
-                  border: `1px solid ${theme.colors.border}`,
-                }}
+                className="fixed bottom-6 left-20 z-30 flex h-10 w-10 items-center justify-center rounded-full transition-all hover:scale-110 inv-arrow-btn"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -871,12 +923,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
               <button
                 onClick={goNext}
                 aria-label="Page suivante"
-                className="fixed bottom-6 right-20 z-30 flex h-10 w-10 items-center justify-center rounded-full transition-all hover:scale-110"
-                style={{
-                  backgroundColor: theme.colors.surface,
-                  color: theme.colors.text,
-                  border: `1px solid ${theme.colors.border}`,
-                }}
+                className="fixed bottom-6 right-20 z-30 flex h-10 w-10 items-center justify-center rounded-full transition-all hover:scale-110 inv-arrow-btn"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

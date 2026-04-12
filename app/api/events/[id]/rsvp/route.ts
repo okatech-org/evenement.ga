@@ -18,7 +18,7 @@ export async function POST(
 ) {
   // Rate limiting: 10 RSVP par IP par heure
   const ip = getClientIp(request);
-  const rl = rateLimit(`rsvp:${ip}`, 10, 60 * 60 * 1000);
+  const rl = await rateLimit(`rsvp:${ip}`, 10, 60 * 60 * 1000);
   if (!rl.allowed) {
     return NextResponse.json(
       { error: "Trop de soumissions. Réessayez plus tard." },

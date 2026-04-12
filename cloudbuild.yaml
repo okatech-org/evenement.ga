@@ -15,6 +15,13 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     args: ["push", "gcr.io/$PROJECT_ID/eventflow:latest"]
 
+  # Run Prisma database migrations
+  - name: "gcr.io/$PROJECT_ID/eventflow:latest"
+    entrypoint: "npx"
+    args: ["prisma", "migrate", "deploy"]
+    env:
+      - "DATABASE_URL=${_DATABASE_URL}"
+
   # Deploy to Cloud Run
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
@@ -38,9 +45,10 @@ steps:
       - "--max-instances"
       - "3"
       - "--set-env-vars"
-      - "NEXTAUTH_SECRET=${_NEXTAUTH_SECRET},NEXTAUTH_URL=${_NEXTAUTH_URL},NEXT_PUBLIC_CONVEX_URL=${_CONVEX_URL},AUTH_TRUST_HOST=true,GOOGLE_CLIENT_ID=${_GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${_GOOGLE_CLIENT_SECRET},APPLE_CLIENT_ID=${_APPLE_CLIENT_ID},APPLE_CLIENT_SECRET=${_APPLE_CLIENT_SECRET},APPLE_TEAM_ID=${_APPLE_TEAM_ID},APPLE_KEY_ID=${_APPLE_KEY_ID}"
+      - "DATABASE_URL=${_DATABASE_URL},NEXTAUTH_SECRET=${_NEXTAUTH_SECRET},NEXTAUTH_URL=${_NEXTAUTH_URL},NEXT_PUBLIC_CONVEX_URL=${_CONVEX_URL},AUTH_TRUST_HOST=true,RESEND_API_KEY=${_RESEND_API_KEY},GOOGLE_CLIENT_ID=${_GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${_GOOGLE_CLIENT_SECRET},APPLE_CLIENT_ID=${_APPLE_CLIENT_ID},APPLE_CLIENT_SECRET=${_APPLE_CLIENT_SECRET},APPLE_TEAM_ID=${_APPLE_TEAM_ID},APPLE_KEY_ID=${_APPLE_KEY_ID}"
 
 substitutions:
+  _DATABASE_URL: ""
   _CONVEX_URL: ""
   _NEXTAUTH_SECRET: ""
   _NEXTAUTH_URL: ""
@@ -50,6 +58,7 @@ substitutions:
   _APPLE_CLIENT_SECRET: ""
   _APPLE_TEAM_ID: ""
   _APPLE_KEY_ID: ""
+  _RESEND_API_KEY: ""
 
 images:
   - "gcr.io/$PROJECT_ID/eventflow:latest"

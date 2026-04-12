@@ -109,13 +109,19 @@ export function ChatBubble({
     }
   }, [messages.length, isOpen, lastSeenCount]);
 
-  // Poll for new messages
+  // Poll for new messages (optimise : 5s, pause si onglet cache, dedup)
   useEffect(() => {
     if (!isOpen) return;
-    const interval = setInterval(async () => {
+
+    let active = true;
+    let isFetching = false;
+
+    async function poll() {
+      if (!active || isFetching || document.hidden) return;
+      isFetching = true;
       try {
         const res = await fetch(`/api/events/${eventId}/chat`);
-        if (res.ok) {
+        if (res.ok && active) {
           const data = await res.json();
           if (data.success) {
             setMessages(data.data);
@@ -123,8 +129,22 @@ export function ChatBubble({
           }
         }
       } catch { /* silent */ }
-    }, 3000);
-    return () => clearInterval(interval);
+      isFetching = false;
+    }
+
+    const interval = setInterval(poll, 5000);
+
+    // Pauser le polling quand l'onglet est masque
+    function handleVisibility() {
+      if (!document.hidden && active) poll();
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [isOpen, eventId]);
 
   // ─── Send ──────────────────────────────────────
@@ -217,67 +237,54 @@ export function ChatBubble({
       onTouchEnd={stopPropagation}
       onTouchMove={stopPropagation}
       onClick={stopPropagation}
+      className="contents"
     >
-      {/* ═══ Floating Button ═══ */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsOpen(!isOpen);
-        }}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95"
-        style={{
-          backgroundColor: colors.primary,
-          color: "#fff",
-          boxShadow: `0 8px 32px ${colors.primary}60`,
-        }}
-        aria-label="Ouvrir le chat"
-      >
-        {isOpen ? (
+      {/* Floating Button */}
+      {!isOpen && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(true);
+          }}
+          className="fixed bottom-6 right-6 z-[999] flex h-14 w-14 items-center justify-center rounded-full shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95"
+          style={{
+            backgroundColor: colors.primary,
+            color: "#fff",
+            boxShadow: `0 8px 32px ${colors.primary}60`,
+          }}
+          aria-label="Ouvrir le chat"
+        >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
-        ) : (
-          <>
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            {unreadCount > 0 && (
-              <span
-                className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold animate-bounce"
-                style={{ backgroundColor: "#ef4444", color: "#fff" }}
-              >
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </span>
-            )}
-          </>
-        )}
-      </button>
-
-      {/* Pulse ring */}
-      {!isOpen && unreadCount > 0 && (
-        <div
-          className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full animate-ping opacity-20"
-          style={{ backgroundColor: colors.primary }}
-        />
+          {unreadCount > 0 && (
+            <span
+              className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold animate-bounce"
+              style={{ backgroundColor: "#ef4444", color: "#fff" }}
+            >
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </button>
       )}
 
-      {/* ═══ Chat Panel ═══ */}
+      {/* Chat Panel — takes full screen on mobile */}
       {isOpen && (
         <div
-          className="fixed bottom-24 right-4 sm:right-6 z-50 flex flex-col overflow-hidden rounded-2xl shadow-2xl"
+          className="fixed inset-0 z-[999] flex flex-col overflow-hidden"
           style={{
-            width: "min(400px, calc(100vw - 32px))",
-            height: "min(560px, 75vh)",
             backgroundColor: colors.background,
-            border: `1px solid ${colors.border}`,
             fontFamily: `'${fontBody}', sans-serif`,
-            boxShadow: `0 25px 60px -12px rgba(0,0,0,0.25), 0 0 0 1px ${colors.border}`,
           }}
         >
           {/* ─── Header ─── */}
           <div
-            className="flex items-center gap-3 px-5 py-4 relative overflow-hidden"
-            style={{ backgroundColor: colors.primary, color: "#fff" }}
+            className="flex items-center gap-3 px-5 py-4 relative overflow-hidden shrink-0"
+            style={{
+              backgroundColor: colors.primary,
+              color: "#fff",
+              paddingTop: "max(1rem, env(safe-area-inset-top, 16px))",
+            }}
           >
             {/* Decorative gradient overlay */}
             <div
@@ -317,7 +324,7 @@ export function ChatBubble({
           {/* ─── Name Entry ─── */}
           {!nameConfirmed && (
             <div
-              className="px-4 py-3 flex items-center gap-2"
+              className="px-4 py-3 flex items-center gap-2 shrink-0"
               style={{
                 backgroundColor: colors.primary + "08",
                 borderBottom: `1px solid ${colors.border}`,
@@ -587,10 +594,11 @@ export function ChatBubble({
 
           {/* ─── Input ─── */}
           <div
-            className="px-4 py-3"
+            className="px-4 py-3 shrink-0"
             style={{
               borderTop: `1px solid ${colors.border}`,
               backgroundColor: colors.background,
+              paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 12px))",
             }}
           >
             {nameConfirmed ? (
@@ -674,7 +682,7 @@ export function ChatBubble({
       {/* Close reaction picker on outside click */}
       {activeReactionId && (
         <div
-          className="fixed inset-0 z-40"
+          className="fixed inset-0 z-[998]"
           onClick={() => setActiveReactionId(null)}
         />
       )}

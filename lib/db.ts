@@ -6,11 +6,10 @@ const connectionString = process.env.DATABASE_URL;
 
 function createPrismaClient() {
   if (!connectionString) {
-    console.warn("⚠️ DATABASE_URL not set — Prisma client will not be functional");
-    const pool = new pg.Pool({ connectionString: "postgresql://build:build@localhost:5432/build" });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const adapter = new PrismaPg(pool as any);
-    return new PrismaClient({ adapter });
+    throw new Error(
+      "DATABASE_URL environment variable is not set. " +
+      "The application cannot start without a database connection."
+    );
   }
 
   const pool = new pg.Pool({ connectionString });

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { verifyCsrf } from "@/lib/api-guards";
 import { slugify } from "@/lib/utils";
 import { checkEventLimit } from "@/lib/plan-guard";
 import { getDefaultModulesForType, getDefaultPresetForType } from "@/lib/modules/defaults";
 import type { EventType, Plan } from "@prisma/client";
+import { logSystem } from "@/lib/superadmin/logger";
 
 /**
  * GET /api/events — List events for the authenticated user
@@ -31,6 +33,9 @@ export async function GET() {
  * POST /api/events — Create a new event
  */
 export async function POST(request: Request) {
+  const csrfError = verifyCsrf(request);
+  if (csrfError) return csrfError;
+
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -114,6 +119,8 @@ export async function POST(request: Request) {
         modules: true,
       },
     });
+
+    logSystem("INFO", "EVENT", "EVENT_CREATED", { actorId: session.user.id, targetId: event.id, metadata: { title: event.title, type: event.type } });
 
     return NextResponse.json(
       { success: true, data: event },

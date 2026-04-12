@@ -19,7 +19,7 @@ ENV NEXT_PUBLIC_CONVEX_URL=$NEXT_PUBLIC_CONVEX_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Generate Prisma client (still needed for types during build)
-RUN npx prisma generate 2>/dev/null || true
+RUN npx prisma generate
 
 RUN npm run build
 

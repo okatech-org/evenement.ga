@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   try {
     // Rate limiting: 5 OTP par IP par 15 minutes
     const ip = getClientIp(request);
-    const rl = rateLimit(`otp:${ip}`, 5, 15 * 60 * 1000);
+    const rl = await rateLimit(`otp:${ip}`, 5, 15 * 60 * 1000);
     if (!rl.allowed) {
       return NextResponse.json(
         { error: "Trop de demandes. Réessayez dans quelques minutes." },

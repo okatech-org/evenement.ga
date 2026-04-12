@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { verifyCsrf } from "@/lib/api-guards";
 import { checkGuestLimit } from "@/lib/plan-guard";
 import { AddGuestSchema } from "@/lib/validations";
 import { z } from "zod";
 import { randomBytes } from "crypto";
 import QRCode from "qrcode";
 import type { Plan } from "@prisma/client";
+import { logSystem } from "@/lib/superadmin/logger";
 
 /**
  * GET /api/events/[id]/guests — List all guests
@@ -70,6 +72,9 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const csrfError = verifyCsrf(request);
+  if (csrfError) return csrfError;
+
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -165,6 +170,9 @@ export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const csrfError = verifyCsrf(request);
+  if (csrfError) return csrfError;
+
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -190,6 +198,8 @@ export async function DELETE(
     await prisma.guest.delete({
       where: { id: guestId, eventId: event.id },
     });
+
+    logSystem("INFO", "EVENT", "GUEST_DELETED", { actorId: session.user.id, targetId: guestId, metadata: { eventId: params.id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { AdminSidebar } from "./admin-sidebar";
 
@@ -18,7 +19,9 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
-      <AdminSidebar user={user} />
+      <Suspense fallback={<div className="w-16 shrink-0 bg-white dark:bg-gray-900" />}>
+        <AdminSidebar user={user} />
+      </Suspense>
 
       {/* Main content — contraint au viewport, pas de scroll de page */}
       <div className="flex flex-1 flex-col min-w-0 h-full overflow-hidden">

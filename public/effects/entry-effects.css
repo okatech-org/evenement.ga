@@ -5,7 +5,8 @@
 
 @keyframes fadeWhite {
   0% { opacity: 0; filter: brightness(2); }
-  100% { opacity: 1; filter: brightness(1); }
+  90% { opacity: 1; filter: brightness(1); }
+  100% { opacity: 1; }
 }
 
 /* ─── Fade Fast ──────────────────────────── */
@@ -26,7 +27,8 @@
 @keyframes morningMist {
   0% { opacity: 0; filter: blur(8px) brightness(1.2); }
   50% { opacity: 0.6; filter: blur(3px) brightness(1.1); }
-  100% { opacity: 1; filter: blur(0) brightness(1); }
+  90% { opacity: 1; filter: blur(0) brightness(1); }
+  100% { opacity: 1; }
 }
 
 /* ─── Curtain Open ──────────────────────── */
@@ -82,10 +84,14 @@
     opacity: 1;
     filter: sepia(0.1);
   }
-  100% {
+  90% {
     opacity: 1;
     transform: scale(1);
     filter: sepia(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
@@ -103,9 +109,12 @@
     opacity: 0.5;
     filter: brightness(0.6) saturate(1.5);
   }
-  100% {
+  90% {
     opacity: 1;
     filter: brightness(1) saturate(1);
+  }
+  100% {
+    opacity: 1;
   }
 }
 

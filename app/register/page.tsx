@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import PhoneInput from "@/components/ui/phone-input";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -295,19 +296,12 @@ export default function RegisterPage() {
                       <label className="block text-sm font-medium text-gray-700">
                         Numéro WhatsApp
                       </label>
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-                          <span className="text-sm text-gray-400">🇬🇦</span>
-                        </div>
-                        <input
-                          id="register-whatsapp-phone"
-                          type="tel"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          placeholder="+241 07 XX XX XX"
-                          className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#25D366] focus:ring-2 focus:ring-[#25D366]/20"
-                        />
-                      </div>
+                      <PhoneInput
+                        id="register-whatsapp-phone"
+                        value={phone}
+                        onChange={setPhone}
+                        defaultCountry="GA"
+                      />
                       <button
                         type="button"
                         id="register-send-otp-btn"

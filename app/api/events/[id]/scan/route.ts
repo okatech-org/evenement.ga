@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { verifyCsrf } from "@/lib/api-guards";
 
 /**
  * POST /api/events/[id]/scan — Scan QR code and record entry
@@ -12,6 +13,9 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const csrfError = verifyCsrf(request);
+  if (csrfError) return csrfError;
+
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });

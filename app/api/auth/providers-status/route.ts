@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+// Force runtime evaluation — env vars are only available at runtime in Cloud Run,
+// not at build time in the Docker image.
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/auth/providers-status
  * Returns which OAuth providers are configured and active.
