@@ -15,25 +15,40 @@ async function verifyPassword(plain: string, hashed: string): Promise<boolean> {
   return compare(plain, hashed);
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  trustHost: true,
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 jours
-  },
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
-  providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    Apple({
-      clientId: process.env.APPLE_CLIENT_ID!,
-      clientSecret: process.env.APPLE_CLIENT_SECRET!,
-    }),
+// ─── Build providers list dynamically ───────────────────────
+// Only register OAuth providers that have real credentials configured.
+// This prevents NextAuth from crashing when Apple/Google secrets are placeholders.
+
+function buildProviders() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const providers: any[] = [];
+
+  // ── Google ──
+  const googleId = process.env.GOOGLE_CLIENT_ID;
+  const googleSecret = process.env.GOOGLE_CLIENT_SECRET;
+  if (googleId && googleSecret && !googleId.startsWith("your-")) {
+    providers.push(
+      Google({
+        clientId: googleId,
+        clientSecret: googleSecret,
+      })
+    );
+  }
+
+  // ── Apple ──
+  const appleId = process.env.APPLE_CLIENT_ID;
+  const appleSecret = process.env.APPLE_CLIENT_SECRET;
+  if (appleId && appleSecret && !appleId.startsWith("your-") && !appleSecret.startsWith("your-")) {
+    providers.push(
+      Apple({
+        clientId: appleId,
+        clientSecret: appleSecret,
+      })
+    );
+  }
+
+  // ── Credentials: Email/Password ──
+  providers.push(
     Credentials({
       id: "credentials",
       name: "credentials",
@@ -70,7 +85,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           plan: user.plan,
         };
       },
-    }),
+    })
+  );
+
+  // ── Credentials: WhatsApp OTP ──
+  providers.push(
     Credentials({
       id: "whatsapp-otp",
       name: "WhatsApp",
@@ -112,8 +131,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           plan: user.plan,
         };
       },
-    }),
-  ],
+    })
+  );
+
+  return providers;
+}
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 jours
+  },
+  pages: {
+    signIn: "/login",
+    error: "/login",
+  },
+  providers: buildProviders(),
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider === "google" || account?.provider === "apple") {
@@ -150,3 +184,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+// ─── Exported helper: which OAuth providers are active ──────
+// Used by the login/register pages to show/hide buttons.
+export const ENABLED_OAUTH_PROVIDERS = {
+  google: !!(process.env.GOOGLE_CLIENT_ID && !process.env.GOOGLE_CLIENT_ID.startsWith("your-")),
+  apple: !!(process.env.APPLE_CLIENT_ID && !process.env.APPLE_CLIENT_ID.startsWith("your-") &&
+    process.env.APPLE_CLIENT_SECRET && !process.env.APPLE_CLIENT_SECRET.startsWith("your-")),
+};

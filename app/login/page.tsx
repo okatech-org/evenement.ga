@@ -42,10 +42,25 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState(
-    error === "CredentialsSignin" ? "Email ou mot de passe incorrect" : ""
+    error === "CredentialsSignin"
+      ? "Email ou mot de passe incorrect"
+      : error === "OAuthAccountNotLinked"
+      ? "Un compte avec cet email existe déjà. Connectez-vous avec votre méthode d'origine."
+      : error === "OAuthCallbackError"
+      ? "Erreur lors de la connexion avec ce fournisseur. Veuillez réessayer."
+      : error
+      ? "Erreur de connexion. Veuillez réessayer."
+      : ""
   );
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  // Available OAuth providers (dynamically detected)
+  const [providers, setProviders] = useState<{
+    google: boolean;
+    apple: boolean;
+    whatsapp: boolean;
+  }>({ google: false, apple: false, whatsapp: true });
 
   // WhatsApp OTP state
   const [showWhatsApp, setShowWhatsApp] = useState(false);
@@ -57,6 +72,11 @@ function LoginForm() {
 
   useEffect(() => {
     setMounted(true);
+    // Fetch available providers
+    fetch("/api/auth/providers-status")
+      .then((res) => res.json())
+      .then((data) => setProviders(data))
+      .catch(() => {/* silent — fallback to defaults */});
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -186,6 +206,7 @@ function LoginForm() {
           {/* ── OAuth Providers ── */}
           <div className="mt-7 space-y-3">
             {/* Google */}
+            {providers.google && (
             <button
               type="button"
               id="login-google-btn"
@@ -205,8 +226,10 @@ function LoginForm() {
               )}
               Continuer avec Google
             </button>
+            )}
 
             {/* Apple */}
+            {providers.apple && (
             <button
               type="button"
               id="login-apple-btn"
@@ -223,6 +246,7 @@ function LoginForm() {
               )}
               Continuer avec Apple
             </button>
+            )}
 
             {/* WhatsApp */}
             <button

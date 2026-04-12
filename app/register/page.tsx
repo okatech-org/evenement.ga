@@ -20,6 +20,13 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // Available OAuth providers (dynamically detected)
+  const [providers, setProviders] = useState<{
+    google: boolean;
+    apple: boolean;
+    whatsapp: boolean;
+  }>({ google: false, apple: false, whatsapp: true });
+
   // WhatsApp OTP state
   const [showWhatsApp, setShowWhatsApp] = useState(false);
   const [phone, setPhone] = useState("");
@@ -30,6 +37,11 @@ export default function RegisterPage() {
 
   useEffect(() => {
     setMounted(true);
+    // Fetch available providers
+    fetch("/api/auth/providers-status")
+      .then((res) => res.json())
+      .then((data) => setProviders(data))
+      .catch(() => {/* silent — fallback to defaults */});
   }, []);
 
   function updateField(field: string, value: string) {
@@ -198,6 +210,7 @@ export default function RegisterPage() {
             {/* ── OAuth Providers ── */}
             <div className="mt-7 space-y-3">
               {/* Google */}
+              {providers.google && (
               <button
                 type="button"
                 id="register-google-btn"
@@ -217,8 +230,10 @@ export default function RegisterPage() {
                 )}
                 Continuer avec Google
               </button>
+              )}
 
               {/* Apple */}
+              {providers.apple && (
               <button
                 type="button"
                 id="register-apple-btn"
@@ -235,6 +250,7 @@ export default function RegisterPage() {
                 )}
                 Continuer avec Apple
               </button>
+              )}
 
               {/* WhatsApp */}
               <button
