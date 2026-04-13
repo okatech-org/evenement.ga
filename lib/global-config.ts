@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/db";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
 import { NextResponse } from "next/server";
 
 // Cache de la config globale (60 secondes)
@@ -18,7 +19,7 @@ export async function getGlobalConfig() {
   }
 
   try {
-    const config = await prisma.globalConfig.findFirst();
+    const config = await convexClient.query(api.globalConfig.get);
     cachedConfig = {
       maintenanceMode: config?.maintenanceMode ?? false,
       maintenanceMessage: config?.maintenanceMessage ?? null,
@@ -27,7 +28,7 @@ export async function getGlobalConfig() {
     };
     return cachedConfig;
   } catch {
-    // En cas d'erreur DB, retourner des valeurs par defaut
+    // En cas d'erreur, retourner des valeurs par defaut
     return {
       maintenanceMode: false,
       maintenanceMessage: null,

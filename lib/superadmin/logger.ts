@@ -1,6 +1,6 @@
-import { prisma } from "@/lib/db";
-import type { LogLevel } from "@prisma/client";
 import { headers } from "next/headers";
+
+type LogLevel = "INFO" | "WARNING" | "ERROR" | "CRITICAL";
 
 type LogCategory =
   | "AUTH"
@@ -20,7 +20,8 @@ interface LogOptions {
 }
 
 /**
- * Log a system event to the SystemLog table.
+ * Log a system event.
+ * Uses console.log as a lightweight fallback — Convex logs are handled client-side.
  * This function is designed to NEVER throw — logging failures
  * should not crash the application.
  */
@@ -53,21 +54,21 @@ export async function logSystem(
       }
     }
 
-    await prisma.systemLog.create({
-      data: {
+    // Log to console (visible in Cloud Run logs)
+    console.log(
+      JSON.stringify({
         level,
         category,
         action,
         actorId: options.actorId || null,
         targetId: options.targetId || null,
         targetType: options.targetType || null,
-        metadata: (options.metadata as Record<string, unknown> | undefined)
-          ? JSON.parse(JSON.stringify(options.metadata))
-          : undefined,
+        metadata: options.metadata || null,
         ipAddress,
         userAgent,
-      },
-    });
+        timestamp: new Date().toISOString(),
+      })
+    );
   } catch (error) {
     // Silent failure — never crash the app due to logging
     console.error("[SystemLog] Failed to write log:", error);

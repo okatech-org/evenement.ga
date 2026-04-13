@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { z } from "zod";
 import { findUserByEmail, createUser } from "@/lib/auth-queries";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { checkRegistrationAllowed } from "@/lib/global-config";
 import { logSystem } from "@/lib/superadmin/logger";
