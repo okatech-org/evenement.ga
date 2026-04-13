@@ -49,7 +49,7 @@ steps:
 
 substitutions:
   _DATABASE_URL: ""
-  _CONVEX_URL: ""
+  _CONVEX_URL: "https://laudable-tortoise-21.eu-west-1.convex.cloud"
   _NEXTAUTH_SECRET: "2Oi9lWVtY8HyJLtLSz1zwa+bOp20GiCH96ASwaLPAJ8="
   _NEXTAUTH_URL: "https://evenements.pro"
   _GOOGLE_CLIENT_ID: ""
