@@ -163,23 +163,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider === "google" || account?.provider === "apple") {
-        await upsertOAuthUser({
-          email: user.email!,
-          name: user.name ?? undefined,
-          image: user.image ?? undefined,
-        });
+        try {
+          await upsertOAuthUser({
+            email: user.email!,
+            name: user.name ?? undefined,
+            image: user.image ?? undefined,
+          });
+        } catch (error) {
+          console.error("[auth] upsertOAuthUser failed:", error);
+          // Don't block sign-in — user profile will sync on next login
+        }
       }
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
-        const dbUser = await findUserByEmail(token.email!);
-        if (dbUser) {
-          token.id = dbUser.id;
-          token.role = dbUser.role;
-          token.plan = dbUser.plan;
-          token.isDemoAccount = dbUser.isDemoAccount;
-          token.demoAccountType = dbUser.demoAccountType ?? undefined;
+        try {
+          let dbUser = await findUserByEmail(token.email!);
+          // If OAuth user not found, create them now (fallback)
+          if (!dbUser && (account?.provider === "google" || account?.provider === "apple")) {
+            await upsertOAuthUser({
+              email: user.email!,
+              name: user.name ?? undefined,
+              image: user.image ?? undefined,
+            });
+            dbUser = await findUserByEmail(token.email!);
+          }
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.role = dbUser.role;
+            token.plan = dbUser.plan;
+            token.isDemoAccount = dbUser.isDemoAccount;
+            token.demoAccountType = dbUser.demoAccountType ?? undefined;
+          }
+        } catch (error) {
+          console.error("[auth] jwt callback error:", error);
         }
       }
       return token;
