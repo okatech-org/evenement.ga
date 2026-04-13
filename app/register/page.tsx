@@ -170,7 +170,7 @@ export default function RegisterPage() {
   const getInputClass = (field: string) =>
     `w-full rounded-xl border ${
       errors[field] ? "border-red-300 focus:border-red-500 focus:ring-red-500/20" : "border-gray-200 focus:border-[#7A3A50] focus:ring-[#7A3A50]/20"
-    } bg-white px-4 py-2.5 text-sm outline-none transition-all focus:ring-2`;
+    } bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all focus:ring-2`;
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#FAF7F5] via-white to-[#FFF0F3] px-4 py-12">
