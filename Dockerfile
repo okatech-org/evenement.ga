@@ -14,7 +14,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Set build-time env (Convex URL is public and safe to bake in)
-ARG NEXT_PUBLIC_CONVEX_URL
+ARG NEXT_PUBLIC_CONVEX_URL=https://laudable-tortoise-21.eu-west-1.convex.cloud
 ENV NEXT_PUBLIC_CONVEX_URL=$NEXT_PUBLIC_CONVEX_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
