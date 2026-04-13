@@ -1,24 +1,27 @@
-import { prisma } from "@/lib/db";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 /**
- * Requetes auth directes vers Prisma (remplace les appels Convex)
+ * Auth queries via Convex (replaces Prisma)
+ * Used by NextAuth authorize(), register route, and demo login
  */
 
 export async function findUserByEmail(email: string) {
-  return prisma.user.findUnique({
-    where: { email },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      password: true,
-      image: true,
-      role: true,
-      plan: true,
-      isDemoAccount: true,
-      demoAccountType: true,
-    },
-  });
+  const user = await convexClient.query(api.auth.getUserForAuth, { email });
+  if (!user) return null;
+
+  return {
+    id: user._id as string,
+    email: user.email,
+    name: user.name ?? null,
+    password: user.password ?? null,
+    image: user.image ?? null,
+    role: user.role,
+    plan: user.plan,
+    isDemoAccount: user.isDemoAccount ?? false,
+    demoAccountType: user.demoAccountType ?? null,
+  };
 }
 
 export async function createUser(data: {
@@ -26,15 +29,12 @@ export async function createUser(data: {
   name: string;
   password: string;
 }) {
-  return prisma.user.create({
-    data: {
-      email: data.email,
-      name: data.name,
-      password: data.password,
-      role: "ORGANIZER",
-      plan: "FREE",
-    },
+  const result = await convexClient.mutation(api.auth.createUser, {
+    email: data.email,
+    name: data.name,
+    password: data.password,
   });
+  return result;
 }
 
 export async function upsertOAuthUser(data: {
@@ -42,66 +42,56 @@ export async function upsertOAuthUser(data: {
   name?: string;
   image?: string;
 }) {
-  return prisma.user.upsert({
-    where: { email: data.email },
-    update: {
-      name: data.name ?? undefined,
-      image: data.image ?? undefined,
-    },
-    create: {
-      email: data.email,
-      name: data.name,
-      image: data.image,
-      role: "ORGANIZER",
-      plan: "FREE",
-    },
+  await convexClient.mutation(api.auth.upsertOAuthUser, {
+    email: data.email,
+    name: data.name,
+    image: data.image,
   });
 }
 
 export async function findUserByPhone(phone: string) {
-  return prisma.user.findUnique({
-    where: { phone },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      image: true,
-      role: true,
-      plan: true,
-      isDemoAccount: true,
-      demoAccountType: true,
-    },
-  });
+  const user = await convexClient.query(api.auth.getUserByPhone, { phone });
+  if (!user) return null;
+
+  return {
+    id: user._id as string,
+    email: user.email,
+    name: user.name ?? null,
+    image: user.image ?? null,
+    role: user.role,
+    plan: user.plan,
+    isDemoAccount: user.isDemoAccount ?? false,
+    demoAccountType: user.demoAccountType ?? null,
+  };
 }
 
 export async function getOrCreateByPhone(phone: string) {
-  const existing = await prisma.user.findUnique({ where: { phone } });
-  if (existing) return existing;
-
-  return prisma.user.create({
-    data: {
-      phone,
-      email: `${phone}@whatsapp.eventflow`,
-      role: "ORGANIZER",
-      plan: "FREE",
-    },
+  const user = await convexClient.mutation(api.auth.getOrCreateByPhone, {
+    phone,
   });
+  if (!user) return null;
+
+  return {
+    id: user._id as string,
+    email: user.email,
+    name: user.name ?? null,
+    image: user.image ?? null,
+    role: user.role,
+    plan: user.plan,
+  };
 }
 
 export async function verifyOtp(phone: string, code: string) {
-  return prisma.otpCode.findFirst({
-    where: {
-      phone,
-      code,
-      used: false,
-      expiresAt: { gt: new Date() },
-    },
-  });
+  const otp = await convexClient.query(api.auth.verifyOtp, { phone, code });
+  if (!otp) return null;
+
+  return {
+    id: otp._id as string,
+  };
 }
 
 export async function markOtpUsed(otpId: string) {
-  return prisma.otpCode.update({
-    where: { id: otpId },
-    data: { used: true },
+  await convexClient.mutation(api.auth.markOtpUsed, {
+    otpId: otpId as Id<"otpCodes">,
   });
 }
