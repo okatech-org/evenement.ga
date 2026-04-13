@@ -4,6 +4,7 @@ import { EVENT_TYPES } from "@/lib/config";
 import { THEME_PRESETS } from "@/lib/themes/presets";
 import type { EventType } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const contentType = "image/png";
 export const size = { width: 1200, height: 630 };

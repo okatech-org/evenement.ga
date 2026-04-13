@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { findUserByEmail } from "@/lib/auth-queries";
 import { DEMO_ACCOUNTS, type DemoAccountType } from "@/lib/demo-guard";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 // ─── PRODUCTION GUARD: Demo endpoints are dev-only ──────────
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
