@@ -62,13 +62,13 @@ export type ModuleUpdateInput = z.infer<typeof ModuleUpdateSchema>;
 
 export const EventUpdateSchema = z.object({
   title: z.string().min(3).max(100).optional(),
-  description: z.string().max(5000).optional(),
+  description: z.string().max(5000).optional().nullable(),
   date: z.string().optional(),
-  location: z.string().max(500).optional(),
+  location: z.string().max(500).optional().nullable(),
   visibility: z.enum(["PUBLIC", "SEMI_PRIVATE", "PRIVATE", "PASSWORD"]).optional(),
-  password: z.string().max(100).optional(),
-  coverImage: z.string().optional(),
-  coverVideo: z.string().optional(),
+  password: z.string().max(100).optional().nullable(),
+  coverImage: z.string().optional().nullable(),
+  coverVideo: z.string().optional().nullable(),
   maxGuests: z.number().int().positive().optional().nullable(),
 });
 
