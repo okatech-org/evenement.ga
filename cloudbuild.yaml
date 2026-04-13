@@ -51,7 +51,7 @@ substitutions:
   _DATABASE_URL: ""
   _CONVEX_URL: ""
   _NEXTAUTH_SECRET: "2Oi9lWVtY8HyJLtLSz1zwa+bOp20GiCH96ASwaLPAJ8="
-  _NEXTAUTH_URL: "https://eventflow-ga.web.app"
+  _NEXTAUTH_URL: "https://evenements.pro"
   _GOOGLE_CLIENT_ID: ""
   _GOOGLE_CLIENT_SECRET: ""
   _APPLE_CLIENT_ID: ""
