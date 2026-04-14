@@ -14,7 +14,11 @@ const SECRET_KEY = process.env.AWS_SECRET_ACCESS_KEY;
 const ENDPOINT = process.env.AWS_S3_ENDPOINT; // Pour R2: https://<account>.r2.cloudflarestorage.com
 const CDN_URL = process.env.STORAGE_CDN_URL; // URL publique du CDN
 
-const isCloudConfigured = !!(BUCKET && ACCESS_KEY && SECRET_KEY);
+const isCloudConfigured = !!(
+  BUCKET && 
+  ACCESS_KEY && !ACCESS_KEY.startsWith("your-") && 
+  SECRET_KEY && !SECRET_KEY.startsWith("your-")
+);
 
 /**
  * Upload un fichier et retourne l'URL publique
