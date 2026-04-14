@@ -117,13 +117,10 @@ function LoginForm() {
     setLoadingProvider(provider);
     setErrorMsg("");
     try {
-      const result = await signIn(provider, { callbackUrl, redirect: false });
-      if (result?.error) {
-        setErrorMsg(`La connexion via ${provider} a échoué.`);
-        setLoadingProvider(null);
-      } else if (result?.url) {
-        window.location.href = result.url;
-      }
+      // OAuth providers require a full-page redirect (redirect: false
+      // only works with credentials providers). Let NextAuth handle the
+      // redirect to accounts.google.com natively.
+      await signIn(provider, { callbackUrl });
     } catch {
       setErrorMsg("Une erreur réseau est survenue.");
       setLoadingProvider(null);

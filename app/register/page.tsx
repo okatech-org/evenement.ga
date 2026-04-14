@@ -115,13 +115,9 @@ export default function RegisterPage() {
     setLoadingProvider(provider);
     setErrors({});
     try {
-      const result = await signIn(provider, { callbackUrl: "/onboarding", redirect: false });
-      if (result?.error) {
-        setErrors({ general: `La connexion via ${provider} a échoué.` });
-        setLoadingProvider(null);
-      } else if (result?.url) {
-        window.location.href = result.url;
-      }
+      // OAuth providers require a full-page redirect (redirect: false
+      // only works with credentials providers).
+      await signIn(provider, { callbackUrl: "/onboarding" });
     } catch {
       setErrors({ general: "Une erreur réseau est survenue." });
       setLoadingProvider(null);
