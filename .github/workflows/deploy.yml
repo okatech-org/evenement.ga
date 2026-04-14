@@ -23,20 +23,38 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
-      - name: Run Prisma Migrations
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
+      # ── Deploy Convex backend ─────────────────────────────
       - name: Deploy Convex Backend
         run: npx convex deploy --yes
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
+      # ── Authenticate to Google Cloud ──────────────────────
+      - name: Auth to GCP
+        uses: google-github-actions/auth@v2
         with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      # ── Trigger Cloud Build (deploys Cloud Run + Firebase Hosting) ──
+      - name: Submit Cloud Build
+        run: |
+          gcloud builds submit \
+            --config cloudbuild.yaml \
+            --project ${{ secrets.GCP_PROJECT_ID }} \
+            --substitutions \
+              _DATABASE_URL='${{ secrets.DATABASE_URL }}',\
+              _CONVEX_URL='${{ secrets.CONVEX_URL }}',\
+              _NEXTAUTH_SECRET='${{ secrets.NEXTAUTH_SECRET }}',\
+              _NEXTAUTH_URL='${{ secrets.NEXTAUTH_URL }}',\
+              _GOOGLE_CLIENT_ID='${{ secrets.GOOGLE_CLIENT_ID }}',\
+              _GOOGLE_CLIENT_SECRET='${{ secrets.GOOGLE_CLIENT_SECRET }}',\
+              _APPLE_CLIENT_ID='${{ secrets.APPLE_CLIENT_ID }}',\
+              _APPLE_CLIENT_SECRET='${{ secrets.APPLE_CLIENT_SECRET }}',\
+              _APPLE_TEAM_ID='${{ secrets.APPLE_TEAM_ID }}',\
+              _APPLE_KEY_ID='${{ secrets.APPLE_KEY_ID }}',\
+              _RESEND_API_KEY='${{ secrets.RESEND_API_KEY }}'
