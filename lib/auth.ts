@@ -148,9 +148,20 @@ if (!authSecret) {
   );
 }
 
+// ─── Detect production environment ────────────────────────
+// Force secure cookies in production behind reverse proxy (Cloud Run + Firebase Hosting)
+// pour eviter les inconsistances de detection HTTPS qui cassent le PKCE flow.
+const isProduction =
+  process.env.NODE_ENV === "production" ||
+  process.env.AUTH_URL?.startsWith("https://") ||
+  process.env.NEXTAUTH_URL?.startsWith("https://");
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   secret: authSecret,
+  // Force HTTPS cookies — sinon le proxy peut faire varier la detection
+  // entre les requetes signin et callback, cassant la verification PKCE
+  useSecureCookies: isProduction,
   session: {
     strategy: "jwt",
     maxAge: 7 * 24 * 60 * 60, // 7 jours
@@ -158,6 +169,67 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/login",
     error: "/login",
+  },
+  // Configuration explicite des cookies pour eviter les inconsistances
+  // de noms (avec/sans prefixe __Secure-) entre encrypt et decrypt.
+  // La salt JWE etant le nom du cookie, toute variation casse le PKCE.
+  cookies: {
+    sessionToken: {
+      name: isProduction ? "__Secure-authjs.session-token" : "authjs.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: isProduction,
+      },
+    },
+    callbackUrl: {
+      name: isProduction ? "__Secure-authjs.callback-url" : "authjs.callback-url",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: isProduction,
+      },
+    },
+    csrfToken: {
+      name: isProduction ? "__Host-authjs.csrf-token" : "authjs.csrf-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: isProduction,
+      },
+    },
+    pkceCodeVerifier: {
+      name: isProduction ? "__Secure-authjs.pkce.code_verifier" : "authjs.pkce.code_verifier",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: isProduction,
+        maxAge: 60 * 15, // 15 minutes
+      },
+    },
+    state: {
+      name: isProduction ? "__Secure-authjs.state" : "authjs.state",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: isProduction,
+        maxAge: 60 * 15,
+      },
+    },
+    nonce: {
+      name: isProduction ? "__Secure-authjs.nonce" : "authjs.nonce",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: isProduction,
+      },
+    },
   },
   providers: buildProviders(),
   callbacks: {
