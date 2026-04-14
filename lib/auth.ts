@@ -31,6 +31,9 @@ function buildProviders() {
       Google({
         clientId: googleId,
         clientSecret: googleSecret,
+        // Disable PKCE/state checks because Firebase Hosting strips all cookies 
+        // except __session, which causes pkceCodeVerifier parsing to fail.
+        checks: ["none"],
       })
     );
   }
