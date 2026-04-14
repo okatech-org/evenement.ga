@@ -16,13 +16,19 @@ steps:
     args: ["push", "gcr.io/$PROJECT_ID/eventflow:latest"]
 
   # ── 3. Run Prisma database migrations ─────────────────────
-  # HOME=/tmp car l'image tourne en USER nextjs (UID 1001) et n'a
-  # pas acces a /builder/home (root-owned). Skip si DATABASE_URL vide.
-  - name: "gcr.io/$PROJECT_ID/eventflow:latest"
+  # Utilise node:20-alpine (root) avec npm ci pour avoir prisma + prisma/config.
+  # L'image runtime ne contient pas les devDependencies Prisma.
+  - name: "node:20-alpine"
     entrypoint: "sh"
     args:
       - "-c"
-      - 'if [ -z "$$DATABASE_URL" ]; then echo "WARN: DATABASE_URL empty, skipping migrations"; exit 0; fi; HOME=/tmp NPM_CONFIG_CACHE=/tmp/.npm npx prisma migrate deploy'
+      - |
+        if [ -z "$$DATABASE_URL" ]; then
+          echo "WARN: DATABASE_URL empty, skipping migrations"
+          exit 0
+        fi
+        npm ci --ignore-scripts --no-audit --no-fund 2>&1 | tail -5
+        npx prisma migrate deploy --schema prisma/schema.prisma
     env:
       - "DATABASE_URL=${_DATABASE_URL}"
 
