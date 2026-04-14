@@ -31,16 +31,6 @@ function buildProviders() {
       Google({
         clientId: googleId,
         clientSecret: googleSecret,
-        // Desactiver TOUS les checks OAuth cote NextAuth.
-        // Derriere le proxy chain (Fastly CDN → Firebase Hosting → Cloud Run),
-        // les cookies securises (__Secure-*) sont strips ou corrompus entre
-        // le POST signin et le GET callback. Ca casse PKCE ("pkceCodeVerifier
-        // could not be parsed") ET state ("state value could not be parsed").
-        // La securite est assuree par :
-        // 1. La whitelist redirect_uri dans Google Cloud Console
-        // 2. Le code authorization grant (single-use, time-limited)
-        // 3. Le secret client verifie cote serveur
-        checks: ["none"],
       })
     );
   }
@@ -71,7 +61,8 @@ function buildProviders() {
           throw new Error("Email et mot de passe requis");
         }
 
-        const user = await findUserByEmail(credentials.email as string);
+        const emailLower = (credentials.email as string).toLowerCase().trim();
+        const user = await findUserByEmail(emailLower);
 
         if (!user || !user.password) {
           throw new Error("Email ou mot de passe incorrect");
@@ -169,8 +160,6 @@ const isProduction =
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   secret: authSecret,
-  // Force HTTPS cookies — sinon le proxy peut faire varier la detection
-  // entre les requetes signin et callback, cassant la verification PKCE
   useSecureCookies: isProduction,
   session: {
     strategy: "jwt",
@@ -179,67 +168,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/login",
     error: "/login",
-  },
-  // Configuration explicite des cookies pour eviter les inconsistances
-  // de noms (avec/sans prefixe __Secure-) entre encrypt et decrypt.
-  // La salt JWE etant le nom du cookie, toute variation casse le PKCE.
-  cookies: {
-    sessionToken: {
-      name: isProduction ? "__Secure-authjs.session-token" : "authjs.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: isProduction,
-      },
-    },
-    callbackUrl: {
-      name: isProduction ? "__Secure-authjs.callback-url" : "authjs.callback-url",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: isProduction,
-      },
-    },
-    csrfToken: {
-      name: isProduction ? "__Host-authjs.csrf-token" : "authjs.csrf-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: isProduction,
-      },
-    },
-    pkceCodeVerifier: {
-      name: isProduction ? "__Secure-authjs.pkce.code_verifier" : "authjs.pkce.code_verifier",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: isProduction,
-        maxAge: 60 * 15, // 15 minutes
-      },
-    },
-    state: {
-      name: isProduction ? "__Secure-authjs.state" : "authjs.state",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: isProduction,
-        maxAge: 60 * 15,
-      },
-    },
-    nonce: {
-      name: isProduction ? "__Secure-authjs.nonce" : "authjs.nonce",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: isProduction,
-      },
-    },
   },
   providers: buildProviders(),
   callbacks: {

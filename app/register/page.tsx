@@ -93,7 +93,7 @@ export default function RegisterPage() {
 
       // Auto sign in after registration
       const signInResult = await signIn("credentials", {
-        email: formData.email,
+        email: formData.email.toLowerCase().trim(),
         password: formData.password,
         redirect: false,
       });
@@ -113,9 +113,17 @@ export default function RegisterPage() {
 
   async function handleOAuthSignIn(provider: string) {
     setLoadingProvider(provider);
+    setErrors({});
     try {
-      await signIn(provider, { callbackUrl: "/onboarding" });
-    } catch {
+      const result = await signIn(provider, { callbackUrl: "/onboarding", redirect: false });
+      if (result?.error) {
+        setErrors({ general: `La connexion via ${provider} a échoué.` });
+        setLoadingProvider(null);
+      } else if (result?.url) {
+        window.location.href = result.url;
+      }
+    } catch (err) {
+      setErrors({ general: "Une erreur réseau est survenue." });
       setLoadingProvider(null);
     }
   }

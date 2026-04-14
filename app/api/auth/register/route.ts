@@ -40,9 +40,10 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const validatedData = RegisterSchema.parse(body);
+    const emailLower = validatedData.email.toLowerCase().trim();
 
     // Verifier si l'utilisateur existe deja
-    const existingUser = await findUserByEmail(validatedData.email);
+    const existingUser = await findUserByEmail(emailLower);
 
     if (existingUser) {
       return NextResponse.json(
@@ -56,12 +57,12 @@ export async function POST(request: Request) {
 
     // Creer l'utilisateur via Prisma
     const user = await createUser({
-      email: validatedData.email,
+      email: emailLower,
       name: `${validatedData.firstName} ${validatedData.lastName}`,
       password: hashedPassword,
     });
 
-    logSystem("INFO", "AUTH", "USER_REGISTERED", { actorId: user.id, metadata: { email: validatedData.email } });
+    logSystem("INFO", "AUTH", "USER_REGISTERED", { actorId: user.id, metadata: { email: emailLower } });
 
     return NextResponse.json(
       {

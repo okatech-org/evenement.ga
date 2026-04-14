@@ -32,7 +32,16 @@ function createConvexClient(): ConvexHttpClient {
       },
     });
   }
-  return new ConvexHttpClient(CONVEX_URL);
+
+  // Force cache: "no-store" to prevent Next.js from caching GET queries (like getUserForAuth)
+  const customFetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    return fetch(input, {
+      ...init,
+      cache: "no-store",
+    });
+  };
+
+  return new ConvexHttpClient(CONVEX_URL, { fetch: customFetch });
 }
 
 const globalForConvex = globalThis as unknown as {

@@ -95,7 +95,7 @@ function LoginForm() {
 
     try {
       const result = await signIn("credentials", {
-        email,
+        email: email.toLowerCase().trim(),
         password,
         redirect: false,
       });
@@ -115,9 +115,17 @@ function LoginForm() {
 
   async function handleOAuthSignIn(provider: string) {
     setLoadingProvider(provider);
+    setErrorMsg("");
     try {
-      await signIn(provider, { callbackUrl });
-    } catch {
+      const result = await signIn(provider, { callbackUrl, redirect: false });
+      if (result?.error) {
+        setErrorMsg(`La connexion via ${provider} a échoué.`);
+        setLoadingProvider(null);
+      } else if (result?.url) {
+        window.location.href = result.url;
+      }
+    } catch (err) {
+      setErrorMsg("Une erreur réseau est survenue.");
       setLoadingProvider(null);
     }
   }
