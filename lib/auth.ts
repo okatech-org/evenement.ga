@@ -268,7 +268,7 @@ export const { auth, signIn, signOut } = nextAuth;
 // Solution: wrap the GET handler to intercept the csrf action and
 // return a synthetic token. The server doesn't validate it anyway
 // (skipCSRFCheck is active), so the value doesn't matter.
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 
 const { handlers: originalHandlers } = nextAuth;
@@ -279,7 +279,7 @@ async function generateSyntheticCsrf(): Promise<string> {
 }
 
 export const handlers = {
-  GET: async (req: Request) => {
+  GET: async (req: NextRequest) => {
     const url = new URL(req.url);
     // Intercept /api/auth/csrf specifically
     if (url.pathname.endsWith("/csrf")) {
