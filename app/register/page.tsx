@@ -115,9 +115,29 @@ export default function RegisterPage() {
     setLoadingProvider(provider);
     setErrors({});
     try {
-      // OAuth providers require a full-page redirect (redirect: false
-      // only works with credentials providers).
-      await signIn(provider, { callbackUrl: "/onboarding" });
+      // Manual OAuth redirect — bypasses next-auth/react signIn()
+      const csrfRes = await fetch("/api/auth/csrf");
+      const csrfData = await csrfRes.json();
+      
+      const signinRes = await fetch(`/api/auth/signin/${provider}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "X-Auth-Return-Redirect": "1",
+        },
+        body: new URLSearchParams({
+          csrfToken: csrfData.csrfToken ?? "",
+          callbackUrl: "/onboarding",
+        }),
+      });
+      
+      const data = await signinRes.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setErrors({ general: "Erreur: pas d'URL de redirection reçue." });
+        setLoadingProvider(null);
+      }
     } catch {
       setErrors({ general: "Une erreur réseau est survenue." });
       setLoadingProvider(null);

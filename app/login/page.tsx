@@ -117,11 +117,40 @@ function LoginForm() {
     setLoadingProvider(provider);
     setErrorMsg("");
     try {
-      // OAuth providers require a full-page redirect (redirect: false
-      // only works with credentials providers). Let NextAuth handle the
-      // redirect to accounts.google.com natively.
-      await signIn(provider, { callbackUrl });
-    } catch {
+      // Bypass next-auth/react's signIn() — it can be broken by Server Components
+      // errors. Instead, manually fetch CSRF, POST to signin, and redirect.
+      console.log("[OAuth] Starting", provider, "sign-in...");
+      
+      // 1. Get CSRF token
+      const csrfRes = await fetch("/api/auth/csrf");
+      const csrfData = await csrfRes.json();
+      console.log("[OAuth] Got CSRF token:", csrfData.csrfToken?.substring(0, 8) + "...");
+      
+      // 2. POST to signin endpoint
+      const signinRes = await fetch(`/api/auth/signin/${provider}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "X-Auth-Return-Redirect": "1",
+        },
+        body: new URLSearchParams({
+          csrfToken: csrfData.csrfToken ?? "",
+          callbackUrl: callbackUrl,
+        }),
+      });
+      
+      const data = await signinRes.json();
+      console.log("[OAuth] Got redirect URL:", data.url?.substring(0, 50) + "...");
+      
+      // 3. Redirect to OAuth provider
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setErrorMsg("Erreur: pas d'URL de redirection reçue.");
+        setLoadingProvider(null);
+      }
+    } catch (err) {
+      console.error("[OAuth] Error:", err);
       setErrorMsg("Une erreur réseau est survenue.");
       setLoadingProvider(null);
     }
