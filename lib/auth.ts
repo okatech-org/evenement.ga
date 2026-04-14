@@ -31,6 +31,15 @@ function buildProviders() {
       Google({
         clientId: googleId,
         clientSecret: googleSecret,
+        // Desactiver PKCE — le cookie PKCE chiffre (JWE) utilise le nom du
+        // cookie comme salt HKDF. Derriere le proxy chain (Fastly CDN →
+        // Firebase Hosting → Cloud Run), la detection HTTPS peut varier
+        // entre le POST signin et le GET callback, changeant le prefixe
+        // du cookie (__Secure- vs sans prefixe) et donc la salt.
+        // Resultat: "pkceCodeVerifier value could not be parsed".
+        // Le check "state" est tout aussi securise et n'utilise pas de
+        // chiffrement de cookie — il compare juste un token signé.
+        checks: ["state"],
       })
     );
   }
