@@ -167,14 +167,13 @@ const isProduction =
 // Solution:
 //   1. Rename session token to `__session` (only cookie preserved by Firebase)
 //   2. OAuth providers use `checks: ["none"]` (PKCE/state cookies stripped)
-//   3. skipCSRFCheck bypasses CSRF validation (Firebase strips the CSRF cookie,
-//      so the double-submit cookie check always fails). The GET /api/auth/csrf
-//      route returns 404 when disabled, but next-auth/react handles this
-//      gracefully — getCsrfToken() catches the error and falls back to "".
-//      CSRF protection is provided by: HTTPS + SameSite=Lax + browser Origin.
+//   3. skipCSRFCheck bypasses server-side CSRF validation. This makes the
+//      /api/auth/csrf route return 404. We provide a custom wrapper in the
+//      route handler to serve a synthetic CSRF token for client compatibility.
+//      Security is maintained via HTTPS + SameSite=Lax + browser Origin.
 // Reference: https://firebase.google.com/docs/hosting/manage-cache#using_cookies
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const nextAuth = NextAuth({
   trustHost: true,
   secret: authSecret,
   useSecureCookies: isProduction,
@@ -256,6 +255,51 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+// Re-export auth, signIn, signOut from the wrapped NextAuth instance
+export const { auth, signIn, signOut } = nextAuth;
+
+// ─── Custom handlers wrapper ───────────────────────────────
+// skipCSRFCheck makes Auth.js return 404 for GET /api/auth/csrf.
+// But next-auth/react's signIn() calls getCsrfToken() which fetches
+// this endpoint and expects a JSON response. If it gets 404, it
+// receives HTML and res.json() throws, breaking the entire signIn flow.
+//
+// Solution: wrap the GET handler to intercept the csrf action and
+// return a synthetic token. The server doesn't validate it anyway
+// (skipCSRFCheck is active), so the value doesn't matter.
+import { NextResponse } from "next/server";
+import { createHash } from "crypto";
+
+const { handlers: originalHandlers } = nextAuth;
+
+async function generateSyntheticCsrf(): Promise<string> {
+  const token = Math.random().toString(36).slice(2);
+  return createHash("sha256").update(token + (authSecret ?? "")).digest("hex");
+}
+
+export const handlers = {
+  GET: async (req: Request) => {
+    const url = new URL(req.url);
+    // Intercept /api/auth/csrf specifically
+    if (url.pathname.endsWith("/csrf")) {
+      const csrfToken = await generateSyntheticCsrf();
+      return NextResponse.json(
+        { csrfToken },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "private, no-cache, no-store",
+            Expires: "0",
+            Pragma: "no-cache",
+          },
+        }
+      );
+    }
+    return originalHandlers.GET(req);
+  },
+  POST: originalHandlers.POST,
+};
 
 // ─── Exported helper: which OAuth providers are active ──────
 // Used by the login/register pages to show/hide buttons.
