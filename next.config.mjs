@@ -8,9 +8,42 @@ const nextConfig = {
     serverComponentsExternalPackages: ["pg"],
   },
 
-  // ─── Security Headers ─────────────────────────────────────
+  // ─── Headers (Security + Cache) ───────────────────────────
   async headers() {
     return [
+      // ── Assets statiques immutables (hash dans le nom de fichier) ──
+      // Mis en cache agressivement pendant 1 an — chaque build a de nouveaux hashes
+      {
+        source: "/_next/static/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/_next/image/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      // ── Pages HTML et routes API : JAMAIS de cache navigateur ──
+      // Empeche les clients de recuperer un vieux HTML qui reference
+      // des hashes CSS/JS qui n'existent plus sur Cloud Run apres un redeploy.
+      {
+        source: "/((?!_next/static|_next/image|favicon.ico|manifest.json|robots.txt|sitemap.xml).*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, no-cache, must-revalidate, max-age=0",
+          },
+        ],
+      },
+      // ── Security headers (applique a toutes les routes) ──
       {
         source: "/(.*)",
         headers: [

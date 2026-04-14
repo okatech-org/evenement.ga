@@ -34,6 +34,10 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#7A3A50" />
+        {/* Empeche le navigateur de cacher le HTML — evite les hashes CSS/JS obsoletes apres redeploy */}
+        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta httpEquiv="Pragma" content="no-cache" />
+        <meta httpEquiv="Expires" content="0" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider>
