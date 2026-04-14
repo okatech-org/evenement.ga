@@ -269,13 +269,15 @@ export const { auth, signIn, signOut } = nextAuth;
 // return a synthetic token. The server doesn't validate it anyway
 // (skipCSRFCheck is active), so the value doesn't matter.
 import { NextRequest, NextResponse } from "next/server";
-import { createHash } from "crypto";
 
 const { handlers: originalHandlers } = nextAuth;
 
-async function generateSyntheticCsrf(): Promise<string> {
-  const token = Math.random().toString(36).slice(2);
-  return createHash("sha256").update(token + (authSecret ?? "")).digest("hex");
+function generateSyntheticCsrf(): string {
+  // Simple random hex — the server doesn't validate CSRF (skipCSRFCheck),
+  // so the value only needs to satisfy the client's type expectation.
+  return Array.from({ length: 32 }, () =>
+    Math.floor(Math.random() * 16).toString(16)
+  ).join("");
 }
 
 export const handlers = {
@@ -283,7 +285,7 @@ export const handlers = {
     const url = new URL(req.url);
     // Intercept /api/auth/csrf specifically
     if (url.pathname.endsWith("/csrf")) {
-      const csrfToken = await generateSyntheticCsrf();
+      const csrfToken = generateSyntheticCsrf();
       return NextResponse.json(
         { csrfToken },
         {
