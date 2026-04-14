@@ -124,7 +124,7 @@ function LoginForm() {
       } else if (result?.url) {
         window.location.href = result.url;
       }
-    } catch (err) {
+    } catch {
       setErrorMsg("Une erreur réseau est survenue.");
       setLoadingProvider(null);
     }

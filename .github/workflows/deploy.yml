@@ -23,9 +23,14 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
-      # ── Deploy Convex backend ─────────────────────────────
+      # ── Deploy Convex backend (skip if secret missing) ────
       - name: Deploy Convex Backend
-        run: npx convex deploy --yes
+        run: |
+          if [ -n "$CONVEX_DEPLOY_KEY" ]; then
+            npx convex deploy --yes
+          else
+            echo "::warning::CONVEX_DEPLOY_KEY not set — skipping Convex backend deploy. Configure in repo secrets to enable."
+          fi
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 

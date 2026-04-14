@@ -122,7 +122,7 @@ export default function RegisterPage() {
       } else if (result?.url) {
         window.location.href = result.url;
       }
-    } catch (err) {
+    } catch {
       setErrors({ general: "Une erreur réseau est survenue." });
       setLoadingProvider(null);
     }
