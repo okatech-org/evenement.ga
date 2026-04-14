@@ -13,9 +13,12 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Check JWT token (Edge-compatible, no DB import needed)
+  // Cookie name MUST match lib/auth.ts config: Firebase Hosting only
+  // preserves the `__session` cookie from incoming requests.
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+    cookieName: "__session",
   });
 
   // ─── Super Admin routes ───────────────────────────────────

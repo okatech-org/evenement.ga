@@ -1,4 +1,5 @@
 import NextAuth from "next-auth";
+import { skipCSRFCheck } from "@auth/core";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import Apple from "next-auth/providers/apple";
@@ -160,10 +161,22 @@ const isProduction =
   process.env.AUTH_URL?.startsWith("https://") ||
   process.env.NEXTAUTH_URL?.startsWith("https://");
 
+// ─── Firebase Hosting compatibility ───────────────────────
+// Firebase Hosting strips ALL incoming cookies EXCEPT the cookie named
+// exactly `__session`. This breaks every NextAuth default cookie
+// (session, CSRF, callback-url, PKCE, state, nonce). Only ONE cookie can
+// survive the proxy, so:
+//   1. Rename the session token to `__session` (the only cookie preserved)
+//   2. Skip CSRF check (its cookie would be stripped anyway — we rely on
+//      HTTPS + SameSite=Lax + origin checks for CSRF protection)
+//   3. OAuth providers use `checks: ["none"]` (PKCE/state cookies stripped)
+// Reference: https://firebase.google.com/docs/hosting/manage-cache#using_cookies
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   secret: authSecret,
   useSecureCookies: isProduction,
+  skipCSRFCheck,
   session: {
     strategy: "jwt",
     maxAge: 7 * 24 * 60 * 60, // 7 jours
@@ -171,6 +184,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/login",
     error: "/login",
+  },
+  cookies: {
+    // Seul cookie preserve par Firebase Hosting. Doit s'appeler
+    // EXACTEMENT "__session" (pas de prefixe __Secure-/__Host-).
+    sessionToken: {
+      name: "__session",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: isProduction,
+        maxAge: 7 * 24 * 60 * 60,
+      },
+    },
   },
   providers: buildProviders(),
   callbacks: {
