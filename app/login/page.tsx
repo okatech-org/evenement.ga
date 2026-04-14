@@ -10,21 +10,29 @@ import PhoneInput from "@/components/ui/phone-input";
 function FloatingParticles() {
   return (
     <div className="pointer-events-none fixed inset-0 overflow-hidden">
+      <style>{`
+        ${[...Array(6)]
+          .map(
+            (_, i) => `
+          .particle-${i} {
+            background: radial-gradient(circle, ${
+              i % 2 === 0 ? "#7A3A50" : "#C48B90"
+            } 0%, transparent 70%);
+            width: ${120 + i * 60}px;
+            height: ${120 + i * 60}px;
+            top: ${10 + i * 14}%;
+            left: ${5 + i * 16}%;
+            animation: float-${i % 3} ${18 + i * 4}s ease-in-out infinite;
+            animation-delay: ${i * 2}s;
+          }
+        `
+          )
+          .join("")}
+      `}</style>
       {[...Array(6)].map((_, i) => (
         <div
           key={i}
-          className="absolute rounded-full opacity-20"
-          style={{
-            background: `radial-gradient(circle, ${
-              i % 2 === 0 ? "#7A3A50" : "#C48B90"
-            } 0%, transparent 70%)`,
-            width: `${120 + i * 60}px`,
-            height: `${120 + i * 60}px`,
-            top: `${10 + i * 14}%`,
-            left: `${5 + i * 16}%`,
-            animation: `float-${i % 3} ${18 + i * 4}s ease-in-out infinite`,
-            animationDelay: `${i * 2}s`,
-          }}
+          className={`absolute rounded-full opacity-20 particle-${i}`}
         />
       ))}
     </div>

@@ -1,5 +1,5 @@
 steps:
-  # Build Docker image
+  # ── 1. Build Docker image ─────────────────────────────────
   - name: "gcr.io/cloud-builders/docker"
     args:
       [
@@ -11,18 +11,44 @@ steps:
         ".",
       ]
 
-  # Push to Container Registry
+  # ── 2. Push to Container Registry ─────────────────────────
   - name: "gcr.io/cloud-builders/docker"
     args: ["push", "gcr.io/$PROJECT_ID/eventflow:latest"]
 
-  # Run Prisma database migrations
+  # ── 3. Extract static assets for Firebase Hosting CDN ─────
+  # Sert _next/static/* directement depuis Firebase CDN
+  # pour eviter l'erreur MIME text/html via Cloud Run.
+  - name: "gcr.io/cloud-builders/docker"
+    entrypoint: "sh"
+    args:
+      - "-c"
+      - |
+        id=$$(docker create gcr.io/$PROJECT_ID/eventflow:latest)
+        mkdir -p public_html/_next
+        docker cp $$id:/app/.next/static public_html/_next/static
+        docker cp $$id:/app/public/. public_html/
+        docker rm $$id
+
+  # ── 4. Deploy static files to Firebase Hosting ────────────
+  - name: "node:20-alpine"
+    entrypoint: "npx"
+    args:
+      - "-y"
+      - "firebase-tools@latest"
+      - "deploy"
+      - "--only"
+      - "hosting"
+      - "--project"
+      - "$PROJECT_ID"
+
+  # ── 5. Run Prisma database migrations ─────────────────────
   - name: "gcr.io/$PROJECT_ID/eventflow:latest"
     entrypoint: "npx"
     args: ["prisma", "migrate", "deploy"]
     env:
       - "DATABASE_URL=${_DATABASE_URL}"
 
-  # Deploy to Cloud Run
+  # ── 6. Deploy to Cloud Run ────────────────────────────────
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
     args:

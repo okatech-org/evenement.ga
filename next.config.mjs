@@ -4,7 +4,9 @@ const nextConfig = {
 
   // Packages avec bindings natifs ou incompatibles avec le bundling webpack
   // doivent rester externes en mode standalone pour Docker/Cloud Run
-  serverExternalPackages: ["pg"],
+  experimental: {
+    serverComponentsExternalPackages: ["pg"],
+  },
 
   // ─── Security Headers ─────────────────────────────────────
   async headers() {

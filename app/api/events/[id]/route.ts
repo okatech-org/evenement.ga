@@ -214,6 +214,8 @@ export async function POST(
     return NextResponse.json({ success: true, url, field });
   } catch (error) {
     console.error("Upload error:", error);
-    return NextResponse.json({ error: "Erreur lors de l'upload" }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    return NextResponse.json({ error: "Erreur lors de l'upload", details: errorMessage, stack: errorStack }, { status: 500 });
   }
 }
