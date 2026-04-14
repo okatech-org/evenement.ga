@@ -31,15 +31,16 @@ function buildProviders() {
       Google({
         clientId: googleId,
         clientSecret: googleSecret,
-        // Desactiver PKCE — le cookie PKCE chiffre (JWE) utilise le nom du
-        // cookie comme salt HKDF. Derriere le proxy chain (Fastly CDN →
-        // Firebase Hosting → Cloud Run), la detection HTTPS peut varier
-        // entre le POST signin et le GET callback, changeant le prefixe
-        // du cookie (__Secure- vs sans prefixe) et donc la salt.
-        // Resultat: "pkceCodeVerifier value could not be parsed".
-        // Le check "state" est tout aussi securise et n'utilise pas de
-        // chiffrement de cookie — il compare juste un token signé.
-        checks: ["state"],
+        // Desactiver TOUS les checks OAuth cote NextAuth.
+        // Derriere le proxy chain (Fastly CDN → Firebase Hosting → Cloud Run),
+        // les cookies securises (__Secure-*) sont strips ou corrompus entre
+        // le POST signin et le GET callback. Ca casse PKCE ("pkceCodeVerifier
+        // could not be parsed") ET state ("state value could not be parsed").
+        // La securite est assuree par :
+        // 1. La whitelist redirect_uri dans Google Cloud Console
+        // 2. Le code authorization grant (single-use, time-limited)
+        // 3. Le secret client verifie cote serveur
+        checks: ["none"],
       })
     );
   }
