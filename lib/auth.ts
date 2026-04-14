@@ -1,4 +1,5 @@
 import NextAuth from "next-auth";
+import { skipCSRFCheck } from "@auth/core";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import Apple from "next-auth/providers/apple";
@@ -166,15 +167,18 @@ const isProduction =
 // Solution:
 //   1. Rename session token to `__session` (only cookie preserved by Firebase)
 //   2. OAuth providers use `checks: ["none"]` (PKCE/state cookies stripped)
-//   3. CSRF route remains active — next-auth/react needs it for signIn() calls
-//      The CSRF cookie itself is stripped by Firebase, but the token is embedded
-//      in the POST body by next-auth/react and validated server-side.
+//   3. skipCSRFCheck bypasses CSRF validation (Firebase strips the CSRF cookie,
+//      so the double-submit cookie check always fails). The GET /api/auth/csrf
+//      route returns 404 when disabled, but next-auth/react handles this
+//      gracefully — getCsrfToken() catches the error and falls back to "".
+//      CSRF protection is provided by: HTTPS + SameSite=Lax + browser Origin.
 // Reference: https://firebase.google.com/docs/hosting/manage-cache#using_cookies
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   secret: authSecret,
   useSecureCookies: isProduction,
+  skipCSRFCheck,
   session: {
     strategy: "jwt",
     maxAge: 7 * 24 * 60 * 60, // 7 jours
