@@ -19,22 +19,25 @@ export default async function OGImage({
     include: { theme: true },
   });
 
+  const baseStyles = {
+    notFound: {
+      width: "100%",
+      height: "100%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#1a1a1a",
+      color: "#fff",
+      fontSize: 48,
+      fontFamily: "sans-serif",
+    } as React.CSSProperties,
+    icon: { fontSize: 64, marginBottom: 16 } as React.CSSProperties,
+  };
+
   if (!event) {
     return new ImageResponse(
       (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "#1a1a1a",
-            color: "#fff",
-            fontSize: 48,
-            fontFamily: "sans-serif",
-          }}
-        >
+        <div {...{ style: baseStyles.notFound }}>
           Événement non trouvé
         </div>
       ),
@@ -57,81 +60,79 @@ export default async function OGImage({
     year: "numeric",
   });
 
+  const dynamicStyles = {
+    container: {
+      width: "100%",
+      height: "100%",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: bg,
+      padding: 60,
+      fontFamily: "sans-serif",
+    } as React.CSSProperties,
+    title: {
+      fontSize: 56,
+      fontWeight: 700,
+      color: primary,
+      textAlign: "center",
+      lineHeight: 1.2,
+      maxWidth: "80%",
+    } as React.CSSProperties,
+    dateLoc: {
+      marginTop: 24,
+      fontSize: 24,
+      color: muted,
+      display: "flex",
+      alignItems: "center",
+      gap: 16,
+    } as React.CSSProperties,
+    cta: {
+      marginTop: 40,
+      padding: "12px 32px",
+      backgroundColor: accent,
+      borderRadius: 12,
+      color: "#fff",
+      fontSize: 20,
+      fontWeight: 600,
+    } as React.CSSProperties,
+    branding: {
+      position: "absolute",
+      bottom: 24,
+      right: 40,
+      fontSize: 14,
+      color: muted,
+      opacity: 0.5,
+    } as React.CSSProperties,
+  };
+
   return new ImageResponse(
     (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: bg,
-          padding: 60,
-          fontFamily: "sans-serif",
-        }}
-      >
+      <div {...{ style: dynamicStyles.container }}>
         {/* Event icon */}
-        <div style={{ fontSize: 64, marginBottom: 16 }}>
+        <div {...{ style: baseStyles.icon }}>
           {eventConfig?.icon || "📅"}
         </div>
 
         {/* Title */}
-        <div
-          style={{
-            fontSize: 56,
-            fontWeight: 700,
-            color: primary,
-            textAlign: "center",
-            lineHeight: 1.2,
-            maxWidth: "80%",
-          }}
-        >
+        <div {...{ style: dynamicStyles.title }}>
           {event.title}
         </div>
 
         {/* Date & Location */}
-        <div
-          style={{
-            marginTop: 24,
-            fontSize: 24,
-            color: muted,
-            display: "flex",
-            alignItems: "center",
-            gap: 16,
-          }}
-        >
+        <div {...{ style: dynamicStyles.dateLoc }}>
           <span>📅 {dateStr}</span>
           {event.location && <span>📍 {event.location}</span>}
         </div>
 
         {/* CTA */}
-        <div
-          style={{
-            marginTop: 40,
-            padding: "12px 32px",
-            backgroundColor: accent,
-            borderRadius: 12,
-            color: "#fff",
-            fontSize: 20,
-            fontWeight: 600,
-          }}
-        >
+        <div {...{ style: dynamicStyles.cta }}>
           Voir l&apos;invitation
         </div>
 
         {/* Branding */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: 24,
-            right: 40,
-            fontSize: 14,
-            color: muted,
-            opacity: 0.5,
-          }}
-        >
+        <div {...{ style: dynamicStyles.branding }}>
           evenement.ga
         </div>
       </div>
