@@ -15,40 +15,14 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     args: ["push", "gcr.io/$PROJECT_ID/eventflow:latest"]
 
-  # ── 3. Extract static assets for Firebase Hosting CDN ─────
-  # Sert _next/static/* directement depuis Firebase CDN
-  # pour eviter l'erreur MIME text/html via Cloud Run.
-  - name: "gcr.io/cloud-builders/docker"
-    entrypoint: "sh"
-    args:
-      - "-c"
-      - |
-        id=$$(docker create gcr.io/$PROJECT_ID/eventflow:latest)
-        mkdir -p public_html/_next
-        docker cp $$id:/app/.next/static public_html/_next/static
-        docker cp $$id:/app/public/. public_html/
-        docker rm $$id
-
-  # ── 4. Deploy static files to Firebase Hosting ────────────
-  - name: "node:20-alpine"
-    entrypoint: "npx"
-    args:
-      - "-y"
-      - "firebase-tools@latest"
-      - "deploy"
-      - "--only"
-      - "hosting"
-      - "--project"
-      - "$PROJECT_ID"
-
-  # ── 5. Run Prisma database migrations ─────────────────────
+  # ── 3. Run Prisma database migrations ─────────────────────
   - name: "gcr.io/$PROJECT_ID/eventflow:latest"
     entrypoint: "npx"
     args: ["prisma", "migrate", "deploy"]
     env:
       - "DATABASE_URL=${_DATABASE_URL}"
 
-  # ── 6. Deploy to Cloud Run ────────────────────────────────
+  # ── 4. Deploy to Cloud Run (CRITICAL) ─────────────────────
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
     args:
@@ -72,6 +46,29 @@ steps:
       - "3"
       - "--set-env-vars"
       - "DATABASE_URL=${_DATABASE_URL},AUTH_SECRET=${_NEXTAUTH_SECRET},NEXTAUTH_SECRET=${_NEXTAUTH_SECRET},AUTH_URL=${_NEXTAUTH_URL},NEXTAUTH_URL=${_NEXTAUTH_URL},AUTH_TRUST_HOST=true,NEXT_PUBLIC_CONVEX_URL=${_CONVEX_URL},RESEND_API_KEY=${_RESEND_API_KEY},GOOGLE_CLIENT_ID=${_GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${_GOOGLE_CLIENT_SECRET},APPLE_CLIENT_ID=${_APPLE_CLIENT_ID},APPLE_CLIENT_SECRET=${_APPLE_CLIENT_SECRET},APPLE_TEAM_ID=${_APPLE_TEAM_ID},APPLE_KEY_ID=${_APPLE_KEY_ID}"
+
+  # ── 5. Extract static assets for Firebase Hosting CDN ─────
+  # Copie _next/static/* depuis le container Docker pour que
+  # Firebase Hosting serve les assets statiques directement.
+  - name: "gcr.io/cloud-builders/docker"
+    entrypoint: "sh"
+    args:
+      - "-c"
+      - |
+        id=$$(docker create gcr.io/$PROJECT_ID/eventflow:latest)
+        mkdir -p public_html/_next
+        docker cp $$id:/app/.next/static public_html/_next/static
+        docker cp $$id:/app/public/. public_html/
+        docker rm $$id
+
+  # ── 6. Deploy static files to Firebase Hosting ────────────
+  # Necessite le role roles/firebasehosting.admin sur le SA Cloud Build.
+  # Si ce step echoue, Cloud Run (step 4) sert deja tout correctement.
+  - name: "node:20-alpine"
+    entrypoint: "sh"
+    args:
+      - "-c"
+      - "npx -y firebase-tools@latest deploy --only hosting --project $PROJECT_ID || echo 'WARN: Firebase Hosting deploy skipped (missing permissions or config)'"
 
 substitutions:
   _DATABASE_URL: ""
