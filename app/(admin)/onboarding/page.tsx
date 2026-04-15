@@ -192,7 +192,7 @@ export default function OnboardingPage() {
             <p className="mt-1 text-sm text-gray-500">
               Le thème et les modules seront ajustés automatiquement.
             </p>
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
               {(Object.entries(EVENT_TYPES) as [string, { label: string; icon: string; description: string; color: string }][]).map(
                 ([key, val]) => (
                   <button
