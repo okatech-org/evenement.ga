@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/db";
 import { EVENT_TYPES } from "@/lib/config";
 import { THEME_PRESETS } from "@/lib/themes/presets";
-import type { EventType } from "@prisma/client";
+import type { EventType } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

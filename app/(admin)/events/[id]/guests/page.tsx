@@ -4,7 +4,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { GUEST_STATUS_LABELS } from "@/lib/config";
 import { GuestTable } from "@/components/admin/guest-table";
-import type { GuestStatus } from "@prisma/client";
+import type { GuestStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { THEME_PRESETS } from "@/lib/themes/presets";
 import { getGoogleFontsUrl, generateThemeCSS } from "@/lib/themes/presets";
 import { EVENT_TYPES } from "@/lib/config";
-import type { EventType, Prisma } from "@prisma/client";
+import type { EventType } from "@/lib/types";
 import { InvitationCard } from "@/components/public/invitation-card";
 import type { Metadata } from "next";
 
@@ -126,7 +126,7 @@ export default async function PublicEventPage({
   // Extract module configs
   const activeModuleTypes = event.modules.map((m) => m.type);
 
-  const getModuleConfig = (type: string): Prisma.JsonValue | null => {
+  const getModuleConfig = (type: string): unknown => {
     const mod = event.modules.find((m) => m.type === type);
     return mod?.configJson ?? null;
   };

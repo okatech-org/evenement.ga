@@ -132,3 +132,140 @@ export const getDashboardStats = query({
     };
   },
 });
+
+// ─── Dashboard Data (page dashboard principal) ─────
+// Retourne tout ce dont la page dashboard a besoin en une seule query :
+// events (avec theme, modules actifs, counts), stats agrégées, RSVPs récentes.
+export const getDashboardData = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const events = await ctx.db
+      .query("events")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    // Enrichir chaque event avec theme, modules actifs, guestCount, chatCount
+    const eventsWithRelations = await Promise.all(
+      events.map(async (event) => {
+        const [theme, modules, guests, chatMessages] = await Promise.all([
+          ctx.db
+            .query("eventThemes")
+            .withIndex("by_event", (q) => q.eq("eventId", event._id))
+            .first(),
+          ctx.db
+            .query("eventModules")
+            .withIndex("by_event", (q) => q.eq("eventId", event._id))
+            .collect(),
+          ctx.db
+            .query("guests")
+            .withIndex("by_event", (q) => q.eq("eventId", event._id))
+            .collect(),
+          ctx.db
+            .query("chatMessages")
+            .withIndex("by_event_channel", (q) => q.eq("eventId", event._id))
+            .collect(),
+        ]);
+
+        return {
+          ...event,
+          theme,
+          modules: modules.filter((m) => m.active),
+          _count: {
+            guests: guests.length,
+            chatMessages: chatMessages.length,
+          },
+        };
+      })
+    );
+
+    // Trier par première date ascendante
+    eventsWithRelations.sort((a, b) => {
+      const ad = a.dates[0] ?? 0;
+      const bd = b.dates[0] ?? 0;
+      return ad - bd;
+    });
+
+    // Stats agrégées
+    const totalEvents = eventsWithRelations.length;
+    const totalGuests = eventsWithRelations.reduce(
+      (acc, e) => acc + e._count.guests,
+      0
+    );
+    const publishedEvents = eventsWithRelations.filter(
+      (e) => e.status === "PUBLISHED"
+    ).length;
+
+    // Compter les invités confirmés (CONFIRMED)
+    let confirmedGuests = 0;
+    for (const event of events) {
+      const guests = await ctx.db
+        .query("guests")
+        .withIndex("by_event", (q) => q.eq("eventId", event._id))
+        .collect();
+      confirmedGuests += guests.filter((g) => g.status === "CONFIRMED").length;
+    }
+
+    // RSVPs récentes (5 dernières) avec guest + event
+    const allRsvps: Array<{
+      _id: string;
+      _creationTime: number;
+      guestId: string;
+      presence: boolean;
+      adultCount: number;
+      childrenCount: number;
+      menuChoice?: string;
+      allergies: string[];
+      message?: string;
+      guest: {
+        firstName: string;
+        lastName: string;
+        event: { id: string; title: string };
+      };
+    }> = [];
+
+    for (const event of events) {
+      const guests = await ctx.db
+        .query("guests")
+        .withIndex("by_event", (q) => q.eq("eventId", event._id))
+        .collect();
+
+      for (const guest of guests) {
+        const rsvp = await ctx.db
+          .query("rsvps")
+          .withIndex("by_guest", (q) => q.eq("guestId", guest._id))
+          .first();
+        if (rsvp) {
+          allRsvps.push({
+            _id: rsvp._id,
+            _creationTime: rsvp._creationTime,
+            guestId: rsvp.guestId,
+            presence: rsvp.presence,
+            adultCount: rsvp.adultCount,
+            childrenCount: rsvp.childrenCount,
+            menuChoice: rsvp.menuChoice,
+            allergies: rsvp.allergies,
+            message: rsvp.message,
+            guest: {
+              firstName: guest.firstName,
+              lastName: guest.lastName,
+              event: { id: event._id, title: event.title },
+            },
+          });
+        }
+      }
+    }
+
+    // Tri par date de soumission descendante, limiter à 5
+    allRsvps.sort((a, b) => b._creationTime - a._creationTime);
+    const recentRSVPs = allRsvps.slice(0, 5);
+
+    return {
+      events: eventsWithRelations,
+      totalEvents,
+      totalGuests,
+      publishedEvents,
+      confirmedGuests,
+      recentRSVPs,
+    };
+  },
+});

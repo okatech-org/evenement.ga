@@ -1,4 +1,4 @@
-import { EventType } from "@prisma/client";
+import { EventType } from "@/lib/types";
 
 /**
  * Theme preset definitions — one per event type.

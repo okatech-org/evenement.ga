@@ -1,9 +1,11 @@
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { EVENT_TYPES } from "@/lib/config";
-import type { EventType, EventStatus } from "@prisma/client";
+import type { EventType, EventStatus } from "@/lib/types";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 export const dynamic = "force-dynamic";
 
@@ -11,52 +13,26 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const events = await prisma.event.findMany({
-    where: { userId: session.user.id },
-    include: {
-      theme: true,
-      modules: { where: { active: true } },
-      _count: {
-        select: {
-          guests: true,
-          chatMessages: true,
-        },
-      },
-    },
-    orderBy: { date: "asc" },
+  // ─── Fetch unique : tout ce dont la page a besoin ──────
+  // Migré de Prisma vers Convex — cf. convex/events.ts::getDashboardData.
+  const data = await convexClient.query(api.events.getDashboardData, {
+    userId: session.user.id as Id<"users">,
   });
 
-  // Aggregate stats
-  const totalEvents = events.length;
-  const totalGuests = events.reduce((acc, e) => acc + e._count.guests, 0);
-  const publishedEvents = events.filter((e) => e.status === "PUBLISHED").length;
+  const {
+    events,
+    totalEvents,
+    totalGuests,
+    publishedEvents,
+    confirmedGuests,
+    recentRSVPs,
+  } = data;
 
-  // Next upcoming event (hero card)
-  const nextEvent = events.find((e) => new Date(e.date) > new Date() && e.status !== "ARCHIVED");
-
-  // Confirmed guests count
-  const confirmedGuests = await prisma.guest.count({
-    where: {
-      event: { userId: session.user.id },
-      status: "CONFIRMED",
-    },
-  });
-
-  // Recent RSVPs
-  const recentRSVPs = await prisma.rSVP.findMany({
-    where: {
-      guest: {
-        event: { userId: session.user.id },
-      },
-    },
-    include: {
-      guest: {
-        include: { event: { select: { title: true, id: true } } },
-      },
-    },
-    orderBy: { submittedAt: "desc" },
-    take: 5,
-  });
+  // Prochain événement : première date future (events.dates[0] est un timestamp ms)
+  const now = Date.now();
+  const nextEvent = events.find(
+    (e) => (e.dates[0] ?? 0) > now && e.status !== "ARCHIVED"
+  );
 
   const statusColor: Record<EventStatus, string> = {
     DRAFT: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
@@ -93,9 +69,8 @@ export default async function DashboardPage() {
       {/* ═══ Hero Card — Next Event ═══ */}
       {nextEvent && (() => {
         const eventConfig = EVENT_TYPES[nextEvent.type as EventType];
-        const daysUntil = Math.ceil(
-          (new Date(nextEvent.date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-        );
+        const firstDate = nextEvent.dates[0] ?? 0;
+        const daysUntil = Math.ceil((firstDate - now) / (1000 * 60 * 60 * 24));
         return (
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#7A3A50] to-[#C48B90] p-6 sm:p-8 text-white shadow-xl shadow-[#7A3A50]/20">
             {/* Background pattern */}
@@ -115,7 +90,7 @@ export default async function DashboardPage() {
               </h2>
 
               <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-white/80">
-                <span>📅 {new Date(nextEvent.date).toLocaleDateString("fr-FR", {
+                <span>📅 {new Date(firstDate).toLocaleDateString("fr-FR", {
                   weekday: "long",
                   day: "numeric",
                   month: "long",
@@ -127,13 +102,13 @@ export default async function DashboardPage() {
               {/* Quick Actions */}
               <div className="mt-6 flex flex-wrap gap-2">
                 <Link
-                  href={`/events/${nextEvent.id}/guests`}
+                  href={`/events/${nextEvent._id}/guests`}
                   className="rounded-xl bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-medium hover:bg-white/30 transition"
                 >
                   👥 Gérer les invités
                 </Link>
                 <Link
-                  href={`/events/${nextEvent.id}/edit`}
+                  href={`/events/${nextEvent._id}/edit`}
                   className="rounded-xl bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-medium hover:bg-white/30 transition"
                 >
                   ✏️ Éditer
@@ -146,7 +121,7 @@ export default async function DashboardPage() {
                   👁️ Prévisualiser →
                 </Link>
                 <Link
-                  href={`/events/${nextEvent.id}`}
+                  href={`/events/${nextEvent._id}`}
                   className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#7A3A50] hover:bg-white/90 transition"
                 >
                   Ouvrir le dashboard →
@@ -212,14 +187,13 @@ export default async function DashboardPage() {
             <div className="space-y-3">
               {events.slice(0, 5).map((event) => {
                 const eventConfig = EVENT_TYPES[event.type as EventType];
-                const daysUntil = Math.ceil(
-                  (new Date(event.date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-                );
+                const firstDate = event.dates[0] ?? 0;
+                const daysUntil = Math.ceil((firstDate - now) / (1000 * 60 * 60 * 24));
 
                 return (
                   <Link
-                    key={event.id}
-                    href={`/events/${event.id}`}
+                    key={event._id}
+                    href={`/events/${event._id}`}
                     className="group flex items-center gap-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm transition-all hover:border-[#7A3A50]/20 hover:shadow-md"
                   >
                     <span className="text-2xl">{eventConfig?.icon ?? "📅"}</span>
@@ -228,7 +202,7 @@ export default async function DashboardPage() {
                         {event.title}
                       </h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        {new Date(event.date).toLocaleDateString("fr-FR", {
+                        {new Date(firstDate).toLocaleDateString("fr-FR", {
                           day: "numeric",
                           month: "short",
                         })} · {event._count.guests} invités
@@ -240,8 +214,8 @@ export default async function DashboardPage() {
                           J-{daysUntil}
                         </span>
                       )}
-                      <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${statusColor[event.status]}`}>
-                        {statusLabel[event.status]}
+                      <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${statusColor[event.status as EventStatus]}`}>
+                        {statusLabel[event.status as EventStatus]}
                       </span>
                     </div>
                   </Link>
@@ -265,7 +239,7 @@ export default async function DashboardPage() {
             <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm divide-y divide-gray-50 dark:divide-gray-800">
               {recentRSVPs.map((rsvp) => (
                 <Link
-                  key={rsvp.id}
+                  key={rsvp._id}
                   href={`/events/${rsvp.guest.event.id}/guests`}
                   className="flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition"
                 >

@@ -1,9 +1,11 @@
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { EVENT_TYPES } from "@/lib/config";
-import type { EventType, EventStatus } from "@prisma/client";
+import type { EventType, EventStatus } from "@/lib/types";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 export const dynamic = "force-dynamic";
 
@@ -11,15 +13,12 @@ export default async function EventsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const events = await prisma.event.findMany({
-    where: { userId: session.user.id },
-    include: {
-      theme: true,
-      modules: { where: { active: true } },
-      _count: { select: { guests: true } },
-    },
-    orderBy: { date: "asc" },
+  // Migré Prisma → Convex : utilise getDashboardData qui retourne déjà
+  // events enrichis avec theme, modules actifs, guest count.
+  const data = await convexClient.query(api.events.getDashboardData, {
+    userId: session.user.id as Id<"users">,
   });
+  const events = data.events;
 
   const statusColor: Record<EventStatus, string> = {
     DRAFT: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
@@ -32,6 +31,8 @@ export default async function EventsPage() {
     PUBLISHED: "Publié",
     ARCHIVED: "Archivé",
   };
+
+  const now = Date.now();
 
   return (
     <div className="space-y-6">
@@ -70,14 +71,13 @@ export default async function EventsPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {events.map((event) => {
             const config = EVENT_TYPES[event.type as EventType];
-            const daysUntil = Math.ceil(
-              (new Date(event.date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-            );
+            const firstDate = event.dates[0] ?? 0;
+            const daysUntil = Math.ceil((firstDate - now) / (1000 * 60 * 60 * 24));
             const isPast = daysUntil <= 0;
 
             return (
               <div
-                key={event.id}
+                key={event._id}
                 className="group relative rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm transition-all hover:border-[#7A3A50]/20 hover:shadow-lg overflow-hidden"
               >
                 {/* Top accent bar */}
@@ -92,7 +92,7 @@ export default async function EventsPage() {
                   }}
                 />
 
-                <Link href={`/events/${event.id}`} className="block p-5">
+                <Link href={`/events/${event._id}`} className="block p-5">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{config?.icon ?? "📅"}</span>
@@ -105,13 +105,13 @@ export default async function EventsPage() {
                         </p>
                       </div>
                     </div>
-                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${statusColor[event.status]}`}>
-                      {statusLabel[event.status]}
+                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${statusColor[event.status as EventStatus]}`}>
+                      {statusLabel[event.status as EventStatus]}
                     </span>
                   </div>
 
                   <div className="mt-4 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                    <span>📅 {new Date(event.date).toLocaleDateString("fr-FR", {
+                    <span>📅 {new Date(firstDate).toLocaleDateString("fr-FR", {
                       day: "numeric",
                       month: "short",
                       year: "numeric",
@@ -130,13 +130,13 @@ export default async function EventsPage() {
                 {/* Quick action footer */}
                 <div className="flex border-t border-gray-50 dark:border-gray-800 divide-x divide-gray-50 dark:divide-gray-800">
                   <Link
-                    href={`/events/${event.id}/guests`}
+                    href={`/events/${event._id}/guests`}
                     className="flex-1 py-2.5 text-center text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-[#7A3A50] dark:hover:text-[#C48B90] transition"
                   >
                     👥 Invités
                   </Link>
                   <Link
-                    href={`/events/${event.id}/edit`}
+                    href={`/events/${event._id}/edit`}
                     className="flex-1 py-2.5 text-center text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-[#7A3A50] dark:hover:text-[#C48B90] transition"
                   >
                     ✏️ Éditer

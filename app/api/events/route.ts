@@ -7,7 +7,7 @@ import { verifyCsrf } from "@/lib/api-guards";
 import { slugify } from "@/lib/utils";
 import { checkEventLimit } from "@/lib/plan-guard";
 import { getDefaultModulesForType, getDefaultPresetForType } from "@/lib/modules/defaults";
-import type { EventType, Plan } from "@prisma/client";
+import type { EventType, Plan } from "@/lib/types";
 import { logSystem } from "@/lib/superadmin/logger";
 
 /**

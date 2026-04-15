@@ -1,4 +1,4 @@
-import { EventType, ModuleType, Plan } from "@prisma/client";
+import { EventType, ModuleType, Plan } from "@/lib/types";
 
 // ─── Event Types Configuration ─────────────────────────────
 
@@ -135,7 +135,7 @@ export const PLAN_LIMITS: Record<
     label: "Gratuit",
     maxEvents: 1,
     maxGuests: 50,
-    modules: [ModuleType.MOD_INVITE, ModuleType.MOD_RSVP, ModuleType.MOD_MENU],
+    modules: ["MOD_INVITE", "MOD_RSVP", "MOD_MENU"],
     qrCode: false,
     chat: false,
     customDomain: false,
@@ -148,12 +148,12 @@ export const PLAN_LIMITS: Record<
     maxEvents: 3,
     maxGuests: 200,
     modules: [
-      ModuleType.MOD_INVITE,
-      ModuleType.MOD_RSVP,
-      ModuleType.MOD_MENU,
-      ModuleType.MOD_QR,
-      ModuleType.MOD_PROGRAMME,
-      ModuleType.MOD_GALERIE,
+      "MOD_INVITE",
+      "MOD_RSVP",
+      "MOD_MENU",
+      "MOD_QR",
+      "MOD_PROGRAMME",
+      "MOD_GALERIE",
     ],
     qrCode: true,
     chat: false,

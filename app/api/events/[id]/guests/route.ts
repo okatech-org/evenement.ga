@@ -9,7 +9,7 @@ import { AddGuestSchema } from "@/lib/validations";
 import { z } from "zod";
 import { randomBytes } from "crypto";
 import QRCode from "qrcode";
-import type { Plan } from "@prisma/client";
+import type { Plan } from "@/lib/types";
 import { logSystem } from "@/lib/superadmin/logger";
 
 /**

@@ -1,4 +1,4 @@
-import { EventType, ModuleType } from "@prisma/client";
+import { EventType, ModuleType } from "@/lib/types";
 
 /**
  * Default modules configuration for each event type

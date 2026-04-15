@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { PLAN_LIMITS } from "@/lib/config";
-import type { Plan, ModuleType } from "@prisma/client";
+import type { Plan, ModuleType } from "@/lib/types";
 
 export type PlanCheckResult =
   | { allowed: true }

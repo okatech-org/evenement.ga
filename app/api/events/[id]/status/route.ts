@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { verifyCsrf } from "@/lib/api-guards";
-import type { EventStatus } from "@prisma/client";
+import type { EventStatus } from "@/lib/types";
 import { logSystem } from "@/lib/superadmin/logger";
 
 /**

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { EVENT_TYPES } from "@/lib/config";
-import type { EventType, EventStatus } from "@prisma/client";
+import type { EventType, EventStatus } from "@/lib/types";
 import { ModuleManager } from "@/components/admin/module-manager";
 
 export const dynamic = "force-dynamic";
