@@ -389,7 +389,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed left-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-xl bg-white dark:bg-gray-900 shadow-lg border border-gray-100 dark:border-gray-800 lg:hidden"
+        className="fixed left-4 top-4 z-50 flex h-11 w-11 items-center justify-center rounded-xl bg-white dark:bg-gray-900 shadow-lg border border-gray-100 dark:border-gray-800 lg:hidden active:scale-95 transition-transform"
         aria-label="Open menu"
       >
         <Menu className="h-5 w-5 text-gray-700 dark:text-gray-300" />
@@ -405,7 +405,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
 
       {/* Mobile sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-white dark:bg-gray-950 shadow-2xl transition-transform duration-300 lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-white dark:bg-gray-950 shadow-2xl transition-transform duration-300 lg:hidden safe-bottom ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

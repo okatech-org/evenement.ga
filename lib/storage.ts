@@ -80,11 +80,16 @@ async function uploadToS3(
 }
 
 async function uploadLocal(buffer: Buffer, key: string): Promise<string> {
-  const dir = join(process.cwd(), "public", "uploads", key.split("/").slice(0, -1).join("/"));
+  const isProd = process.env.NODE_ENV === "production";
+  // In production (Docker/Cloud Run), the app directory is read-only.
+  // Write to /tmp/uploads and serve via /api/uploads/... route.
+  const baseDir = isProd ? "/tmp/uploads" : join(process.cwd(), "public", "uploads");
+  const dir = join(baseDir, key.split("/").slice(0, -1).join("/"));
   await mkdir(dir, { recursive: true });
-  const filePath = join(process.cwd(), "public", "uploads", key);
+  const filePath = join(baseDir, key);
   await writeFile(filePath, buffer);
-  return `/uploads/${key}`;
+  // In production, files are served by the API route /api/uploads/[...path]
+  return isProd ? `/api/uploads/${key}` : `/uploads/${key}`;
 }
 
 /**

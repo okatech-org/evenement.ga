@@ -1,4 +1,5 @@
 "use client";
+// noinspection CssInlineStyles
 
 import { useEffect, useState, useCallback, useRef, type CSSProperties } from "react";
 import { AmbientEffect } from "@/components/effects/ambient-effect";
@@ -200,7 +201,7 @@ function PageBackground({ pageId, theme }: { pageId: string; theme: InvitationCa
   if (video) {
     return (
       <div className="absolute inset-0 z-0 overflow-hidden">
-        <video src={video} autoPlay loop muted playsInline className="absolute top-1/2 left-1/2 min-w-full min-h-full object-cover" style={{ transform: "translate(-50%, -50%)" }} />
+        <video src={video} autoPlay loop muted playsInline className="absolute top-1/2 left-1/2 min-w-full min-h-full object-cover -translate-x-1/2 -translate-y-1/2" />
         <div className="absolute inset-0 inv-cover-gradient" />
       </div>
     );
@@ -215,12 +216,11 @@ function PageBackground({ pageId, theme }: { pageId: string; theme: InvitationCa
             key={idx}
             src={url}
             alt=""
-            className="absolute top-1/2 left-1/2 min-w-full min-h-full object-cover"
-            style={{
-              transform: "translate(-50%, -50%)",
+            className="absolute top-1/2 left-1/2 min-w-full min-h-full object-cover -translate-x-1/2 -translate-y-1/2"
+            {...{ style: {
               opacity: idx === currentSlide ? 1 : 0,
               transition: "opacity 1s ease-in-out",
-            }}
+            } }}
           />
         ))}
         <div className="absolute inset-0 inv-cover-gradient" />
@@ -648,12 +648,12 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
   const currentPageDef = pages[currentPage];
   const hasCoverMedia = event.coverImage || event.coverVideo;
 
-
+  // noinspection CssInlineStyles
   return (
     <div
       ref={rootRef}
-      className={`relative h-screen overflow-hidden inv-root ${entryClass}`}
-      style={theme.cssVars as unknown as CSSProperties}
+      className={`relative h-[100dvh] overflow-hidden inv-root safe-bottom ${entryClass}`}
+      {...{ style: theme.cssVars as unknown as CSSProperties }}
     >
       {/* Ambient Effects */}
       <AmbientEffect
@@ -858,6 +858,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
                       <RsvpForm
                         eventId={event.id}
                         showMenu={activeModules.includes("MOD_MENU")}
+                        showChildren={modulesData.rsvp?.allowChildren !== false}
                         colors={theme.colors}
                         guestInfo={guestInfo || undefined}
                       />
@@ -912,7 +913,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
               <button
                 onClick={goPrev}
                 aria-label="Page précédente"
-                className="fixed bottom-6 left-20 z-30 flex h-10 w-10 items-center justify-center rounded-full transition-all hover:scale-110 inv-arrow-btn"
+                className="fixed bottom-6 left-16 sm:left-20 z-30 flex h-10 w-10 items-center justify-center rounded-full transition-all hover:scale-110 inv-arrow-btn"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -923,7 +924,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
               <button
                 onClick={goNext}
                 aria-label="Page suivante"
-                className="fixed bottom-6 right-20 z-30 flex h-10 w-10 items-center justify-center rounded-full transition-all hover:scale-110 inv-arrow-btn"
+                className="fixed bottom-6 right-16 sm:right-20 z-30 flex h-10 w-10 items-center justify-center rounded-full transition-all hover:scale-110 inv-arrow-btn"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

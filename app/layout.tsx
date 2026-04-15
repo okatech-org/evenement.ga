@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+// noinspection ALL
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth-provider";
@@ -12,6 +13,14 @@ const inter = Inter({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  themeColor: "#7A3A50",
+};
+
 export const metadata: Metadata = {
   title: {
     template: "%s | EventFlow",
@@ -22,6 +31,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
   ),
+  icons: {
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({
@@ -32,8 +44,8 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
+        <link rel="apple-touch-icon" href="/icon.png" />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#7A3A50" />
         {/* Empeche le navigateur de cacher le HTML — evite les hashes CSS/JS obsoletes apres redeploy */}
         <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
         <meta httpEquiv="Pragma" content="no-cache" />

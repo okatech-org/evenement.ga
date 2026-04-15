@@ -91,11 +91,11 @@ export default async function EventDetailPage({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap mt-2 sm:mt-0">
           <Link
             href={`/${event.slug}`}
             target="_blank"
-            className="rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 transition hover:bg-gray-50 dark:hover:bg-gray-800"
+            className="rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 sm:py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 transition hover:bg-gray-50 dark:hover:bg-gray-800"
           >
             👁️ Prévisualiser
           </Link>
@@ -103,7 +103,7 @@ export default async function EventDetailPage({
             <input type="hidden" name="status" value={statusActions[event.status as EventStatus].nextStatus} />
             <button
               type="submit"
-              className={`rounded-xl px-3 py-1.5 text-sm font-medium text-white transition ${statusActions[event.status as EventStatus].color}`}
+              className={`rounded-xl px-3 py-2 sm:py-1.5 text-sm font-medium text-white transition ${statusActions[event.status as EventStatus].color}`}
             >
               {statusActions[event.status as EventStatus].label}
             </button>
@@ -163,7 +163,7 @@ export default async function EventDetailPage({
       </div>
 
       {/* Share link — compact */}
-      <div className="rounded-xl border border-[#7A3A50]/10 dark:border-[#7A3A50]/20 bg-[#7A3A50]/5 dark:bg-[#7A3A50]/10 px-4 py-2.5 flex items-center gap-3 shrink-0">
+      <div className="rounded-xl border border-[#7A3A50]/10 dark:border-[#7A3A50]/20 bg-[#7A3A50]/5 dark:bg-[#7A3A50]/10 px-4 py-3 sm:py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 shrink-0">
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium text-gray-900 dark:text-white">🔗 Lien de partage</p>
           <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono truncate">
@@ -172,7 +172,7 @@ export default async function EventDetailPage({
         </div>
         <Link
           href={`/events/${event._id}/guests`}
-          className="rounded-lg bg-[#7A3A50] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#6A2A40] transition shrink-0"
+          className="rounded-lg bg-[#7A3A50] px-3 py-2 sm:py-1.5 text-xs font-medium text-white hover:bg-[#6A2A40] transition shrink-0 text-center"
         >
           + Ajouter des invités
         </Link>

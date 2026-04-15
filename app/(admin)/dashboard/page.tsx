@@ -50,7 +50,7 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
             Bonjour, {session.user.name?.split(" ")[0]} 👋
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -59,7 +59,7 @@ export default async function DashboardPage() {
         </div>
         <Link
           href="/onboarding"
-          className="inline-flex items-center gap-2 rounded-xl bg-[#7A3A50] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#7A3A50]/25 transition hover:bg-[#6A2A40] hover:shadow-xl"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#7A3A50] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#7A3A50]/25 transition hover:bg-[#6A2A40] hover:shadow-xl w-full sm:w-auto"
         >
           <span className="text-lg">+</span> Nouvel événement
         </Link>
@@ -99,7 +99,7 @@ export default async function DashboardPage() {
               </div>
 
               {/* Quick Actions */}
-              <div className="mt-6 flex flex-wrap gap-2">
+              <div className="mt-6 flex flex-col sm:flex-row flex-wrap gap-2">
                 <Link
                   href={`/events/${nextEvent._id}/guests`}
                   className="rounded-xl bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-medium hover:bg-white/30 transition"

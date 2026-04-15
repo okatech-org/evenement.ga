@@ -34,16 +34,16 @@ export default async function EventsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Mes événements</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Mes événements</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {events.length} événement{events.length !== 1 ? "s" : ""}
           </p>
         </div>
         <Link
           href="/onboarding"
-          className="inline-flex items-center gap-2 rounded-xl bg-[#7A3A50] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#7A3A50]/25 transition hover:bg-[#6A2A40]"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#7A3A50] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#7A3A50]/25 transition hover:bg-[#6A2A40] w-full sm:w-auto"
         >
           <span className="text-lg">+</span> Nouvel événement
         </Link>
@@ -66,7 +66,7 @@ export default async function EventsPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {events.map((event) => {
             const config = EVENT_TYPES[event.type as EventType];
             const firstDate = event.dates[0] ?? 0;
@@ -80,14 +80,13 @@ export default async function EventsPage() {
               >
                 {/* Top accent bar */}
                 <div
-                  className="h-1"
-                  style={{
-                    background: event.status === "PUBLISHED"
-                      ? "linear-gradient(90deg, #7A3A50, #C48B90)"
+                  className={`h-1 ${
+                    event.status === "PUBLISHED"
+                      ? "bg-gradient-to-r from-[#7A3A50] to-[#C48B90]"
                       : event.status === "DRAFT"
-                      ? "linear-gradient(90deg, #EAB308, #FDE68A)"
-                      : "#9CA3AF",
-                  }}
+                      ? "bg-gradient-to-r from-yellow-500 to-yellow-200"
+                      : "bg-gray-400"
+                  }`}
                 />
 
                 <Link href={`/events/${event._id}`} className="block p-5">

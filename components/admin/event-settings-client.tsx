@@ -263,7 +263,7 @@ export function EventSettingsClient({ event }: SettingsClientProps) {
         <h2 className="font-semibold text-red-800 dark:text-red-400">Zone de danger</h2>
 
         {/* Archive */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-red-800 dark:text-red-400">
               Archiver l&apos;événement
@@ -285,7 +285,7 @@ export function EventSettingsClient({ event }: SettingsClientProps) {
         </div>
 
         {/* Delete */}
-        <div className="flex items-center justify-between border-t border-red-200 dark:border-red-900/50 pt-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-red-200 dark:border-red-900/50 pt-4">
           <div>
             <p className="text-sm font-medium text-red-800 dark:text-red-400">
               Supprimer l&apos;événement

@@ -1,5 +1,6 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 
 // ─── Scan QR ───────────────────────────────────────
 export const scan = mutation({
@@ -72,7 +73,211 @@ export const generateQr = mutation({
   },
 });
 
-// ─── Seed Data ─────────────────────────────────────
+// ─── Scan by token/URL (used by the scan API route) ─────────
+export const scanByToken = mutation({
+  args: {
+    eventId: v.id("events"),
+    scannedBy: v.id("users"),
+    scannedUrl: v.optional(v.string()),
+    inviteToken: v.optional(v.string()),
+    qrToken: v.optional(v.string()),
+    guestId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // ── Find guest by multiple lookup strategies ──
+    let guest = null;
+
+    if (args.guestId) {
+      try {
+        const found = await ctx.db.get(args.guestId as Id<"guests">);
+        if (found && "eventId" in found && found.eventId === args.eventId) {
+          guest = found;
+        }
+      } catch {
+        guest = null;
+      }
+    }
+
+    if (!guest && args.inviteToken) {
+      guest = await ctx.db
+        .query("guests")
+        .withIndex("by_invite_token", (q) => q.eq("inviteToken", args.inviteToken!))
+        .first();
+      if (guest && guest.eventId !== args.eventId) guest = null;
+    }
+
+    if (!guest && args.qrToken) {
+      guest = await ctx.db
+        .query("guests")
+        .withIndex("by_qr_token", (q) => q.eq("qrToken", args.qrToken!))
+        .first();
+      if (guest && guest.eventId !== args.eventId) guest = null;
+    }
+
+    if (!guest && args.scannedUrl) {
+      // Parse the scanned URL to extract the token
+      const parts = args.scannedUrl.split("/");
+      const token = parts[parts.length - 1];
+      if (token) {
+        // Try inviteToken
+        guest = await ctx.db
+          .query("guests")
+          .withIndex("by_invite_token", (q) => q.eq("inviteToken", token))
+          .first();
+        // Try qrToken
+        if (!guest) {
+          guest = await ctx.db
+            .query("guests")
+            .withIndex("by_qr_token", (q) => q.eq("qrToken", token))
+            .first();
+        }
+        if (guest && guest.eventId !== args.eventId) guest = null;
+      }
+    }
+
+    if (!guest) {
+      return {
+        status: "INVALID",
+        message: "❌ Invité non trouvé — QR code invalide",
+        color: "red",
+      };
+    }
+
+    // Check status — declined
+    if (guest.status === "DECLINED") {
+      return {
+        status: "DECLINED",
+        message: `${guest.firstName} ${guest.lastName} a décliné l'invitation`,
+        color: "red",
+        guest: {
+          firstName: guest.firstName,
+          lastName: guest.lastName,
+          group: guest.group,
+        },
+      };
+    }
+
+    // Check status — not confirmed
+    if (guest.status !== "CONFIRMED") {
+      return {
+        status: "NOT_CONFIRMED",
+        message: `${guest.firstName} ${guest.lastName} — Invitation non confirmée`,
+        color: "orange",
+        guest: {
+          firstName: guest.firstName,
+          lastName: guest.lastName,
+          group: guest.group,
+          status: guest.status,
+        },
+      };
+    }
+
+    // Check if already scanned
+    const existingScan = await ctx.db
+      .query("qrScans")
+      .withIndex("by_guest", (q) => q.eq("guestId", guest!._id))
+      .first();
+
+    const rsvp = await ctx.db
+      .query("rsvps")
+      .withIndex("by_guest", (q) => q.eq("guestId", guest!._id))
+      .first();
+
+    if (existingScan) {
+      return {
+        status: "ALREADY_SCANNED",
+        message: `⚠️ ${guest.firstName} ${guest.lastName} — Déjà scanné`,
+        color: "orange",
+        scannedAt: existingScan._creationTime,
+        guest: {
+          firstName: guest.firstName,
+          lastName: guest.lastName,
+          group: guest.group,
+          adultCount: rsvp?.adultCount ?? 1,
+          childrenCount: rsvp?.childrenCount ?? 0,
+          menuChoice: rsvp?.menuChoice,
+          allergies: rsvp?.allergies || [],
+        },
+      };
+    }
+
+    // ── Create scan record — VALID ──
+    await ctx.db.insert("qrScans", {
+      guestId: guest._id,
+      eventId: args.eventId,
+      scannedBy: args.scannedBy,
+      status: "VALID",
+    });
+
+    return {
+      status: "VALID",
+      message: `✅ Bienvenue ${guest.firstName} ${guest.lastName} !`,
+      color: "green",
+      scannedAt: Date.now(),
+      guest: {
+        firstName: guest.firstName,
+        lastName: guest.lastName,
+        group: guest.group,
+        adultCount: rsvp?.adultCount ?? 1,
+        childrenCount: rsvp?.childrenCount ?? 0,
+        menuChoice: rsvp?.menuChoice,
+        allergies: rsvp?.allergies || [],
+      },
+    };
+  },
+});
+
+// ─── Scan History (query) ─────────────────────────────
+export const scanHistory = query({
+  args: {
+    eventId: v.id("events"),
+  },
+  handler: async (ctx, args) => {
+    const scans = await ctx.db
+      .query("qrScans")
+      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+      .order("desc")
+      .take(50);
+
+    const totalConfirmed = (
+      await ctx.db
+        .query("guests")
+        .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+        .collect()
+    ).filter((g) => g.status === "CONFIRMED").length;
+
+    const enriched = await Promise.all(
+      scans.map(async (scan) => {
+        const guest = await ctx.db.get(scan.guestId);
+        const rsvp = guest
+          ? await ctx.db
+              .query("rsvps")
+              .withIndex("by_guest", (q) => q.eq("guestId", guest._id))
+              .first()
+          : null;
+        return {
+          id: scan._id,
+          guestName: guest ? `${guest.firstName} ${guest.lastName}` : "Inconnu",
+          group: guest?.group ?? null,
+          adultCount: rsvp?.adultCount ?? 1,
+          childrenCount: rsvp?.childrenCount ?? 0,
+          menuChoice: rsvp?.menuChoice ?? null,
+          scannedAt: new Date(scan._creationTime).toISOString(),
+          status: scan.status,
+        };
+      })
+    );
+
+    return {
+      scans: enriched,
+      stats: {
+        scanned: scans.length,
+        totalConfirmed,
+        remaining: totalConfirmed - scans.length,
+      },
+    };
+  },
+});
 export const seed = mutation({
   handler: async (ctx) => {
     // Check if already seeded

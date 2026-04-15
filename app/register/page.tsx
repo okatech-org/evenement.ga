@@ -421,7 +421,7 @@ export default function RegisterPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="register-firstname" className="mb-1.5 block text-sm font-medium text-gray-700">
                     Prénom

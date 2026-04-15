@@ -166,8 +166,7 @@ function ModuleToggle({
       }`}
     >
       <div
-        className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all"
-        style={{ left: active ? "18px" : "2px" }}
+        className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${active ? "left-[18px]" : "left-[2px]"}`}
       />
     </button>
   );
@@ -666,9 +665,9 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
   // ═════════════════════════════════════════════════════════
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] gap-0 overflow-hidden -m-6 lg:-m-8">
+    <div className="flex h-[calc(100vh-4rem)] gap-0 overflow-hidden -m-4 lg:-m-6 -mt-0 lg:-mt-6">
       {/* ═══════════ LEFT: Editor Panel ═══════════ */}
-      <div className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 flex flex-col border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
+      <div className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 flex flex-col border-r-0 lg:border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
         {/* Editor Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
           <div className="min-w-0">
@@ -1092,6 +1091,32 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
                   Active le formulaire de confirmation de présence. Les invités pourront confirmer, choisir leur menu et recevoir leur QR code.
                 </p>
+
+                {getModule("MOD_RSVP")?.active && (
+                  <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                    {/* Allow children toggle */}
+                    <div className="flex items-center justify-between rounded-lg bg-gray-50/50 dark:bg-gray-800/30 px-3 py-2.5">
+                      <div>
+                        <p className="text-xs font-medium text-gray-700 dark:text-gray-300">👶 Autoriser les enfants</p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                          {getConfig("MOD_RSVP")?.allowChildren !== false
+                            ? "Les invités peuvent ajouter des enfants"
+                            : "Le champ enfants est masqué du formulaire"}
+                        </p>
+                      </div>
+                      <ModuleToggle
+                        active={getConfig("MOD_RSVP")?.allowChildren !== false}
+                        onToggle={() => {
+                          const current = getConfig("MOD_RSVP");
+                          updateModuleConfig("MOD_RSVP", {
+                            ...current,
+                            allowChildren: current?.allowChildren === false ? true : false,
+                          });
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </EditorSection>
 
               <EditorSection

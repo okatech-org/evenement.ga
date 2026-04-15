@@ -18,7 +18,7 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
   const isEditPage = /\/events\/[^/]+\/edit/.test(pathname);
 
   return (
-    <div className="flex h-screen h-[100dvh] overflow-hidden bg-gray-50 dark:bg-gray-950">
+    <div className="flex h-[100dvh] overflow-hidden bg-gray-50 dark:bg-gray-950">
       <Suspense fallback={<div className="w-16 shrink-0 bg-white dark:bg-gray-900" />}>
         <AdminSidebar user={user} />
       </Suspense>

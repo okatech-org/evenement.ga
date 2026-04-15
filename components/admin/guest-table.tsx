@@ -61,7 +61,7 @@ function Toast({ message, type, onClose }: { message: string; type: "success" | 
     }`}>
       <span>{type === "success" ? "✅" : "❌"}</span>
       <span>{message}</span>
-      <button onClick={onClose} className="ml-2 rounded-full p-0.5 hover:bg-white/20 transition">
+      <button onClick={onClose} title="Fermer" className="ml-2 rounded-full p-0.5 hover:bg-white/20 transition">
         <X className="h-3.5 w-3.5" />
       </button>
     </div>
@@ -361,6 +361,7 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
               </div>
               <button
                 onClick={() => setWhatsappModal(null)}
+                title="Fermer"
                 className="ml-auto rounded-full p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
               >
                 <X className="h-4 w-4" />
@@ -404,15 +405,34 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
       )}
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          type="search"
-          placeholder="Rechercher un invité..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2 text-sm text-gray-900 dark:text-white outline-none focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
-        />
-        <div className="flex gap-1">
+      <div className="space-y-3">
+        {/* Search + Actions Row */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="search"
+            placeholder="Rechercher un invité..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full sm:w-auto sm:flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 sm:py-2 text-sm text-gray-900 dark:text-white outline-none focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={exportCSV}
+              className="flex-1 sm:flex-none rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 sm:py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              📥 CSV
+            </button>
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#7A3A50] px-4 py-2 sm:py-1.5 text-xs font-semibold text-white hover:bg-[#6A2A40] transition"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              <span className="sm:inline">Ajouter</span>
+            </button>
+          </div>
+        </div>
+        {/* Filter Pills — horizontally scrollable on mobile */}
+        <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
           {[
             { key: "all", label: "Tous" },
             { key: "CONFIRMED", label: "✅ Confirmés" },
@@ -422,7 +442,7 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+              className={`shrink-0 rounded-lg px-3 py-2 sm:py-1.5 text-xs font-medium transition ${
                 filter === f.key
                   ? "bg-[#7A3A50] text-white"
                   : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -431,21 +451,6 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
               {f.label}
             </button>
           ))}
-        </div>
-        <div className="ml-auto flex gap-2">
-          <button
-            onClick={exportCSV}
-            className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-          >
-            📥 Exporter CSV
-          </button>
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#7A3A50] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#6A2A40] transition"
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            Ajouter un invité
-          </button>
         </div>
       </div>
 
@@ -462,12 +467,13 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
+              title="Fermer"
               className="text-gray-400 hover:text-gray-600"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
             <input
               type="text"
               placeholder="Prénom *"
@@ -539,7 +545,7 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
             <div className="flex-1 min-h-0 flex flex-col">
               {/* Grille paginee — 4 cols × 3 lignes */}
               <div className="flex-1 min-h-0">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-3 h-full" style={{ gridTemplateRows: "repeat(3, 1fr)" }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-3 h-full auto-rows-auto lg:auto-rows-fr">
                   {pageGuests.map((g) => {
                     const initials = `${g.firstName?.[0] || ""}${g.lastName?.[0] || ""}`.toUpperCase();
                     return (
@@ -574,7 +580,7 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
                         )}
 
                         {/* Actions */}
-                        <div className="flex items-center justify-between border-t border-gray-50 dark:border-gray-800 px-2 py-1 mt-auto">
+                        <div className="flex items-center justify-between border-t border-gray-50 dark:border-gray-800 px-2 py-1.5 sm:py-1 mt-auto">
                           <div className="flex items-center">
                             {g.inviteToken ? (
                               <>
@@ -614,35 +620,47 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
               </div>
 
               {/* Pagination */}
-              <div className="flex items-center justify-between pt-2 shrink-0">
-                <p className="text-xs text-gray-400 dark:text-gray-500">
-                  {filtered.length} invité{filtered.length !== 1 ? "s" : ""} · Page {safePage + 1}/{totalPages}
+              <div className="flex items-center justify-between pt-3 sm:pt-2 shrink-0">
+                <p className="text-[11px] sm:text-xs text-gray-400 dark:text-gray-500">
+                  {filtered.length} invité{filtered.length !== 1 ? "s" : ""} · {safePage + 1}/{totalPages}
                 </p>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
                   <button
                     onClick={() => setPage(Math.max(0, safePage - 1))}
                     disabled={safePage === 0}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Page précédente"
+                    className="flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
-                  {Array.from({ length: totalPages }, (_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setPage(i)}
-                      className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition ${
-                        i === safePage
-                          ? "bg-[#7A3A50] text-white"
-                          : "border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                      }`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
+                  {/* Show limited page numbers on mobile */}
+                  {Array.from({ length: totalPages }, (_, i) => {
+                    // On small screens, only show current page ± 1
+                    if (totalPages > 5 && Math.abs(i - safePage) > 1 && i !== 0 && i !== totalPages - 1) {
+                      if (i === safePage - 2 || i === safePage + 2) {
+                        return <span key={i} className="text-[10px] text-gray-400 px-0.5">…</span>;
+                      }
+                      return null;
+                    }
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => setPage(i)}
+                        className={`flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-lg text-xs font-medium transition ${
+                          i === safePage
+                            ? "bg-[#7A3A50] text-white"
+                            : "border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                        }`}
+                      >
+                        {i + 1}
+                      </button>
+                    );
+                  })}
                   <button
                     onClick={() => setPage(Math.min(totalPages - 1, safePage + 1))}
                     disabled={safePage >= totalPages - 1}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Page suivante"
+                    className="flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
