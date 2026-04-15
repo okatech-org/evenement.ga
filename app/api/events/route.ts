@@ -2,44 +2,40 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { verifyCsrf } from "@/lib/api-guards";
 import { slugify } from "@/lib/utils";
 import { checkEventLimit } from "@/lib/plan-guard";
 import { getDefaultModulesForType, getDefaultPresetForType } from "@/lib/modules/defaults";
 import type { EventType, Plan } from "@/lib/types";
 import { logSystem } from "@/lib/superadmin/logger";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
 
 /**
- * GET /api/events — List events for the authenticated user
+ * GET /api/events — List events for the authenticated user (migré Convex)
  */
 export async function GET() {
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  const events = await prisma.event.findMany({
-    where: { userId: session.user.id },
-    include: {
-      theme: true,
-      _count: { select: { guests: true } },
-    },
-    orderBy: { createdAt: "desc" },
+  const events = await convexClient.query(api.events.listByEmail, {
+    email: session.user.email,
   });
 
   return NextResponse.json({ success: true, data: events });
 }
 
 /**
- * POST /api/events — Create a new event
+ * POST /api/events — Create a new event (migré Convex)
  */
 export async function POST(request: Request) {
   const csrfError = verifyCsrf(request);
   if (csrfError) return csrfError;
 
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -54,9 +50,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verifier la limite d'evenements du plan
+    // Vérifier la limite d'events du plan (plan-guard utilise déjà Convex)
     const planCheck = await checkEventLimit(
-      session.user.id,
+      session.user.email,
       (session.user.plan ?? "FREE") as Plan
     );
     if (!planCheck.allowed) {
@@ -82,47 +78,41 @@ export async function POST(request: Request) {
 
     // Generate unique slug
     let slug = slugify(title);
-    const existingSlug = await prisma.event.findUnique({ where: { slug } });
-    if (existingSlug) {
+    const taken = await convexClient.query(api.events.isSlugTaken, { slug });
+    if (taken) {
       slug = `${slug}-${Date.now().toString(36)}`;
     }
 
-    // Use first date as the primary event date
-    const primaryDate = new Date(eventDates[0]);
+    // Convertir les dates ISO en timestamps (Convex stocke les timestamps)
+    const datesTimestamps = eventDates.map((d) => new Date(d).getTime());
 
-    // Create event with theme and default modules
-    const event = await prisma.event.create({
-      data: {
+    // Use location fallback from venues
+    const finalLocation =
+      location || (venues && venues.length > 0 ? venues[0].name : undefined);
+
+    const event = await convexClient.mutation(
+      api.events.createWithDefaults,
+      {
+        email: session.user.email,
         title,
         slug,
         type: eventType as EventType,
-        date: primaryDate,
-        endDate: eventDates.length > 1 ? new Date(eventDates[eventDates.length - 1]) : null,
-        location: location || (venues && venues.length > 0 ? venues[0].name : null),
-        status: "DRAFT",
-        visibility: "SEMI_PRIVATE",
-        userId: session.user.id,
-        theme: {
-          create: {
-            preset: getDefaultPresetForType(eventType as EventType),
-          },
-        },
-        modules: {
-          create: getDefaultModulesForType(eventType as EventType).map((m) => ({
-            type: m.type,
-            order: m.order,
-            active: m.active,
-            configJson: {},
-          })),
-        },
-      },
-      include: {
-        theme: true,
-        modules: true,
-      },
-    });
+        dates: datesTimestamps,
+        location: finalLocation,
+        presetId: getDefaultPresetForType(eventType as EventType),
+        modules: getDefaultModulesForType(eventType as EventType).map((m) => ({
+          type: m.type,
+          order: m.order,
+          active: m.active,
+        })),
+      }
+    );
 
-    logSystem("INFO", "EVENT", "EVENT_CREATED", { actorId: session.user.id, targetId: event.id, metadata: { title: event.title, type: event.type } });
+    logSystem("INFO", "EVENT", "EVENT_CREATED", {
+      actorId: session.user.id,
+      targetId: event.id,
+      metadata: { title: event.title, type: eventType },
+    });
 
     return NextResponse.json(
       { success: true, data: event },
@@ -136,4 +126,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

@@ -71,6 +71,8 @@ export default defineSchema({
     visibility: v.string(), // PUBLIC | SEMI_PRIVATE | PRIVATE | PASSWORD
     password: v.optional(v.string()),
     maxGuests: v.optional(v.number()),
+    coverImage: v.optional(v.string()),
+    coverVideo: v.optional(v.string()),
     userId: v.id("users"),
   })
     .index("by_slug", ["slug"])
@@ -108,6 +110,12 @@ export default defineSchema({
     colorBorder: v.string(),
     fontDisplay: v.string(),
     fontBody: v.string(),
+    fontSizeTitle: v.optional(v.string()),
+    fontSizeBody: v.optional(v.string()),
+    letterSpacing: v.optional(v.string()),
+    lineHeight: v.optional(v.string()),
+    pageMedia: v.optional(v.string()), // JSON string
+    pageThemes: v.optional(v.string()), // JSON string
   }).index("by_event", ["eventId"]),
 
   eventModules: defineTable({
@@ -128,12 +136,14 @@ export default defineSchema({
     phone: v.optional(v.string()),
     group: v.optional(v.string()),
     status: v.string(), // INVITED | SEEN | CONFIRMED | DECLINED | ABSENT
+    inviteToken: v.optional(v.string()),
     qrToken: v.optional(v.string()),
     qrExpiresAt: v.optional(v.number()),
   })
     .index("by_event", ["eventId"])
     .index("by_email", ["email"])
-    .index("by_qr_token", ["qrToken"]),
+    .index("by_qr_token", ["qrToken"])
+    .index("by_invite_token", ["inviteToken"]),
 
   rsvps: defineTable({
     guestId: v.id("guests"),
@@ -154,10 +164,14 @@ export default defineSchema({
 
   chatMessages: defineTable({
     eventId: v.id("events"),
-    userId: v.id("users"),
+    userId: v.optional(v.id("users")),
     channel: v.string(),
     content: v.string(),
     type: v.string(), // TEXT | IMAGE | REACTION
+    senderName: v.optional(v.string()),
+    senderRole: v.optional(v.string()),
+    replyToId: v.optional(v.id("chatMessages")),
+    reactions: v.optional(v.string()), // JSON string
   }).index("by_event_channel", ["eventId", "channel"]),
 
   notifications: defineTable({

@@ -1,8 +1,9 @@
 import { ImageResponse } from "next/og";
-import { prisma } from "@/lib/db";
 import { EVENT_TYPES } from "@/lib/config";
 import { THEME_PRESETS } from "@/lib/themes/presets";
 import type { EventType } from "@/lib/types";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,9 +15,9 @@ export default async function OGImage({
 }: {
   params: { slug: string };
 }) {
-  const event = await prisma.event.findUnique({
-    where: { slug: params.slug },
-    include: { theme: true },
+  // Migré Prisma → Convex
+  const event = await convexClient.query(api.events.getPublicBySlug, {
+    slug: params.slug,
   });
 
   const baseStyles = {
@@ -54,7 +55,7 @@ export default async function OGImage({
   const muted = event.theme?.colorMuted || preset.colorMuted;
   const accent = event.theme?.colorAccent || preset.colorAccent;
 
-  const dateStr = event.date.toLocaleDateString("fr-FR", {
+  const dateStr = new Date(event.dates[0] ?? Date.now()).toLocaleDateString("fr-FR", {
     day: "numeric",
     month: "long",
     year: "numeric",

@@ -2,7 +2,6 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { verifyCsrf } from "@/lib/api-guards";
 import { checkGuestLimit } from "@/lib/plan-guard";
 import { AddGuestSchema } from "@/lib/validations";
@@ -11,33 +10,34 @@ import { randomBytes } from "crypto";
 import QRCode from "qrcode";
 import type { Plan } from "@/lib/types";
 import { logSystem } from "@/lib/superadmin/logger";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 /**
- * GET /api/events/[id]/guests — List all guests
+ * GET /api/events/[id]/guests — List all guests (migré Convex)
  */
 export async function GET(
   _request: Request,
   { params }: { params: { id: string } }
 ) {
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   try {
-    const event = await prisma.event.findUnique({
-      where: { id: params.id, userId: session.user.id },
-      select: { id: true, slug: true },
+    const event = await convexClient.query(api.events.getForAdmin, {
+      id: params.id as Id<"events">,
+      email: session.user.email,
     });
 
     if (!event) {
       return NextResponse.json({ error: "Événement non trouvé" }, { status: 404 });
     }
 
-    const guests = await prisma.guest.findMany({
-      where: { eventId: event.id },
-      include: { rsvp: true },
-      orderBy: { createdAt: "desc" },
+    const guests = await convexClient.query(api.guests.listByEvent, {
+      eventId: event._id,
     });
 
     const baseUrl = process.env.NEXTAUTH_URL || "https://evenement.ga";
@@ -45,20 +45,20 @@ export async function GET(
     return NextResponse.json({
       success: true,
       data: guests.map((g) => ({
-        id: g.id,
+        id: g._id,
         firstName: g.firstName,
         lastName: g.lastName,
-        email: g.email,
-        phone: g.phone,
-        group: g.group,
+        email: g.email ?? null,
+        phone: g.phone ?? null,
+        group: g.group ?? null,
         status: g.status,
-        inviteToken: g.inviteToken,
+        inviteToken: g.inviteToken ?? null,
         inviteUrl: g.inviteToken
           ? `${baseUrl}/${event.slug}?guest=${g.inviteToken}`
           : null,
         hasRsvp: !!g.rsvp,
         presence: g.rsvp?.presence ?? null,
-        createdAt: g.createdAt.toISOString(),
+        createdAt: new Date(g._creationTime).toISOString(),
       })),
     });
   } catch (error) {
@@ -68,7 +68,7 @@ export async function GET(
 }
 
 /**
- * POST /api/events/[id]/guests — Add a new guest
+ * POST /api/events/[id]/guests — Add a new guest (migré Convex)
  */
 export async function POST(
   request: Request,
@@ -78,14 +78,14 @@ export async function POST(
   if (csrfError) return csrfError;
 
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   try {
-    const event = await prisma.event.findUnique({
-      where: { id: params.id, userId: session.user.id },
-      select: { id: true, slug: true },
+    const event = await convexClient.query(api.events.getForAdmin, {
+      id: params.id as Id<"events">,
+      email: session.user.email,
     });
 
     if (!event) {
@@ -95,13 +95,13 @@ export async function POST(
     const body = await request.json();
     const validatedGuest = AddGuestSchema.parse(body);
     const { firstName, lastName } = validatedGuest;
-    const email = validatedGuest.email || null;
-    const phone = validatedGuest.phone || null;
-    const group = validatedGuest.group || null;
+    const guestEmail = validatedGuest.email || undefined;
+    const phone = validatedGuest.phone || undefined;
+    const group = validatedGuest.group || undefined;
 
-    // Verifier la limite d'invites du plan
+    // Vérifier la limite du plan
     const guestCheck = await checkGuestLimit(
-      event.id,
+      event._id,
       (session.user.plan ?? "FREE") as Plan
     );
     if (!guestCheck.allowed) {
@@ -116,7 +116,7 @@ export async function POST(
     const baseUrl = process.env.NEXTAUTH_URL || "https://evenement.ga";
     const scanUrl = `${baseUrl}/scan/${event.slug}/${inviteToken}`;
 
-    // Generate QR code
+    // Generate QR code data URL
     const qrDataUrl = await QRCode.toDataURL(scanUrl, {
       width: 400,
       margin: 2,
@@ -124,30 +124,32 @@ export async function POST(
       errorCorrectionLevel: "M",
     });
 
-    const guest = await prisma.guest.create({
-      data: {
-        eventId: event.id,
-        firstName,
-        lastName,
-        email: email || null,
-        phone: phone || null,
-        group: group || null,
-        inviteToken,
-        qrToken: scanUrl,
-        status: "INVITED",
-      },
+    const guest = await convexClient.mutation(api.guests.create, {
+      eventId: event._id,
+      email: session.user.email,
+      firstName,
+      lastName,
+      guestEmail,
+      phone,
+      group,
+      inviteToken,
+      qrToken: scanUrl,
     });
+
+    if (!guest) {
+      return NextResponse.json({ error: "Erreur de création" }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
       data: {
-        id: guest.id,
+        id: guest._id,
         firstName: guest.firstName,
         lastName: guest.lastName,
-        email: guest.email,
-        phone: guest.phone,
-        group: guest.group,
-        inviteToken: guest.inviteToken,
+        email: guest.email ?? null,
+        phone: guest.phone ?? null,
+        group: guest.group ?? null,
+        inviteToken: guest.inviteToken ?? null,
         inviteUrl: `${baseUrl}/${event.slug}?guest=${inviteToken}`,
         qrDataUrl,
         status: guest.status,
@@ -176,20 +178,11 @@ export async function DELETE(
   if (csrfError) return csrfError;
 
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   try {
-    const event = await prisma.event.findUnique({
-      where: { id: params.id, userId: session.user.id },
-      select: { id: true },
-    });
-
-    if (!event) {
-      return NextResponse.json({ error: "Événement non trouvé" }, { status: 404 });
-    }
-
     const body = await request.json();
     const { guestId } = body;
 
@@ -197,11 +190,17 @@ export async function DELETE(
       return NextResponse.json({ error: "guestId requis" }, { status: 400 });
     }
 
-    await prisma.guest.delete({
-      where: { id: guestId, eventId: event.id },
+    await convexClient.mutation(api.guests.remove, {
+      guestId: guestId as Id<"guests">,
+      eventId: params.id as Id<"events">,
+      email: session.user.email,
     });
 
-    logSystem("INFO", "EVENT", "GUEST_DELETED", { actorId: session.user.id, targetId: guestId, metadata: { eventId: params.id } });
+    logSystem("INFO", "EVENT", "GUEST_DELETED", {
+      actorId: session.user.id,
+      targetId: guestId,
+      metadata: { eventId: params.id },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

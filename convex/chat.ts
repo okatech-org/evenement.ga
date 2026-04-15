@@ -30,13 +30,14 @@ export const list = query({
       .order("asc")
       .take(100);
 
-    // Enrich with user info
+    // Enrich with user info (userId peut être undefined pour les invités
+    // anonymes — le schéma chatMessages.userId est maintenant optional).
     const result = [];
     for (const msg of messages) {
-      const user = await ctx.db.get(msg.userId);
+      const user = msg.userId ? await ctx.db.get(msg.userId) : null;
       result.push({
         ...msg,
-        user: { id: msg.userId, name: user?.name, image: user?.image },
+        user: { id: msg.userId ?? null, name: user?.name, image: user?.image },
       });
     }
     return result;

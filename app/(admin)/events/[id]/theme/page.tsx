@@ -1,8 +1,10 @@
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ThemeEditor } from "@/components/admin/theme-editor";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +14,12 @@ export default async function EventThemePage({
   params: { id: string };
 }) {
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  if (!session?.user?.email) redirect("/login");
 
-  const event = await prisma.event.findUnique({
-    where: { id: params.id, userId: session.user.id },
-    include: { theme: true },
+  // Migré Prisma → Convex (getForAdmin retourne event + theme)
+  const event = await convexClient.query(api.events.getForAdmin, {
+    id: params.id as Id<"events">,
+    email: session.user.email,
   });
 
   if (!event) notFound();
@@ -27,7 +30,7 @@ export default async function EventThemePage({
       <div className="flex items-center gap-2 text-sm text-gray-400">
         <Link href="/events" className="hover:text-[#7A3A50]">Événements</Link>
         <span>/</span>
-        <Link href={`/events/${event.id}`} className="hover:text-[#7A3A50]">{event.title}</Link>
+        <Link href={`/events/${event._id}`} className="hover:text-[#7A3A50]">{event.title}</Link>
         <span>/</span>
         <span className="text-gray-700">Thème</span>
       </div>
@@ -49,7 +52,7 @@ export default async function EventThemePage({
       </div>
 
       <ThemeEditor
-        eventId={event.id}
+        eventId={event._id}
         currentTheme={{
           preset: event.theme?.preset || "mariage",
           colorPrimary: event.theme?.colorPrimary,
@@ -67,10 +70,10 @@ export default async function EventThemePage({
           ambientIntensity: event.theme?.ambientIntensity,
           scrollReveal: event.theme?.scrollReveal,
           cursorEffect: event.theme?.cursorEffect,
-          fontSizeTitle: (event.theme as Record<string, unknown>)?.fontSizeTitle as string | null ?? null,
-          fontSizeBody: (event.theme as Record<string, unknown>)?.fontSizeBody as string | null ?? null,
-          letterSpacing: (event.theme as Record<string, unknown>)?.letterSpacing as string | null ?? null,
-          lineHeight: (event.theme as Record<string, unknown>)?.lineHeight as string | null ?? null,
+          fontSizeTitle: event.theme?.fontSizeTitle ?? null,
+          fontSizeBody: event.theme?.fontSizeBody ?? null,
+          letterSpacing: event.theme?.letterSpacing ?? null,
+          lineHeight: event.theme?.lineHeight ?? null,
         }}
         eventType={event.type}
       />

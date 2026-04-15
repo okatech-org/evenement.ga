@@ -1,17 +1,18 @@
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { GUEST_STATUS_LABELS } from "@/lib/config";
 import { GuestTable } from "@/components/admin/guest-table";
 import type { GuestStatus } from "@/lib/types";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
-  const event = await prisma.event.findUnique({
-    where: { id: params.id },
-    select: { title: true },
+  const event = await convexClient.query(api.events.getById, {
+    id: params.id as Id<"events">,
   });
   return { title: event ? `Invités — ${event.title} | EventFlow` : "Invités | EventFlow" };
 }
@@ -22,21 +23,19 @@ export default async function EventGuestsPage({
   params: { id: string };
 }) {
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  if (!session?.user?.email) redirect("/login");
 
-  const event = await prisma.event.findUnique({
-    where: { id: params.id, userId: session.user.id },
-    select: { id: true, title: true, slug: true },
+  // Migré Prisma → Convex : getForAdmin valide l'ownership par email.
+  const event = await convexClient.query(api.events.getForAdmin, {
+    id: params.id as Id<"events">,
+    email: session.user.email,
   });
 
   if (!event) notFound();
 
-  const guests = await prisma.guest.findMany({
-    where: { eventId: event.id },
-    include: {
-      rsvp: true,
-    },
-    orderBy: { createdAt: "desc" },
+  // Récupérer invités avec RSVP associé (rsvp.listGuests existe déjà)
+  const guests = await convexClient.query(api.rsvp.listGuests, {
+    eventId: event._id,
   });
 
   // Stats
@@ -63,7 +62,7 @@ export default async function EventGuestsPage({
       <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 shrink-0">
         <Link href="/events" className="hover:text-[#7A3A50] dark:hover:text-[#C48B90]">Événements</Link>
         <span>/</span>
-        <Link href={`/events/${event.id}`} className="hover:text-[#7A3A50] dark:hover:text-[#C48B90]">{event.title}</Link>
+        <Link href={`/events/${event._id}`} className="hover:text-[#7A3A50] dark:hover:text-[#C48B90]">{event.title}</Link>
         <span>/</span>
         <span className="text-gray-700 dark:text-gray-300">Invités</span>
       </div>
@@ -98,21 +97,21 @@ export default async function EventGuestsPage({
         ))}
       </div>
 
-      {/* Guest Table — prend l'espace restant */}
+      {/* Guest Table */}
       <div className="flex-1 min-h-0 overflow-hidden">
         <GuestTable
-          eventId={event.id}
+          eventId={event._id}
           eventSlug={event.slug}
           guests={guests.map((g) => ({
-            id: g.id,
+            id: g._id,
             firstName: g.firstName,
             lastName: g.lastName,
             email: g.email || "",
-            phone: g.phone,
+            phone: g.phone ?? null,
             status: g.status,
             statusLabel: GUEST_STATUS_LABELS[g.status as keyof typeof GUEST_STATUS_LABELS]?.label || g.status,
-            statusColor: statusColor[g.status],
-            inviteToken: g.inviteToken,
+            statusColor: statusColor[g.status as GuestStatus],
+            inviteToken: g.inviteToken ?? null,
             presence: g.rsvp?.presence ?? null,
             adultCount: g.rsvp?.adultCount ?? 0,
             childrenCount: g.rsvp?.childrenCount ?? 0,

@@ -1,18 +1,18 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
 import { THEME_PRESETS } from "@/lib/themes/presets";
 import { getGoogleFontsUrl, generateThemeCSS } from "@/lib/themes/presets";
 import { EVENT_TYPES } from "@/lib/config";
 import type { EventType } from "@/lib/types";
 import { InvitationCard } from "@/components/public/invitation-card";
 import type { Metadata } from "next";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const event = await prisma.event.findUnique({
-    where: { slug: params.slug },
-    select: { title: true, description: true, type: true, date: true },
+  const event = await convexClient.query(api.events.getBySlug, {
+    slug: params.slug,
   });
 
   if (!event) return { title: "Événement non trouvé" };
@@ -37,68 +37,25 @@ export default async function PublicEventPage({
   params: { slug: string };
   searchParams: { guest?: string };
 }) {
-  const event = await prisma.event.findUnique({
-    where: { slug: params.slug },
-    include: {
-      theme: true,
-      modules: {
-        where: { active: true },
-        orderBy: { order: "asc" },
-      },
-      user: {
-        select: { name: true },
-      },
-      chatMessages: {
-        orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          content: true,
-          senderName: true,
-          senderRole: true,
-          reactions: true,
-          replyToId: true,
-          createdAt: true,
-        },
-      },
-      _count: {
-        select: { guests: true },
-      },
-    },
+  // Migré Prisma → Convex : query unifiée getPublicBySlug
+  const event = await convexClient.query(api.events.getPublicBySlug, {
+    slug: params.slug,
+    inviteToken: searchParams.guest,
   });
 
-  if (!event || event.status === "ARCHIVED") notFound();
+  if (!event) notFound();
 
-  // ── Lookup guest by inviteToken (personalized link) ──
-  let guestInfo: {
-    firstName: string;
-    lastName: string;
-    email: string | null;
-    inviteToken: string;
-    hasRsvp: boolean;
-    presence: boolean | null;
-    qrToken: string | null;
-  } | null = null;
-
-  if (searchParams.guest) {
-    const guest = await prisma.guest.findUnique({
-      where: { inviteToken: searchParams.guest },
-      include: { rsvp: true },
-    });
-
-    if (guest && guest.eventId === event.id) {
-      guestInfo = {
-        firstName: guest.firstName,
-        lastName: guest.lastName,
-        email: guest.email,
-        inviteToken: guest.inviteToken!,
-        hasRsvp: !!guest.rsvp,
-        presence: guest.rsvp?.presence ?? null,
-        qrToken: guest.qrToken,
-      };
+  // Parse JSON strings stockés (Convex)
+  const parseJson = <T = Record<string, unknown>>(s: string | undefined): T => {
+    if (!s) return {} as T;
+    try {
+      return JSON.parse(s) as T;
+    } catch {
+      return {} as T;
     }
-  }
+  };
 
-  // Build theme from DB or use preset
+  // Build theme from Convex or use preset
   const presetId = event.theme?.preset || "mariage";
   const preset = THEME_PRESETS[presetId] || THEME_PRESETS.mariage;
 
@@ -126,44 +83,57 @@ export default async function PublicEventPage({
   // Extract module configs
   const activeModuleTypes = event.modules.map((m) => m.type);
 
-  const getModuleConfig = (type: string): unknown => {
+  const getModuleConfig = (type: string): Record<string, unknown> | null => {
     const mod = event.modules.find((m) => m.type === type);
-    return mod?.configJson ?? null;
+    if (!mod?.configJson) return null;
+    return parseJson(mod.configJson);
   };
 
-  // Serialize module configs for client
   const modulesData = {
-    programme: getModuleConfig("MOD_PROGRAMME") as Record<string, unknown> | null,
-    menu: getModuleConfig("MOD_MENU") as Record<string, unknown> | null,
-    logistics: getModuleConfig("MOD_LOGISTIQUE") as Record<string, unknown> | null,
-    chat: getModuleConfig("MOD_CHAT") as Record<string, unknown> | null,
-    gallery: getModuleConfig("MOD_GALERIE") as Record<string, unknown> | null,
-    rsvp: getModuleConfig("MOD_RSVP") as Record<string, unknown> | null,
+    programme: getModuleConfig("MOD_PROGRAMME"),
+    menu: getModuleConfig("MOD_MENU"),
+    logistics: getModuleConfig("MOD_LOGISTIQUE"),
+    chat: getModuleConfig("MOD_CHAT"),
+    gallery: getModuleConfig("MOD_GALERIE"),
+    rsvp: getModuleConfig("MOD_RSVP"),
   };
 
-  // Serialize chat messages with reply-to resolution
-  const replyIds = event.chatMessages
-    .filter((m) => m.replyToId)
-    .map((m) => m.replyToId!);
+  // Chat : resolve replies (map replyToId → original message)
+  const messageMap = new Map(event.chatMessages.map((m) => [m._id, m]));
+  const chatMessages = event.chatMessages.map((m) => {
+    const original = m.replyToId ? messageMap.get(m.replyToId) : null;
+    return {
+      id: m._id,
+      senderName: m.senderName || "Anonyme",
+      senderRole: m.senderRole || "GUEST",
+      text: m.content,
+      reactions: parseJson<Record<string, string[]>>(m.reactions),
+      replyTo: original
+        ? {
+            id: original._id,
+            senderName: original.senderName || "Anonyme",
+            content: original.content,
+          }
+        : null,
+      sentAt: new Date(m._creationTime).toISOString(),
+    };
+  });
 
-  const repliedMessages = replyIds.length > 0
-    ? await prisma.chatMessage.findMany({
-        where: { id: { in: replyIds } },
-        select: { id: true, senderName: true, content: true },
-      })
-    : [];
+  // Convex event.dates[0] = date principale (Prisma.date)
+  const firstDate = event.dates[0] ?? Date.now();
 
-  const replyMap = new Map(repliedMessages.map((m) => [m.id, m]));
-
-  const chatMessages = event.chatMessages.map((m) => ({
-    id: m.id,
-    senderName: m.senderName || "Anonyme",
-    senderRole: m.senderRole || "GUEST",
-    text: m.content,
-    reactions: (m.reactions || {}) as Record<string, string[]>,
-    replyTo: m.replyToId ? replyMap.get(m.replyToId) || null : null,
-    sentAt: m.createdAt.toISOString(),
-  }));
+  // Reshape guestInfo pour matcher l'ancienne forme Prisma (pas de _id)
+  const guestInfo = event.guestInfo
+    ? {
+        firstName: event.guestInfo.firstName,
+        lastName: event.guestInfo.lastName,
+        email: event.guestInfo.email,
+        inviteToken: event.guestInfo.inviteToken,
+        hasRsvp: event.guestInfo.hasRsvp,
+        presence: event.guestInfo.presence,
+        qrToken: event.guestInfo.qrToken,
+      }
+    : null;
 
   return (
     <>
@@ -172,17 +142,17 @@ export default async function PublicEventPage({
 
       <InvitationCard
         event={{
-          id: event.id,
+          id: event._id,
           slug: event.slug,
           title: event.title,
           type: event.type,
-          date: event.date.toISOString(),
-          location: event.location,
-          description: event.description,
+          date: new Date(firstDate).toISOString(),
+          location: event.location ?? null,
+          description: event.description ?? null,
           organizer: event.user.name,
           guestCount: event._count.guests,
-          coverImage: event.coverImage,
-          coverVideo: event.coverVideo,
+          coverImage: event.coverImage ?? null,
+          coverVideo: event.coverVideo ?? null,
         }}
         theme={{
           cssVars,
@@ -192,8 +162,8 @@ export default async function PublicEventPage({
           ambientEffect,
           ambientIntensity,
           scrollReveal,
-          pageMedia: (event.theme?.pageMedia as Record<string, unknown>) || {},
-          pageThemes: (event.theme?.pageThemes as Record<string, unknown>) || {},
+          pageMedia: parseJson(event.theme?.pageMedia),
+          pageThemes: parseJson(event.theme?.pageThemes),
           colors: {
             primary: themeData.colorPrimary,
             secondary: themeData.colorSecondary,

@@ -2,7 +2,6 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { verifyCsrf } from "@/lib/api-guards";
 import { EventUpdateSchema } from "@/lib/validations";
 import { z } from "zod";
@@ -13,6 +12,9 @@ import {
   ALLOWED_VIDEO_TYPES,
 } from "@/lib/storage";
 import { logSystem } from "@/lib/superadmin/logger";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 // Magic-number validation pour verifier le contenu reel du fichier
 const FILE_SIGNATURES: Record<string, number[][]> = {
@@ -28,12 +30,10 @@ const FILE_SIGNATURES: Record<string, number[][]> = {
 function validateFileSignature(buffer: Buffer, declaredType: string): boolean {
   if (buffer.length < 12) return false;
 
-  // MP4/MOV: "ftyp" at bytes 4-7
   if (declaredType === "video/mp4" || declaredType === "video/quicktime") {
     return buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70;
   }
 
-  // WebP: RIFF at 0-3, then WEBP at 8-11
   if (declaredType === "image/webp") {
     const riff = buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46;
     const webp = buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
@@ -41,7 +41,7 @@ function validateFileSignature(buffer: Buffer, declaredType: string): boolean {
   }
 
   const signatures = FILE_SIGNATURES[declaredType];
-  if (!signatures || signatures.length === 0) return true; // Type inconnu, accepter
+  if (!signatures || signatures.length === 0) return true;
 
   return signatures.some((sig) =>
     sig.every((byte, i) => buffer[i] === byte)
@@ -49,7 +49,7 @@ function validateFileSignature(buffer: Buffer, declaredType: string): boolean {
 }
 
 /**
- * PUT /api/events/[id] — Update event details
+ * PUT /api/events/[id] — Update event details (migré Convex)
  */
 export async function PUT(
   request: Request,
@@ -59,38 +59,30 @@ export async function PUT(
   if (csrfError) return csrfError;
 
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   try {
-    const event = await prisma.event.findUnique({
-      where: { id: params.id, userId: session.user.id },
-    });
-
-    if (!event) {
-      return NextResponse.json({ error: "Événement non trouvé" }, { status: 404 });
-    }
-
     const body = await request.json();
     const validatedData = EventUpdateSchema.parse(body);
 
-    const updated = await prisma.event.update({
-      where: { id: params.id },
-      data: {
-        ...(validatedData.title !== undefined && { title: validatedData.title }),
-        ...(validatedData.description !== undefined && { description: validatedData.description }),
-        ...(validatedData.date !== undefined && { date: new Date(validatedData.date) }),
-        ...(validatedData.location !== undefined && { location: validatedData.location }),
-        ...(validatedData.visibility !== undefined && { visibility: validatedData.visibility }),
-        ...(validatedData.password !== undefined && { password: validatedData.password }),
-        ...(validatedData.coverImage !== undefined && { coverImage: validatedData.coverImage }),
-        ...(validatedData.coverVideo !== undefined && { coverVideo: validatedData.coverVideo }),
-      },
-      include: { theme: true },
+    await convexClient.mutation(api.events.update, {
+      id: params.id as Id<"events">,
+      email: session.user.email,
+      ...(validatedData.title !== undefined && { title: validatedData.title }),
+      ...(validatedData.description !== undefined && { description: validatedData.description }),
+      ...(validatedData.date !== undefined && {
+        dates: [new Date(validatedData.date).getTime()],
+      }),
+      ...(validatedData.location !== undefined && { location: validatedData.location }),
+      ...(validatedData.visibility !== undefined && { visibility: validatedData.visibility }),
+      ...(validatedData.password !== undefined && { password: validatedData.password }),
+      ...(validatedData.coverImage !== undefined && { coverImage: validatedData.coverImage }),
+      ...(validatedData.coverVideo !== undefined && { coverVideo: validatedData.coverVideo }),
     });
 
-    return NextResponse.json({ success: true, data: updated });
+    return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -104,7 +96,7 @@ export async function PUT(
 }
 
 /**
- * DELETE /api/events/[id] — Delete an event
+ * DELETE /api/events/[id] — Delete an event (migré Convex, cascade inclus)
  */
 export async function DELETE(
   request: Request,
@@ -114,22 +106,30 @@ export async function DELETE(
   if (csrfError) return csrfError;
 
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   try {
-    const event = await prisma.event.findUnique({
-      where: { id: params.id, userId: session.user.id },
+    const event = await convexClient.query(api.events.getForAdmin, {
+      id: params.id as Id<"events">,
+      email: session.user.email,
     });
 
     if (!event) {
       return NextResponse.json({ error: "Événement non trouvé" }, { status: 404 });
     }
 
-    await prisma.event.delete({ where: { id: params.id } });
+    await convexClient.mutation(api.events.remove, {
+      id: params.id as Id<"events">,
+      email: session.user.email,
+    });
 
-    logSystem("WARNING", "EVENT", "EVENT_DELETED", { actorId: session.user.id, targetId: params.id, metadata: { title: event.title } });
+    logSystem("WARNING", "EVENT", "EVENT_DELETED", {
+      actorId: session.user.id,
+      targetId: params.id,
+      metadata: { title: event.title },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -139,7 +139,7 @@ export async function DELETE(
 }
 
 /**
- * POST /api/events/[id] — Upload cover image/video
+ * POST /api/events/[id] — Upload cover image/video (migré Convex)
  */
 export async function POST(
   request: Request,
@@ -149,13 +149,14 @@ export async function POST(
   if (csrfError) return csrfError;
 
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   try {
-    const event = await prisma.event.findUnique({
-      where: { id: params.id, userId: session.user.id },
+    const event = await convexClient.query(api.events.getForAdmin, {
+      id: params.id as Id<"events">,
+      email: session.user.email,
     });
 
     if (!event) {
@@ -164,13 +165,12 @@ export async function POST(
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    const type = formData.get("type") as string | null; // "image" or "video"
+    const type = formData.get("type") as string | null;
 
     if (!file) {
       return NextResponse.json({ error: "Fichier requis" }, { status: 400 });
     }
 
-    // Valider le type de fichier
     const isImage = ALLOWED_IMAGE_TYPES.includes(file.type);
     const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
 
@@ -178,7 +178,6 @@ export async function POST(
       return NextResponse.json({ error: "Type de fichier non supporté" }, { status: 400 });
     }
 
-    // Limiter la taille
     const maxSize = isImage ? FILE_LIMITS.image : FILE_LIMITS.video;
     if (file.size > maxSize) {
       return NextResponse.json(
@@ -187,11 +186,9 @@ export async function POST(
       );
     }
 
-    // Upload vers S3/R2 ou local
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Valider le contenu reel du fichier via magic numbers
     if (!validateFileSignature(buffer, file.type)) {
       return NextResponse.json(
         { error: "Le contenu du fichier ne correspond pas au type déclaré" },
@@ -204,18 +201,19 @@ export async function POST(
       contentType: file.type,
     });
 
-    // Update event
-    const field = (type === "video" || isVideo) ? "coverVideo" : "coverImage";
-    await prisma.event.update({
-      where: { id: params.id },
-      data: { [field]: url },
+    // Update event with cover URL via Convex
+    const isVideoFile = type === "video" || isVideo;
+    await convexClient.mutation(api.events.update, {
+      id: params.id as Id<"events">,
+      email: session.user.email,
+      ...(isVideoFile ? { coverVideo: url } : { coverImage: url }),
     });
+    const field = isVideoFile ? "coverVideo" : "coverImage";
 
     return NextResponse.json({ success: true, url, field });
   } catch (error) {
     console.error("Upload error:", error);
     const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    return NextResponse.json({ error: "Erreur lors de l'upload", details: errorMessage, stack: errorStack }, { status: 500 });
+    return NextResponse.json({ error: "Erreur lors de l'upload", details: errorMessage }, { status: 500 });
   }
 }

@@ -2,10 +2,12 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { z } from "zod";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
-// Whitelist des champs autorises pour le theme
+// Whitelist des champs autorisés pour le theme
 const ThemeUpdateSchema = z.object({
   preset: z.string().optional(),
   entryEffect: z.string().optional(),
@@ -34,20 +36,20 @@ const ThemeUpdateSchema = z.object({
 });
 
 /**
- * GET /api/events/[id]/theme — Recuperer le theme
+ * GET /api/events/[id]/theme — Récupérer le theme (migré Convex)
  */
 export async function GET(
   _request: Request,
   { params }: { params: { id: string } }
 ) {
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  const event = await prisma.event.findUnique({
-    where: { id: params.id, userId: session.user.id },
-    include: { theme: true },
+  const event = await convexClient.query(api.events.getForAdmin, {
+    id: params.id as Id<"events">,
+    email: session.user.email,
   });
 
   if (!event) {
@@ -58,36 +60,41 @@ export async function GET(
 }
 
 /**
- * PUT /api/events/[id]/theme — Mettre a jour le theme
+ * PUT /api/events/[id]/theme — Mettre à jour le theme (migré Convex)
  */
 export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   try {
-    const event = await prisma.event.findUnique({
-      where: { id: params.id, userId: session.user.id },
-    });
-
-    if (!event) {
-      return NextResponse.json({ error: "Événement non trouvé" }, { status: 404 });
-    }
-
     const body = await request.json();
     const validatedData = ThemeUpdateSchema.parse(body);
 
-    const theme = await prisma.eventTheme.upsert({
-      where: { eventId: event.id },
-      update: validatedData,
-      create: { eventId: event.id, ...validatedData },
-    });
+    // pageMedia/pageThemes sont des objets → stringify pour Convex (stocké en v.string())
+    const payload: Record<string, unknown> = {
+      eventId: params.id as Id<"events">,
+      email: session.user.email,
+    };
+    for (const [key, value] of Object.entries(validatedData)) {
+      if (value === undefined) continue;
+      if (key === "pageMedia" || key === "pageThemes") {
+        payload[key] = typeof value === "string" ? value : JSON.stringify(value);
+      } else {
+        payload[key] = value;
+      }
+    }
 
-    return NextResponse.json({ success: true, data: theme });
+    await convexClient.mutation(
+      api.themes.patchByEvent,
+      payload as Parameters<typeof convexClient.mutation<typeof api.themes.patchByEvent>>[1]
+    );
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

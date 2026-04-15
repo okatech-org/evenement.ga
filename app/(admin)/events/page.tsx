@@ -5,18 +5,16 @@ import { EVENT_TYPES } from "@/lib/config";
 import type { EventType, EventStatus } from "@/lib/types";
 import convexClient from "@/lib/convex-server";
 import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
 
 export const dynamic = "force-dynamic";
 
 export default async function EventsPage() {
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  if (!session?.user?.email) redirect("/login");
 
-  // Migré Prisma → Convex : utilise getDashboardData qui retourne déjà
-  // events enrichis avec theme, modules actifs, guest count.
+  // Résolution par email pour éviter les IDs obsolètes dans le JWT.
   const data = await convexClient.query(api.events.getDashboardData, {
-    userId: session.user.id as Id<"users">,
+    email: session.user.email,
   });
   const events = data.events;
 

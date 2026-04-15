@@ -1,8 +1,10 @@
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { QRScanner } from "@/components/admin/qr-scanner";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +14,12 @@ export default async function EventScannerPage({
   params: { id: string };
 }) {
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  if (!session?.user?.email) redirect("/login");
 
-  const event = await prisma.event.findUnique({
-    where: { id: params.id, userId: session.user.id },
-    select: { id: true, title: true, slug: true },
+  // Migré Prisma → Convex
+  const event = await convexClient.query(api.events.getForAdmin, {
+    id: params.id as Id<"events">,
+    email: session.user.email,
   });
 
   if (!event) notFound();
@@ -27,7 +30,7 @@ export default async function EventScannerPage({
       <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
         <Link href="/events" className="hover:text-[#7A3A50] dark:hover:text-[#C48B90]">Événements</Link>
         <span>/</span>
-        <Link href={`/events/${event.id}`} className="hover:text-[#7A3A50] dark:hover:text-[#C48B90]">{event.title}</Link>
+        <Link href={`/events/${event._id}`} className="hover:text-[#7A3A50] dark:hover:text-[#C48B90]">{event.title}</Link>
         <span>/</span>
         <span className="text-gray-700 dark:text-gray-300">Scanner</span>
       </div>
@@ -41,7 +44,7 @@ export default async function EventScannerPage({
       </div>
 
       {/* Scanner */}
-      <QRScanner eventId={event.id} />
+      <QRScanner eventId={event._id} />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
 import type * as events from "../events.js";
 import type * as globalConfig from "../globalConfig.js";
+import type * as guests from "../guests.js";
 import type * as modules from "../modules.js";
 import type * as qr from "../qr.js";
 import type * as rsvp from "../rsvp.js";
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   chat: typeof chat;
   events: typeof events;
   globalConfig: typeof globalConfig;
+  guests: typeof guests;
   modules: typeof modules;
   qr: typeof qr;
   rsvp: typeof rsvp;

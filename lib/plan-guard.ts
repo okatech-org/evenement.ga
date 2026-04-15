@@ -1,16 +1,19 @@
-import { prisma } from "@/lib/db";
 import { PLAN_LIMITS } from "@/lib/config";
 import type { Plan, ModuleType } from "@/lib/types";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 export type PlanCheckResult =
   | { allowed: true }
   | { allowed: false; reason: string; currentPlan: string; requiredPlan?: string };
 
 /**
- * Verifie si l'utilisateur peut creer un nouvel evenement
+ * Vérifie si l'utilisateur peut créer un nouvel événement.
+ * Prend un email pour résoudre l'utilisateur (compatible JWT legacy).
  */
 export async function checkEventLimit(
-  userId: string,
+  email: string,
   plan: Plan
 ): Promise<PlanCheckResult> {
   const limits = PLAN_LIMITS[plan];
@@ -18,7 +21,9 @@ export async function checkEventLimit(
     return { allowed: true };
   }
 
-  const currentCount = await prisma.event.count({ where: { userId } });
+  const currentCount = await convexClient.query(api.events.countByEmail, {
+    email,
+  });
 
   if (currentCount >= limits.maxEvents) {
     return {
@@ -33,7 +38,7 @@ export async function checkEventLimit(
 }
 
 /**
- * Verifie si l'evenement peut accueillir un nouvel invite
+ * Vérifie si l'événement peut accueillir un nouvel invité.
  */
 export async function checkGuestLimit(
   eventId: string,
@@ -44,7 +49,9 @@ export async function checkGuestLimit(
     return { allowed: true };
   }
 
-  const currentCount = await prisma.guest.count({ where: { eventId } });
+  const currentCount = await convexClient.query(api.events.countGuestsByEvent, {
+    eventId: eventId as Id<"events">,
+  });
 
   if (currentCount >= limits.maxGuests) {
     return {
@@ -59,7 +66,7 @@ export async function checkGuestLimit(
 }
 
 /**
- * Verifie si le module est accessible avec le plan actuel
+ * Vérifie si le module est accessible avec le plan actuel.
  */
 export function checkModuleAccess(
   moduleType: ModuleType,

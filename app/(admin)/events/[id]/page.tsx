@@ -1,10 +1,12 @@
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { EVENT_TYPES } from "@/lib/config";
 import type { EventType, EventStatus } from "@/lib/types";
 import { ModuleManager } from "@/components/admin/module-manager";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 export const dynamic = "force-dynamic";
 
@@ -14,30 +16,20 @@ export default async function EventDetailPage({
   params: { id: string };
 }) {
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  if (!session?.user?.email) redirect("/login");
 
-  const event = await prisma.event.findUnique({
-    where: { id: params.id, userId: session.user.id },
-    include: {
-      theme: true,
-      modules: { orderBy: { order: "asc" } },
-      _count: { select: { guests: true, chatMessages: true } },
-    },
+  // Migré Prisma → Convex : query unifiée getForAdmin
+  const event = await convexClient.query(api.events.getForAdmin, {
+    id: params.id as Id<"events">,
+    email: session.user.email,
   });
 
   if (!event) notFound();
 
   const eventConfig = EVENT_TYPES[event.type as EventType];
 
-  // Get confirmed / declined counts
-  const guestStats = await prisma.guest.groupBy({
-    by: ["status"],
-    where: { eventId: event.id },
-    _count: true,
-  });
-
-  const confirmed = guestStats.find((s) => s.status === "CONFIRMED")?._count || 0;
-  const declined = guestStats.find((s) => s.status === "DECLINED")?._count || 0;
+  const confirmed = event.guestStats.CONFIRMED ?? 0;
+  const declined = event.guestStats.DECLINED ?? 0;
   const pending = event._count.guests - confirmed - declined;
 
   const statusActions: Record<EventStatus, { label: string; nextStatus: EventStatus; color: string }> = {
@@ -58,9 +50,8 @@ export default async function EventDetailPage({
     ARCHIVED: "Archivé",
   };
 
-  const daysUntil = Math.ceil(
-    (new Date(event.date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-  );
+  const firstDate = event.dates[0] ?? 0;
+  const daysUntil = Math.ceil((firstDate - Date.now()) / (1000 * 60 * 60 * 24));
 
   return (
     <div className="flex flex-col h-full gap-3 lg:gap-4 overflow-hidden">
@@ -80,12 +71,12 @@ export default async function EventDetailPage({
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-lg lg:text-xl font-bold text-gray-900 dark:text-white">{event.title}</h1>
-              <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${statusColor[event.status]}`}>
-                {statusLabel[event.status]}
+              <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${statusColor[event.status as EventStatus]}`}>
+                {statusLabel[event.status as EventStatus]}
               </span>
             </div>
             <p className="text-xs lg:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              {eventConfig?.label} · {new Date(event.date).toLocaleDateString("fr-FR", {
+              {eventConfig?.label} · {new Date(firstDate).toLocaleDateString("fr-FR", {
                 weekday: "long",
                 day: "numeric",
                 month: "long",
@@ -108,13 +99,13 @@ export default async function EventDetailPage({
           >
             👁️ Prévisualiser
           </Link>
-          <form action={`/api/events/${event.id}/status`} method="POST">
-            <input type="hidden" name="status" value={statusActions[event.status].nextStatus} />
+          <form action={`/api/events/${event._id}/status`} method="POST">
+            <input type="hidden" name="status" value={statusActions[event.status as EventStatus].nextStatus} />
             <button
               type="submit"
-              className={`rounded-xl px-3 py-1.5 text-sm font-medium text-white transition ${statusActions[event.status].color}`}
+              className={`rounded-xl px-3 py-1.5 text-sm font-medium text-white transition ${statusActions[event.status as EventStatus].color}`}
             >
-              {statusActions[event.status].label}
+              {statusActions[event.status as EventStatus].label}
             </button>
           </form>
         </div>
@@ -123,7 +114,7 @@ export default async function EventDetailPage({
       {/* Stats cards */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 shrink-0">
         <Link
-          href={`/events/${event.id}/guests`}
+          href={`/events/${event._id}/guests`}
           className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 lg:p-4 shadow-sm hover:border-[#7A3A50]/20 hover:shadow-md transition group"
         >
           <div className="flex items-center justify-between">
@@ -180,23 +171,23 @@ export default async function EventDetailPage({
           </p>
         </div>
         <Link
-          href={`/events/${event.id}/guests`}
+          href={`/events/${event._id}/guests`}
           className="rounded-lg bg-[#7A3A50] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#6A2A40] transition shrink-0"
         >
           + Ajouter des invités
         </Link>
       </div>
 
-      {/* Module Manager — prend l'espace restant avec scroll interne */}
+      {/* Module Manager */}
       <div className="flex-1 min-h-0 flex flex-col">
         <h2 className="mb-2 text-sm lg:text-base font-semibold text-gray-900 dark:text-white shrink-0">
           Modules
         </h2>
         <div className="flex-1 min-h-0 overflow-y-auto pr-1">
           <ModuleManager
-            eventId={event.id}
+            eventId={event._id}
             modules={event.modules.map((m) => ({
-              id: m.id,
+              id: m._id,
               type: m.type,
               active: m.active,
               order: m.order,

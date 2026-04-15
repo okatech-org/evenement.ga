@@ -1,19 +1,22 @@
 import { Suspense } from "react";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
-import { THEME_PRESETS } from "@/lib/themes/presets";
-import { generateThemeCSS } from "@/lib/themes/presets";
+import { THEME_PRESETS, generateThemeCSS } from "@/lib/themes/presets";
 import { EventEditClient } from "@/components/admin/event-edit-client";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
-  const event = await prisma.event.findUnique({
-    where: { id: params.id },
-    select: { title: true },
+  // Migré Prisma → Convex : getById retourne l'event brut
+  const event = await convexClient.query(api.events.getById, {
+    id: params.id as Id<"events">,
   });
-  return { title: event ? `${event.title} — Modifier | EventFlow` : "Modifier l'événement | EventFlow" };
+  return {
+    title: event ? `${event.title} — Modifier | EventFlow` : "Modifier l'événement | EventFlow",
+  };
 }
 
 export default async function EventEditPage({
@@ -22,28 +25,11 @@ export default async function EventEditPage({
   params: { id: string };
 }) {
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  if (!session?.user?.email) redirect("/login");
 
-  const event = await prisma.event.findUnique({
-    where: { id: params.id, userId: session.user.id },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      description: true,
-      date: true,
-      endDate: true,
-      location: true,
-      coverImage: true,
-      coverVideo: true,
-      type: true,
-      user: { select: { name: true } },
-      _count: { select: { guests: true } },
-      theme: true,
-      modules: {
-        orderBy: { order: "asc" },
-      },
-    },
+  const event = await convexClient.query(api.events.getForAdmin, {
+    id: params.id as Id<"events">,
+    email: session.user.email,
   });
 
   if (!event) notFound();
@@ -67,6 +53,16 @@ export default async function EventEditPage({
 
   const cssVars = generateThemeCSS(themeColors);
 
+  // Convex stocke pageMedia/pageThemes comme JSON strings, on les parse.
+  const parseJson = (s: string | undefined): Record<string, unknown> => {
+    if (!s) return {};
+    try {
+      return JSON.parse(s);
+    } catch {
+      return {};
+    }
+  };
+
   const themeData = {
     cssVars,
     fontDisplay: themeColors.fontDisplay,
@@ -75,8 +71,8 @@ export default async function EventEditPage({
     ambientEffect: event.theme?.ambientEffect ?? preset.ambientEffect,
     ambientIntensity: event.theme?.ambientIntensity ?? preset.ambientIntensity,
     scrollReveal: event.theme?.scrollReveal || preset.scrollReveal,
-    pageMedia: (event.theme?.pageMedia as Record<string, unknown>) || {},
-    pageThemes: (event.theme?.pageThemes as Record<string, unknown>) || {},
+    pageMedia: parseJson(event.theme?.pageMedia),
+    pageThemes: parseJson(event.theme?.pageThemes),
     colors: {
       primary: themeColors.colorPrimary,
       secondary: themeColors.colorSecondary,
@@ -89,21 +85,33 @@ export default async function EventEditPage({
     },
   };
 
+  // Convex : dates est un array. Prisma : date + endDate singuliers.
+  // On reconstruit pour compat : date = dates[0], endDate = last ou null.
+  const firstDate = event.dates[0] ?? 0;
+  const lastDate = event.dates[event.dates.length - 1] ?? firstDate;
+
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin h-8 w-8 border-4 border-gray-300 border-t-gray-600 rounded-full" /></div>}>
     <EventEditClient
       event={{
-        ...event,
-        date: event.date.toISOString(),
-        endDate: event.endDate?.toISOString() || null,
+        id: event._id,
+        title: event.title,
+        slug: event.slug,
+        description: event.description ?? null,
+        date: new Date(firstDate).toISOString(),
+        endDate: event.dates.length > 1 ? new Date(lastDate).toISOString() : null,
+        location: event.location ?? null,
+        coverImage: event.coverImage ?? null,
+        coverVideo: event.coverVideo ?? null,
+        type: event.type,
         organizer: event.user.name,
         guestCount: event._count.guests,
         modules: event.modules.map((m) => ({
-          id: m.id,
+          id: m._id,
           type: m.type,
           active: m.active,
           order: m.order,
-          configJson: m.configJson as Record<string, unknown>,
+          configJson: (m.configJson ? JSON.parse(m.configJson) : {}) as Record<string, unknown>,
         })),
       }}
       theme={themeData}
