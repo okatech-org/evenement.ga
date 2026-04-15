@@ -347,7 +347,6 @@ export default function OnboardingPage() {
                       {/* Venue Name */}
                       <input
                         type="text"
-                        required
                         value={venue.name}
                         onChange={(e) => updateVenue(i, "name", e.target.value)}
                         className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
@@ -357,7 +356,6 @@ export default function OnboardingPage() {
                       {/* Venue Address */}
                       <input
                         type="text"
-                        required
                         value={venue.address}
                         onChange={(e) => updateVenue(i, "address", e.target.value)}
                         className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
@@ -365,7 +363,7 @@ export default function OnboardingPage() {
                       />
 
                       {/* Date + Time row */}
-                      <div className="mt-2 grid grid-cols-3 gap-2">
+                      <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
                         {/* Day selector */}
                         <div>
                           <label className="mb-1 flex items-center gap-1 text-xs text-gray-500">
@@ -403,7 +401,6 @@ export default function OnboardingPage() {
                           </label>
                           <input
                             type="time"
-                            required
                             value={venue.startTime}
                             onChange={(e) => updateVenue(i, "startTime", e.target.value)}
                             className="w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-sm text-gray-900 outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"

@@ -25,11 +25,11 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
 
       {/* Main content — contraint au viewport, pas de scroll de page */}
       <div className="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
-        <main className={`flex-1 min-h-0 overflow-hidden ${isEditPage ? "p-4 lg:p-6 pt-16 lg:pt-6" : "p-4 lg:p-6 pt-16 lg:pt-6"}`}>
+        <main className={`flex-1 min-h-0 ${isEditPage ? "overflow-hidden p-4 lg:p-6 pt-16 lg:pt-6" : "overflow-y-auto p-4 lg:p-6 pt-16 lg:pt-6"}`}>
           {isEditPage ? (
             <div className="h-full">{children}</div>
           ) : (
-            <div className="mx-auto max-w-6xl h-full">{children}</div>
+            <div className="mx-auto max-w-6xl">{children}</div>
           )}
         </main>
       </div>
