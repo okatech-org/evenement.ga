@@ -108,6 +108,28 @@ export async function POST(request: Request) {
       }
     );
 
+    // Persist venues into eventVenues table (previously lost)
+    if (venues && Array.isArray(venues) && venues.length > 0) {
+      for (let i = 0; i < venues.length; i++) {
+        const v = venues[i];
+        if (!v.name || !v.address) continue; // skip empty venues
+
+        const venueDate = v.date
+          ? new Date(v.date).getTime()
+          : datesTimestamps[0] || Date.now();
+
+        await convexClient.mutation(api.venues.add, {
+          eventId: event.id,
+          name: v.name,
+          address: v.address,
+          date: venueDate,
+          startTime: v.startTime || undefined,
+          endTime: v.endTime || undefined,
+          order: i,
+        });
+      }
+    }
+
     logSystem("INFO", "EVENT", "EVENT_CREATED", {
       actorId: session.user.id,
       targetId: event.id,

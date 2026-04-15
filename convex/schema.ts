@@ -84,7 +84,7 @@ export default defineSchema({
     name: v.string(), // venue name (e.g. "Salle de réception")
     address: v.string(), // full address
     date: v.number(), // timestamp for which day this venue applies
-    startTime: v.string(), // "14:00"
+    startTime: v.optional(v.string()), // "14:00" — optional at creation
     endTime: v.optional(v.string()), // "18:00"
     order: v.number(), // sort order within the day
     description: v.optional(v.string()),

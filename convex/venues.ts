@@ -8,7 +8,7 @@ export const add = mutation({
     name: v.string(),
     address: v.string(),
     date: v.number(),
-    startTime: v.string(),
+    startTime: v.optional(v.string()),
     endTime: v.optional(v.string()),
     order: v.number(),
     description: v.optional(v.string()),

@@ -32,6 +32,7 @@ export default function OnboardingPage() {
     venues: [{ name: "", address: "", date: "", startTime: "", endTime: "" }],
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // ─── Date helpers ────────────────────────────────
   function addDate() {
@@ -85,9 +86,10 @@ export default function OnboardingPage() {
     });
   }
 
-  // ─── Submit ──────────────────────────────────────
+  // ─── Submit ──────────────────────────────────────────────────
   async function handleComplete() {
     setIsLoading(true);
+    setError(null);
     try {
       const payload = {
         eventType: data.eventType,
@@ -96,8 +98,11 @@ export default function OnboardingPage() {
         venues: data.venues
           .filter((v) => v.name && v.address)
           .map((v) => ({
-            ...v,
+            name: v.name,
+            address: v.address,
             date: v.date || data.dates[0] || "",
+            startTime: v.startTime || "",
+            endTime: v.endTime || "",
           })),
       };
 
@@ -111,10 +116,13 @@ export default function OnboardingPage() {
         const result = await res.json();
         router.push(`/events/${result.data?.id || ""}`);
       } else {
-        router.push("/dashboard");
+        const errorData = await res.json().catch(() => null);
+        setError(
+          errorData?.error || `Erreur lors de la création (${res.status})`
+        );
       }
     } catch {
-      router.push("/dashboard");
+      setError("Une erreur réseau est survenue. Vérifiez votre connexion.");
     } finally {
       setIsLoading(false);
     }
@@ -128,7 +136,7 @@ export default function OnboardingPage() {
   const validDates = data.dates.filter(Boolean);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#FFFDF9] via-white to-[#FFF0F3] px-4 py-8">
+    <div className="flex h-full items-center justify-center bg-gradient-to-br from-[#FFFDF9] via-white to-[#FFF0F3] px-4 py-8 overflow-y-auto">
       <div className="w-full max-w-xl">
         {/* Progress */}
         <div className="mb-8 flex items-center justify-center gap-2">
@@ -487,6 +495,16 @@ export default function OnboardingPage() {
                 </div>
               ))}
             </div>
+
+            {/* Error feedback */}
+            {error && (
+              <div className="mt-4 flex items-center gap-2.5 rounded-xl bg-red-50 px-4 py-3 text-left text-sm text-red-600 ring-1 ring-red-100">
+                <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+                {error}
+              </div>
+            )}
 
             <div className="mt-6 flex flex-col gap-3">
               <button
