@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 
 // ─── Create Event ──────────────────────────────────
 export const create = mutation({
@@ -565,13 +566,30 @@ export const getDashboardStats = query({
 //
 // Résout l'utilisateur par email pour éviter les problèmes d'IDs obsolètes
 // stockés dans d'anciennes sessions JWT (format Prisma vs format Convex).
+// Rétro-compat : accepte aussi userId — le build Next.js de prod pré-migration
+// envoie encore userId jusqu'au prochain redéploiement Cloud Run.
 export const getDashboardData = query({
-  args: { email: v.string() },
+  args: {
+    email: v.optional(v.string()),
+    userId: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .first();
+    let user: { _id: Id<"users"> } | null = null;
+
+    if (args.email) {
+      user = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", args.email as string))
+        .first();
+    } else if (args.userId) {
+      // Tente de charger par _id. Si ce n'est pas un ID Convex valide
+      // (ex : ancien cuid Prisma persisté dans un JWT), ctx.db.get throw → catch.
+      try {
+        user = await ctx.db.get(args.userId as Id<"users">);
+      } catch {
+        user = null;
+      }
+    }
 
     // Utilisateur introuvable → dashboard vide (évite un crash du server component).
     if (!user) {
