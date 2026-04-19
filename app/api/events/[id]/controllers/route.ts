@@ -122,7 +122,7 @@ export async function POST(
  */
 export async function DELETE(
   request: Request,
-  _ctx: { params: { id: string } }
+  {}: { params: { id: string } }
 ) {
   const csrfError = verifyCsrf(request);
   if (csrfError) return csrfError;
