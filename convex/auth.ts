@@ -87,6 +87,35 @@ export const markOtpUsed = mutation({
   },
 });
 
+// ─── Create OTP ────────────────────────────────────
+export const createOtp = mutation({
+  args: { phone: v.string(), code: v.string(), expiresAt: v.number() },
+  handler: async (ctx, args) => {
+    return ctx.db.insert("otpCodes", {
+      phone: args.phone,
+      code: args.code,
+      expiresAt: args.expiresAt,
+      used: false,
+    });
+  },
+});
+
+// ─── Invalidate existing OTPs for a phone ──────────
+export const invalidateOtps = mutation({
+  args: { phone: v.string() },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("otpCodes")
+      .withIndex("by_phone_code", (q) => q.eq("phone", args.phone))
+      .collect();
+    for (const otp of existing) {
+      if (!otp.used) {
+        await ctx.db.patch(otp._id, { used: true });
+      }
+    }
+  },
+});
+
 // ─── Upsert OAuth User (Google/Apple sign-in) ──────
 export const upsertOAuthUser = mutation({
   args: {

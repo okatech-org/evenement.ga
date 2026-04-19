@@ -1,7 +1,9 @@
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
@@ -49,15 +51,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Find valid OTP
-    const otpRecord = await prisma.otpCode.findFirst({
-      where: {
-        phone: normalizedPhone,
-        code: otp,
-        used: false,
-        expiresAt: { gt: new Date() },
-      },
-      orderBy: { createdAt: "desc" },
+    // Find valid OTP via Convex
+    const otpRecord = await convexClient.query(api.auth.verifyOtp, {
+      phone: normalizedPhone,
+      code: otp,
     });
 
     if (!otpRecord) {
@@ -68,9 +65,8 @@ export async function POST(request: Request) {
     }
 
     // Marquer l'OTP comme utilise immediatement
-    await prisma.otpCode.update({
-      where: { id: otpRecord.id },
-      data: { used: true },
+    await convexClient.mutation(api.auth.markOtpUsed, {
+      otpId: otpRecord._id as Id<"otpCodes">,
     });
 
     return NextResponse.json({

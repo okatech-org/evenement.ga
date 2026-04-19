@@ -1,7 +1,8 @@
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
@@ -41,21 +42,18 @@ export async function POST(request: Request) {
     }
 
     // Invalidate any existing unused OTPs for this phone
-    await prisma.otpCode.updateMany({
-      where: { phone: normalizedPhone, used: false },
-      data: { used: true },
+    await convexClient.mutation(api.auth.invalidateOtps, {
+      phone: normalizedPhone,
     });
 
     // Generate 6-digit OTP
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Store OTP with 5-minute expiration
-    await prisma.otpCode.create({
-      data: {
-        phone: normalizedPhone,
-        code,
-        expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
-      },
+    await convexClient.mutation(api.auth.createOtp, {
+      phone: normalizedPhone,
+      code,
+      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
     });
 
     // ──────────────────────────────────────────────────────────

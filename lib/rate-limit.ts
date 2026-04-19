@@ -12,7 +12,8 @@ function getRedis(): Redis | null {
   if (_redis) return _redis;
   const url = process.env.UPSTASH_REDIS_URL;
   const token = process.env.UPSTASH_REDIS_TOKEN;
-  if (!url || !token) return null;
+  // Skip if missing or placeholder values from .env.example
+  if (!url || !token || url.startsWith("your-") || !url.startsWith("https://")) return null;
   _redis = new Redis({ url, token });
   return _redis;
 }
