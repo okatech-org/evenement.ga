@@ -14,6 +14,11 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import {
+  enqueueScan,
+  flushQueue,
+  getQueuedScans,
+} from "@/lib/offline-scan-queue";
 
 interface ScanResult {
   status: string;
@@ -60,6 +65,8 @@ export function QRScanner({ eventId }: { eventId: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const lastScannedRef = useRef<string>("");
   const cooldownRef = useRef(false);
+  const [offlineCount, setOfflineCount] = useState(0);
+  const [syncingOffline, setSyncingOffline] = useState(false);
 
   // Load scan history
   const loadHistory = useCallback(async () => {
@@ -90,6 +97,25 @@ export function QRScanner({ eventId }: { eventId: string }) {
     lastScannedRef.current = decodedText;
     setProcessing(true);
 
+    // Détection offline préventive : si navigator signale offline, on met direct en queue
+    const isOffline = typeof navigator !== "undefined" && navigator.onLine === false;
+
+    if (isOffline) {
+      enqueueScan(eventId, decodedText);
+      setOfflineCount(getQueuedScans(eventId).length);
+      setLastResult({
+        status: "QUEUED",
+        message: "📡 Hors-ligne — scan sauvegardé localement. Sera synchronisé au retour du réseau.",
+        color: "orange",
+      });
+      setProcessing(false);
+      setTimeout(() => {
+        cooldownRef.current = false;
+        lastScannedRef.current = "";
+      }, 3000);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/events/${eventId}/scan`, {
         method: "POST",
@@ -110,10 +136,13 @@ export function QRScanner({ eventId }: { eventId: string }) {
         });
       }
     } catch {
+      // Fetch failed → réseau coupé ou serveur inaccessible. On queue.
+      enqueueScan(eventId, decodedText);
+      setOfflineCount(getQueuedScans(eventId).length);
       setLastResult({
-        status: "ERROR",
-        message: "Erreur de connexion",
-        color: "red",
+        status: "QUEUED",
+        message: "📡 Réseau indisponible — scan sauvegardé. Sync auto au retour.",
+        color: "orange",
       });
     } finally {
       setProcessing(false);
@@ -124,6 +153,40 @@ export function QRScanner({ eventId }: { eventId: string }) {
       }, 3000);
     }
   }, [eventId, loadHistory]);
+
+  // Sync la file offline
+  const syncOffline = useCallback(async () => {
+    const pending = getQueuedScans(eventId);
+    if (pending.length === 0) return;
+    setSyncingOffline(true);
+    try {
+      const { success, failed } = await flushQueue(eventId);
+      setOfflineCount(getQueuedScans(eventId).length);
+      if (success > 0) {
+        setLastResult({
+          status: "SYNCED",
+          message: `✅ ${success} scan${success > 1 ? "s" : ""} synchronisé${success > 1 ? "s" : ""}${failed > 0 ? ` · ${failed} échec${failed > 1 ? "s" : ""}` : ""}`,
+          color: "green",
+        });
+        loadHistory();
+      }
+    } finally {
+      setSyncingOffline(false);
+    }
+  }, [eventId, loadHistory]);
+
+  // Au mount + à chaque événement "online", on flush
+  useEffect(() => {
+    setOfflineCount(getQueuedScans(eventId).length);
+    if (typeof window === "undefined") return;
+    const handler = () => syncOffline();
+    window.addEventListener("online", handler);
+    // Flush immédiat si des scans sont déjà en queue
+    if (navigator.onLine && getQueuedScans(eventId).length > 0) {
+      syncOffline();
+    }
+    return () => window.removeEventListener("online", handler);
+  }, [eventId, syncOffline]);
 
   // Start camera
   async function startScanning() {
@@ -213,6 +276,27 @@ export function QRScanner({ eventId }: { eventId: string }) {
 
   return (
     <div className="space-y-6">
+      {/* Offline queue banner */}
+      {offlineCount > 0 && (
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 px-4 py-3 flex items-center gap-3">
+          <span className="text-lg">📡</span>
+          <div className="flex-1 min-w-0 text-xs text-amber-800 dark:text-amber-300">
+            <p className="font-semibold">
+              {offlineCount} scan{offlineCount > 1 ? "s" : ""} en attente de synchronisation
+            </p>
+            <p className="opacity-80">Seront envoyés automatiquement au retour du réseau.</p>
+          </div>
+          <button
+            type="button"
+            onClick={syncOffline}
+            disabled={syncingOffline}
+            className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
+          >
+            {syncingOffline ? "Sync…" : "Synchroniser"}
+          </button>
+        </div>
+      )}
+
       {/* Stats bar */}
       {stats && (
         <div className="grid grid-cols-3 gap-3">

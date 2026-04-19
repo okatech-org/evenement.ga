@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -15,7 +18,7 @@ interface ChatMessage {
   senderName: string;
   senderRole: string;
   text: string;
-  reactions: Record<string, string[]>;
+  reactions: Record<string, number>;
   replyTo: ReplyTo | null;
   sentAt: string;
 }
@@ -34,7 +37,69 @@ interface ChatBubbleProps {
     border: string;
   };
   fontBody: string;
+  /** Nom a afficher ("Prenom D."). Si present et hasConfirmedPresence true -> auto-join. */
   guestName?: string;
+  /** True si l'invite a confirme sa presence (RSVP accepte). Seul pre-requis pour poster. */
+  hasConfirmedPresence?: boolean;
+  /** Token d'invite pour scoper le chat au guest (authentifier coté Convex) */
+  inviteToken?: string;
+  /** Email de l'organisateur (s'il est connecte et peut moderer) */
+  organizerEmail?: string;
+}
+
+// ─── URL auto-link helper ───────────────────────────────────
+function renderWithLinks(text: string): React.ReactNode {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, i) => {
+    if (urlRegex.test(part)) {
+      return (
+        <a
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline break-all"
+        >
+          {part}
+        </a>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
+// ─── Map Convex message to UI message ───────────────────────
+type ConvexMessage = {
+  _id: string;
+  _creationTime: number;
+  content: string;
+  senderName: string;
+  senderRole: string;
+  replyToId: string | null;
+  replyTo: { id: string; senderName: string; content: string } | null;
+  reactions: string | null;
+};
+
+function mapConvexMessage(m: ConvexMessage): ChatMessage {
+  let reactions: Record<string, number> = {};
+  if (m.reactions) {
+    try {
+      const parsed = JSON.parse(m.reactions);
+      if (parsed && typeof parsed === "object") reactions = parsed;
+    } catch {
+      // ignore
+    }
+  }
+  return {
+    id: m._id,
+    senderName: m.senderName,
+    senderRole: m.senderRole,
+    text: m.content,
+    reactions,
+    replyTo: m.replyTo,
+    sentAt: new Date(m._creationTime).toISOString(),
+  };
 }
 
 // ─── Color Hash ─────────────────────────────────────────────
@@ -65,21 +130,51 @@ export function ChatBubble({
   colors,
   fontBody,
   guestName,
+  hasConfirmedPresence = false,
+  inviteToken,
+  organizerEmail,
 }: ChatBubbleProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages || []);
-  const [name, setName] = useState(guestName || "");
-  const [nameConfirmed, setNameConfirmed] = useState(!!guestName);
+  // Nom auto quand la presence est confirmee : "Prenom D." (immuable)
+  // Sinon, on n'autorise pas l'ecriture du tout (ou l'organisateur via email)
+  const canPost = hasConfirmedPresence || !!organizerEmail;
+  const autoName = guestName || "";
+  const [name] = useState(autoName);
+  const [nameConfirmed] = useState(!!autoName && canPost);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [activeReactionId, setActiveReactionId] = useState<string | null>(null);
-  const [activeSenders, setActiveSenders] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [lastSeenCount, setLastSeenCount] = useState(initialMessages?.length || 0);
+  const [sendError, setSendError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // ─── Convex real-time ─────────────────────────────
+  const convexMessages = useQuery(api.chat.list, {
+    eventId: eventId as Id<"events">,
+    channel: "public",
+  });
+  const sendMessage = useMutation(api.chat.send);
+  const removeMessage = useMutation(api.chat.remove);
+  const toggleReactionMutation = useMutation(api.chat.toggleReaction);
+
+  const messages: ChatMessage[] = useMemo(() => {
+    if (convexMessages === undefined) {
+      // Loading — utiliser l'initial render du serveur
+      return initialMessages || [];
+    }
+    return (convexMessages as ConvexMessage[]).map(mapConvexMessage);
+  }, [convexMessages, initialMessages]);
+
+  const isLoading = convexMessages === undefined;
+  const activeSenders = useMemo(() => {
+    const set = new Set<string>();
+    for (const m of messages) set.add(m.senderName);
+    return set.size;
+  }, [messages]);
 
   const scrollToBottom = useCallback((smooth = true) => {
     messagesEndRef.current?.scrollIntoView({
@@ -109,74 +204,49 @@ export function ChatBubble({
     }
   }, [messages.length, isOpen, lastSeenCount]);
 
-  // Poll for new messages (optimise : 5s, pause si onglet cache, dedup)
+  // Plus de polling — Convex useQuery fournit les mises a jour en temps reel automatiquement.
+
+  // Escape pour fermer le panel
   useEffect(() => {
     if (!isOpen) return;
-
-    let active = true;
-    let isFetching = false;
-
-    async function poll() {
-      if (!active || isFetching || document.hidden) return;
-      isFetching = true;
-      try {
-        const res = await fetch(`/api/events/${eventId}/chat`);
-        if (res.ok && active) {
-          const data = await res.json();
-          if (data.success) {
-            setMessages(data.data);
-            setActiveSenders(data.meta?.activeSenders || 0);
-          }
-        }
-      } catch { /* silent */ }
-      isFetching = false;
-    }
-
-    const interval = setInterval(poll, 5000);
-
-    // Pauser le polling quand l'onglet est masque
-    function handleVisibility() {
-      if (!document.hidden && active) poll();
-    }
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      active = false;
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", handleVisibility);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsOpen(false);
+      }
     };
-  }, [isOpen, eventId]);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen]);
 
   // ─── Send ──────────────────────────────────────
 
-  async function handleSend(e: React.FormEvent) {
-    e.preventDefault();
-    if (!text.trim() || !name.trim()) return;
+  async function handleSend(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    const trimmed = text.trim();
+    if (!trimmed || !name.trim()) return;
+    // Garde-fou : seul un invite avec token peut poster (UI deja verrouillee sinon)
+    if (!inviteToken) return;
     setSending(true);
+    setSendError(null);
 
     try {
-      const res = await fetch(`/api/events/${eventId}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          senderName: name.trim(),
-          text: text.trim(),
-          replyToId: replyingTo?.id || null,
-        }),
+      await sendMessage({
+        eventId: eventId as Id<"events">,
+        channel: "public",
+        content: trimmed,
+        replyToId: replyingTo?.id ? (replyingTo.id as Id<"chatMessages">) : undefined,
+        inviteToken,
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setMessages((prev) => [...prev, data.data]);
-          setText("");
-          setReplyingTo(null);
-          setNameConfirmed(true);
-          setLastSeenCount((prev) => prev + 1);
-          inputRef.current?.focus();
-        }
-      }
-    } catch { /* silent */ }
-    setSending(false);
+      setText("");
+      setReplyingTo(null);
+      inputRef.current?.focus();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Envoi echoue";
+      setSendError(msg);
+      setTimeout(() => setSendError(null), 4000);
+    } finally {
+      setSending(false);
+    }
   }
 
   // ─── Reactions ─────────────────────────────────
@@ -184,28 +254,30 @@ export function ChatBubble({
   async function handleReaction(messageId: string, emoji: string) {
     if (!name.trim()) return;
     setActiveReactionId(null);
-
     try {
-      const res = await fetch(`/api/events/${eventId}/chat`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messageId,
-          emoji,
-          senderName: name.trim(),
-        }),
+      await toggleReactionMutation({
+        messageId: messageId as Id<"chatMessages">,
+        emoji,
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === messageId ? { ...m, reactions: data.data.reactions } : m
-            )
-          );
-        }
-      }
-    } catch { /* silent */ }
+    } catch {
+      // Convex re-subscribera avec les bonnes donnees au prochain update
+    }
+  }
+
+  // ─── Delete ────────────────────────────────────
+
+  async function handleDelete(messageId: string) {
+    try {
+      await removeMessage({
+        messageId: messageId as Id<"chatMessages">,
+        inviteToken: inviteToken || undefined,
+        email: organizerEmail || undefined,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Suppression echouee";
+      setSendError(msg);
+      setTimeout(() => setSendError(null), 4000);
+    }
   }
 
   // ─── Helpers ───────────────────────────────────
@@ -321,64 +393,61 @@ export function ChatBubble({
             </button>
           </div>
 
-          {/* ─── Name Entry ─── */}
-          {!nameConfirmed && (
+          {/* ─── Bandeau identite (auto) ─── */}
+          {canPost && autoName && (
             <div
-              className="px-4 py-3 flex items-center gap-2 shrink-0"
+              className="px-4 py-2 flex items-center gap-2 shrink-0"
               style={{
                 backgroundColor: colors.primary + "08",
                 borderBottom: `1px solid ${colors.border}`,
               }}
             >
               <div
-                className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold shrink-0"
-                style={{ backgroundColor: colors.primary + "20", color: colors.primary }}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold text-white shrink-0"
+                style={{ backgroundColor: hashColor(autoName) }}
               >
-                {name ? getInitials(name) : "?"}
+                {getInitials(autoName)}
               </div>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && name.trim()) {
-                    setNameConfirmed(true);
-                    inputRef.current?.focus();
-                  }
-                }}
-                placeholder="Votre prénom pour rejoindre..."
-                className="flex-1 rounded-lg px-3 py-2 text-sm outline-none transition"
-                style={{
-                  backgroundColor: colors.surface,
-                  color: colors.text,
-                  border: `1px solid ${colors.border}`,
-                }}
-              />
-              {name.trim() && (
-                <button
-                  onClick={() => { setNameConfirmed(true); inputRef.current?.focus(); }}
-                  className="shrink-0 rounded-lg px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90"
-                  style={{ backgroundColor: colors.primary }}
-                >
-                  Rejoindre
-                </button>
-              )}
+              <div className="flex-1 min-w-0 leading-tight">
+                <p className="text-xs font-semibold truncate" style={{ color: colors.text }}>
+                  {autoName}
+                </p>
+                <p className="text-[10px]" style={{ color: colors.muted }}>
+                  Vous participez en tant que {autoName}
+                </p>
+              </div>
             </div>
           )}
 
           {/* ─── Messages ─── */}
           <div
             ref={containerRef}
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions"
+            aria-label="Messages du salon"
             className="flex-1 overflow-y-auto px-3.5 py-3 space-y-1"
             style={{ backgroundColor: colors.surface + "80" }}
           >
-            {messages.length === 0 ? (
+            {isLoading ? (
               <div className="flex flex-col items-center justify-center h-full opacity-60">
-                <span className="text-4xl mb-3">💬</span>
-                <p className="text-sm font-medium" style={{ color: colors.text }}>
-                  Bienvenue dans le salon !
+                <div
+                  className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
+                  style={{
+                    borderColor: `${colors.primary} transparent ${colors.primary} ${colors.primary}`,
+                  }}
+                />
+                <p className="text-xs mt-3" style={{ color: colors.muted }}>
+                  Chargement des messages...
                 </p>
-                <p className="text-xs mt-1 text-center max-w-[200px]" style={{ color: colors.muted }}>
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full opacity-60">
+                <span className="text-4xl mb-3" aria-hidden="true">💬</span>
+                <p className="text-sm font-medium" style={{ color: colors.text }}>
+                  Soyez le premier à écrire !
+                </p>
+                <p className="text-xs mt-1 text-center max-w-[220px]" style={{ color: colors.muted }}>
                   Partagez vos messages, vœux et émotions avec tous les invités
                 </p>
               </div>
@@ -390,12 +459,11 @@ export function ChatBubble({
                 const showAvatar = i === 0 || messages[i - 1].senderName !== msg.senderName;
                 const avatarColor = hashColor(msg.senderName);
                 const reactions = msg.reactions || {};
-                const reactionEntries = Object.entries(reactions).filter(
-                  ([, users]) => (users as string[]).length > 0
-                );
+                const reactionEntries = Object.entries(reactions).filter(([, count]) => count > 0);
+                const canDelete = isOwn || !!organizerEmail;
 
                 return (
-                  <div key={msg.id}>
+                  <article key={msg.id} role="article" aria-label={`Message de ${msg.senderName}`}>
                     {/* Date divider */}
                     {showDate && (
                       <div className="flex justify-center my-3">
@@ -483,7 +551,7 @@ export function ChatBubble({
                           )}
 
                           <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">
-                            {msg.text}
+                            {renderWithLinks(msg.text)}
                           </p>
 
                           <p
@@ -493,36 +561,54 @@ export function ChatBubble({
                             {formatTime(msg.sentAt)}
                           </p>
 
-                          {/* Reply button (hover) */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setReplyingTo(msg);
-                              inputRef.current?.focus();
-                            }}
-                            className={`absolute top-1 ${isOwn ? "left-0 -translate-x-full" : "right-0 translate-x-full"} opacity-0 group-hover:opacity-100 transition-opacity px-1`}
-                            title="Répondre"
+                          {/* Actions (hover) : repondre + supprimer */}
+                          <div
+                            className={`absolute top-1 ${isOwn ? "left-0 -translate-x-full" : "right-0 translate-x-full"} opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex gap-1 px-1`}
                           >
-                            <span className="text-xs" style={{ color: colors.muted }}>↩️</span>
-                          </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReplyingTo(msg);
+                                inputRef.current?.focus();
+                              }}
+                              className="text-xs p-1 hover:bg-black/5 rounded"
+                              title="Répondre"
+                              aria-label="Répondre à ce message"
+                            >
+                              <span style={{ color: colors.muted }}>↩️</span>
+                            </button>
+                            {canDelete && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm("Supprimer ce message ?")) handleDelete(msg.id);
+                                }}
+                                className="text-xs p-1 hover:bg-red-500/10 rounded"
+                                title={isOwn ? "Supprimer mon message" : "Supprimer (modération)"}
+                                aria-label="Supprimer ce message"
+                              >
+                                <span style={{ color: "#ef4444" }}>🗑️</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Reactions display */}
                         {reactionEntries.length > 0 && (
                           <div className={`flex flex-wrap gap-1 mt-1 ${isOwn ? "justify-end" : "justify-start"} ml-1`}>
-                            {reactionEntries.map(([emoji, users]) => (
+                            {reactionEntries.map(([emoji, count]) => (
                               <button
                                 key={emoji}
                                 onClick={() => handleReaction(msg.id, emoji)}
                                 className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] transition hover:scale-110"
                                 style={{
-                                  backgroundColor: (users as string[]).includes(name) ? colors.primary + "20" : colors.surface,
-                                  border: `1px solid ${(users as string[]).includes(name) ? colors.primary + "40" : colors.border}`,
+                                  backgroundColor: colors.surface,
+                                  border: `1px solid ${colors.border}`,
                                 }}
-                                title={(users as string[]).join(", ")}
+                                aria-label={`${count} réaction${count > 1 ? "s" : ""} ${emoji}`}
                               >
                                 <span>{emoji}</span>
-                                <span style={{ color: colors.muted, fontSize: "10px" }}>{(users as string[]).length}</span>
+                                <span style={{ color: colors.muted, fontSize: "10px" }}>{count}</span>
                               </button>
                             ))}
                           </div>
@@ -550,7 +636,7 @@ export function ChatBubble({
                         )}
                       </div>
                     </div>
-                  </div>
+                  </article>
                 );
               })
             )}
@@ -601,22 +687,49 @@ export function ChatBubble({
               paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 12px))",
             }}
           >
-            {nameConfirmed ? (
+            {!canPost ? (
+              <div className="rounded-xl px-3 py-3 text-center space-y-1"
+                   style={{ backgroundColor: colors.primary + "10", border: `1px solid ${colors.primary}30` }}>
+                <p className="text-xs font-semibold" style={{ color: colors.primary }}>
+                  🔒 Rejoindre le salon
+                </p>
+                <p className="text-[11px] leading-snug" style={{ color: colors.muted }}>
+                  Confirmez votre présence à l&apos;événement pour participer à la discussion.
+                </p>
+              </div>
+            ) : nameConfirmed ? (
               <div className="space-y-2">
+                {sendError && (
+                  <div
+                    role="alert"
+                    className="rounded-lg bg-red-50 dark:bg-red-950/30 px-3 py-1.5 text-[11px] text-red-600 dark:text-red-400"
+                  >
+                    {sendError}
+                  </div>
+                )}
                 <form onSubmit={handleSend} className="flex gap-2 items-end">
                   <div className="flex-1 relative">
-                    <input
+                    <textarea
                       ref={inputRef}
-                      type="text"
                       value={text}
                       onChange={(e) => setText(e.target.value)}
-                      placeholder="Écrire un message..."
+                      onKeyDown={(e) => {
+                        // Enter = envoi, Shift+Enter = nouvelle ligne
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSend();
+                        }
+                      }}
+                      placeholder="Écrire un message... (Entrée pour envoyer, Maj+Entrée pour nouvelle ligne)"
                       maxLength={500}
-                      className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none transition pr-10"
+                      rows={1}
+                      aria-label="Composer un message"
+                      className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none transition pr-10 resize-none"
                       style={{
                         backgroundColor: colors.surface,
                         color: colors.text,
                         border: `1.5px solid ${text ? colors.primary + "40" : colors.border}`,
+                        maxHeight: "120px",
                       }}
                     />
                     {text.length > 400 && (
@@ -649,32 +762,13 @@ export function ChatBubble({
                     )}
                   </button>
                 </form>
-                <div className="flex items-center justify-between px-1">
-                  <button
-                    onClick={() => { setNameConfirmed(false); }}
-                    className="text-[10px] flex items-center gap-1 hover:underline transition"
-                    style={{ color: colors.muted }}
-                  >
-                    <span
-                      className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white"
-                      style={{ backgroundColor: hashColor(name) }}
-                    >
-                      {getInitials(name)}
-                    </span>
-                    {name}
-                  </button>
+                <div className="flex items-center justify-end px-1">
                   <span className="text-[10px]" style={{ color: colors.muted + "80" }}>
-                    Double-clic = réagir
+                    Double-clic sur un message pour réagir · Entrée pour envoyer
                   </span>
                 </div>
               </div>
-            ) : (
-              <div className="text-center py-2">
-                <p className="text-xs" style={{ color: colors.muted }}>
-                  Entrez votre nom ci-dessus pour envoyer un message
-                </p>
-              </div>
-            )}
+            ) : null}
           </div>
         </div>
       )}

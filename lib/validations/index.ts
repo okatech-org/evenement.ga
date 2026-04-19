@@ -60,16 +60,33 @@ export type ModuleUpdateInput = z.infer<typeof ModuleUpdateSchema>;
 
 // ─── Event update validation ───────────────────────
 
-export const EventUpdateSchema = z.object({
-  title: z.string().min(3).max(100).optional(),
-  description: z.string().max(5000).optional().nullable(),
-  date: z.string().optional(),
-  location: z.string().max(500).optional().nullable(),
-  visibility: z.enum(["PUBLIC", "SEMI_PRIVATE", "PRIVATE", "PASSWORD"]).optional(),
-  password: z.string().max(100).optional().nullable(),
-  coverImage: z.string().optional().nullable(),
-  coverVideo: z.string().optional().nullable(),
-  maxGuests: z.number().int().positive().optional().nullable(),
-});
+export const EventUpdateSchema = z
+  .object({
+    title: z.string().min(3).max(100).optional(),
+    description: z.string().max(5000).optional().nullable(),
+    // Legacy scalaire — conservé pour rétro-compat, utilisé si dates absent
+    date: z.string().optional(),
+    // Multi-jour : liste complète des dates (ISO strings ou timestamps ms)
+    dates: z.array(z.union([z.string(), z.number()])).min(1).optional(),
+    location: z.string().max(500).optional().nullable(),
+    visibility: z.enum(["PUBLIC", "SEMI_PRIVATE", "PRIVATE", "PASSWORD"]).optional(),
+    password: z.string().max(100).optional().nullable(),
+    coverImage: z.string().optional().nullable(),
+    coverVideo: z.string().optional().nullable(),
+    maxGuests: z.number().int().positive().optional().nullable(),
+    rsvpDeadline: z.number().int().nullable().optional(),
+  })
+  // Si visibility = PASSWORD, un mot de passe non vide est requis (évite une config
+  // trompeuse où l'event semble protégé mais ne l'est pas).
+  .refine(
+    (data) => {
+      if (data.visibility !== "PASSWORD") return true;
+      return typeof data.password === "string" && data.password.trim().length >= 4;
+    },
+    {
+      message: "Un mot de passe d'au moins 4 caractères est requis pour la visibilité 'Mot de passe'",
+      path: ["password"],
+    }
+  );
 
 export type EventUpdateInput = z.infer<typeof EventUpdateSchema>;

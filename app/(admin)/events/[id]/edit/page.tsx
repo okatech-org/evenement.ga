@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { THEME_PRESETS, generateThemeCSS } from "@/lib/themes/presets";
 import { EventEditClient } from "@/components/admin/event-edit-client";
+// Import depuis le fichier utils (sans "use client") — safe en server component.
+import { venueFromConvex } from "@/components/admin/venue-utils";
 import convexClient from "@/lib/convex-server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -90,6 +92,12 @@ export default async function EventEditPage({
   const firstDate = event.dates[0] ?? 0;
   const lastDate = event.dates[event.dates.length - 1] ?? firstDate;
 
+  // Dates ISO complètes pour l'éditeur multi-jour
+  const allDatesIso = event.dates.map((d) => new Date(d).toISOString());
+
+  // Venues — convertis en draft strings pour le formulaire
+  const venuesDraft = (event.venues || []).map(venueFromConvex);
+
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin h-8 w-8 border-4 border-gray-300 border-t-gray-600 rounded-full" /></div>}>
     <EventEditClient
@@ -100,9 +108,11 @@ export default async function EventEditPage({
         description: event.description ?? null,
         date: new Date(firstDate).toISOString(),
         endDate: event.dates.length > 1 ? new Date(lastDate).toISOString() : null,
+        dates: allDatesIso,
         location: event.location ?? null,
         coverImage: event.coverImage ?? null,
         coverVideo: event.coverVideo ?? null,
+        rsvpDeadline: (event as { rsvpDeadline?: number }).rsvpDeadline ?? null,
         type: event.type,
         organizer: event.user.name,
         guestCount: event._count.guests,
@@ -113,6 +123,7 @@ export default async function EventEditPage({
           order: m.order,
           configJson: (m.configJson ? JSON.parse(m.configJson) : {}) as Record<string, unknown>,
         })),
+        venues: venuesDraft,
       }}
       theme={themeData}
     />

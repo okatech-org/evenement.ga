@@ -107,7 +107,7 @@ export default async function PublicEventPage({
       senderName: m.senderName || "Anonyme",
       senderRole: m.senderRole || "GUEST",
       text: m.content,
-      reactions: parseJson<Record<string, string[]>>(m.reactions),
+      reactions: parseJson<Record<string, number>>(m.reactions),
       replyTo: original
         ? {
             id: original._id,
@@ -132,6 +132,7 @@ export default async function PublicEventPage({
         hasRsvp: event.guestInfo.hasRsvp,
         presence: event.guestInfo.presence,
         qrToken: event.guestInfo.qrToken,
+        rsvp: (event.guestInfo as { rsvp?: { adultCount: number; childrenCount: number; menuChoice: string | null; allergies: string[]; message: string | null } | null }).rsvp ?? null,
       }
     : null;
 
@@ -153,6 +154,7 @@ export default async function PublicEventPage({
           guestCount: event._count.guests,
           coverImage: event.coverImage ?? null,
           coverVideo: event.coverVideo ?? null,
+          rsvpDeadline: (event as { rsvpDeadline?: number }).rsvpDeadline ?? null,
         }}
         theme={{
           cssVars,

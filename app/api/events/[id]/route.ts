@@ -67,19 +67,28 @@ export async function PUT(
     const body = await request.json();
     const validatedData = EventUpdateSchema.parse(body);
 
+    // Priorité : dates (multi-jour) > date (legacy scalaire)
+    const resolvedDates: number[] | undefined =
+      validatedData.dates !== undefined
+        ? validatedData.dates.map((d) =>
+            typeof d === "number" ? d : new Date(d).getTime()
+          )
+        : validatedData.date !== undefined
+          ? [new Date(validatedData.date).getTime()]
+          : undefined;
+
     await convexClient.mutation(api.events.update, {
       id: params.id as Id<"events">,
       email: session.user.email,
       ...(validatedData.title !== undefined && { title: validatedData.title }),
       ...(validatedData.description !== undefined && { description: validatedData.description }),
-      ...(validatedData.date !== undefined && {
-        dates: [new Date(validatedData.date).getTime()],
-      }),
+      ...(resolvedDates !== undefined && { dates: resolvedDates }),
       ...(validatedData.location !== undefined && { location: validatedData.location }),
       ...(validatedData.visibility !== undefined && { visibility: validatedData.visibility }),
       ...(validatedData.password !== undefined && { password: validatedData.password }),
       ...(validatedData.coverImage !== undefined && { coverImage: validatedData.coverImage }),
       ...(validatedData.coverVideo !== undefined && { coverVideo: validatedData.coverVideo }),
+      ...(validatedData.rsvpDeadline !== undefined && { rsvpDeadline: validatedData.rsvpDeadline }),
     });
 
     return NextResponse.json({ success: true });

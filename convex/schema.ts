@@ -73,6 +73,10 @@ export default defineSchema({
     maxGuests: v.optional(v.number()),
     coverImage: v.optional(v.string()),
     coverVideo: v.optional(v.string()),
+    rsvpDeadline: v.optional(v.number()), // timestamp ms — deadline pour les confirmations
+    // Tier d'invitation payé (decouverte=gratuit, essentiel, confort, premium, prestige)
+    tier: v.optional(v.string()),
+    tierPaidAt: v.optional(v.number()), // timestamp paiement confirmé via webhook
     userId: v.id("users"),
   })
     .index("by_slug", ["slug"])
@@ -158,7 +162,10 @@ export default defineSchema({
   qrScans: defineTable({
     guestId: v.id("guests"),
     eventId: v.id("events"),
-    scannedBy: v.id("users"),
+    // Optionnel : scan admin authentifié (scanner intégré)
+    scannedBy: v.optional(v.id("users")),
+    // Optionnel : scan via controller link public (/verify/[token])
+    controllerLinkId: v.optional(v.id("controllerLinks")),
     status: v.string(), // VALID | ALREADY_SCANNED | INVALID | EXPIRED
   }).index("by_guest", ["guestId"]).index("by_event", ["eventId"]),
 

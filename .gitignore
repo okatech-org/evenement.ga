@@ -39,3 +39,6 @@ next-env.d.ts
 .firebase/
 firebase-debug.log
 .env.production
+
+# user uploads (runtime)
+public/uploads/

@@ -25,6 +25,7 @@ import { DevicePreviewFrame, DEVICE_PRESETS, type DevicePreset } from "./device-
 import { DeviceSwitcher } from "./device-switcher";
 import { InvitationCard } from "@/components/public/invitation-card";
 import { Palette } from "lucide-react";
+import { VenuesEditor, type VenueDraft } from "./venues-editor";
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -68,13 +69,18 @@ interface EventEditClientProps {
     description: string | null;
     date: string;
     endDate: string | null;
+    /** Liste complète des dates (ISO strings) — multi-jour. Fallback : [date]. */
+    dates?: string[];
     location: string | null;
     coverImage: string | null;
     coverVideo: string | null;
+    rsvpDeadline: number | null;
     type: string;
     organizer: string | null;
     guestCount: number;
     modules: ModuleData[];
+    /** Venues chargées depuis Convex — éditables via l'onglet Accueil. */
+    venues?: VenueDraft[];
   };
   theme: ThemeData;
 }
@@ -100,6 +106,29 @@ interface PageThemeOverride {
   colorBackground?: string;
   colorText?: string;
   colorPrimary?: string;
+}
+
+// ─── Types pour Menu/Infos attaches a une etape du programme ─
+interface ItemMenuCourse { name: string; items: string[]; icon?: string }
+interface ItemMenu { label?: string; courses: ItemMenuCourse[] }
+interface ItemInfosSection { title?: string; icon?: string; description?: string; items?: string[] }
+interface ItemInfos { sections: ItemInfosSection[] }
+
+interface ProgrammeItemAdmin {
+  time: string;
+  endTime?: string;
+  title: string;
+  description: string;
+  icon: string;
+  location?: string;
+  address?: string;
+  menu?: ItemMenu;
+  infos?: ItemInfos;
+  [key: string]: unknown;
+}
+interface ProgrammeDayAdmin {
+  label: string;
+  items: ProgrammeItemAdmin[];
 }
 
 // ─── Collapsible Section ─────────────────────────────────
@@ -185,8 +214,23 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
   // ── Form state ──
   const [title, setTitle] = useState(event.title);
   const [description, setDescription] = useState(event.description || "");
-  const [date, setDate] = useState(event.date.split("T")[0]);
+  // Dates multi-jour (strings "YYYY-MM-DD"). Fallback : date principale seule.
+  const [dates, setDates] = useState<string[]>(() => {
+    if (event.dates && event.dates.length > 0) {
+      return event.dates.map((d) => d.split("T")[0]);
+    }
+    return [event.date.split("T")[0]];
+  });
   const [location, setLocation] = useState(event.location || "");
+  // Venues éditables — chargées depuis le server (via event.venues).
+  const [venues, setVenues] = useState<VenueDraft[]>(event.venues || []);
+  // RSVP deadline : timestamp ms ; input datetime-local (format "YYYY-MM-DDTHH:mm")
+  const [rsvpDeadline, setRsvpDeadline] = useState<string>(() => {
+    if (!event.rsvpDeadline) return "";
+    const d = new Date(event.rsvpDeadline);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  });
   // coverImage/coverVideo: read-only state for preview (per-page media system replaces the editor)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [coverImage, _setCoverImage] = useState(event.coverImage);
@@ -248,20 +292,44 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
 
   const pageMediaImageRef = useRef<HTMLInputElement>(null);
   const pageMediaVideoRef = useRef<HTMLInputElement>(null);
+  const galleryUploadRef = useRef<HTMLInputElement>(null);
   const [pendingUploadPage, setPendingUploadPage] = useState<PageKey | null>(null);
+
+  // ── Dates helpers (multi-jour) ──
+  function addDate() {
+    setDates((prev) => [...prev, ""]);
+  }
+  function removeDate(index: number) {
+    setDates((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+  }
+  function updateDate(index: number, value: string) {
+    setDates((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+  }
 
   async function handleSave() {
     setIsSaving(true);
     setSaved(false);
     try {
+      // Filtrer les dates vides avant envoi
+      const cleanDates = dates.filter(Boolean);
+      if (cleanDates.length === 0) {
+        console.warn("Aucune date valide — la sauvegarde des dates est ignorée");
+      }
+
       await fetch(`/api/events/${event.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
           description: description || null,
-          date,
+          // Multi-jour : envoie la liste complète. Fallback legacy `date` si vide.
+          ...(cleanDates.length > 0 ? { dates: cleanDates } : {}),
           location: location || null,
+          rsvpDeadline: rsvpDeadline ? new Date(rsvpDeadline).getTime() : null,
         }),
       });
 
@@ -280,6 +348,24 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
         body: JSON.stringify({ pageMedia, pageThemes }),
       });
 
+      // Remplacer les venues (atomic via replaceAll). Filtrer celles incomplètes.
+      const cleanVenues = venues
+        .filter((v) => v.name && v.address)
+        .map((v, i) => ({
+          name: v.name,
+          address: v.address,
+          date: v.date || cleanDates[0] || "",
+          startTime: v.startTime || null,
+          endTime: v.endTime || null,
+          order: i,
+          description: v.description || null,
+        }));
+      await fetch(`/api/events/${event.id}/venues`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ venues: cleanVenues }),
+      });
+
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
@@ -291,10 +377,8 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
 
 
 
-  // ── Per-page media upload ──
-  async function handlePageMediaUpload(file: File, type: "image" | "video", pageKey: PageKey) {
-    setIsUploading(true);
-    setUploadError(null);
+  // ── Helper : upload un fichier unique ──
+  async function uploadSingleFile(file: File, type: "image" | "video"): Promise<string | null> {
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -306,28 +390,77 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
       });
 
       const data = await res.json();
+      if (res.ok && data.url) return data.url as string;
 
-      if (res.ok && data.url) {
-        if (type === "image") {
-          const current = pageMedia[pageKey].images;
-          if (current.length < 5) {
-            updatePageMedia(pageKey, { images: [...current, data.url] });
-          }
-        } else {
-          updatePageMedia(pageKey, { video: data.url, images: [] });
-        }
-      } else {
-        const errorMsg = data.error || `Erreur ${res.status}`;
-        setUploadError(errorMsg);
-        setTimeout(() => setUploadError(null), 5000);
-      }
+      const errorMsg = data.error || `Erreur ${res.status}`;
+      setUploadError(errorMsg);
+      setTimeout(() => setUploadError(null), 5000);
+      return null;
     } catch (error) {
-      console.error("Page media upload error:", error);
+      console.error("Upload error:", error);
       setUploadError("Erreur réseau lors de l'upload");
       setTimeout(() => setUploadError(null), 5000);
+      return null;
+    }
+  }
+
+  // ── Per-page media upload (supporte multi-select) ──
+  async function handlePageMediaUpload(files: FileList | File[], type: "image" | "video", pageKey: PageKey) {
+    const arr = Array.from(files);
+    if (arr.length === 0) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+    try {
+      if (type === "video") {
+        // Videos: on garde le comportement actuel (1 seule video, remplace)
+        const url = await uploadSingleFile(arr[0], "video");
+        if (url) updatePageMedia(pageKey, { video: url, images: [] });
+        return;
+      }
+
+      // Images : upload en parallele, limite a 5 au total
+      const current = pageMedia[pageKey].images;
+      const remaining = Math.max(0, 5 - current.length);
+      const toUpload = arr.slice(0, remaining);
+      if (arr.length > remaining) {
+        setUploadError(`Limite de 5 images atteinte — ${remaining} fichier(s) importe(s) sur ${arr.length}`);
+        setTimeout(() => setUploadError(null), 5000);
+      }
+
+      const results = await Promise.all(toUpload.map((f) => uploadSingleFile(f, "image")));
+      const urls = results.filter((u): u is string => !!u);
+      if (urls.length > 0) {
+        updatePageMedia(pageKey, { images: [...current, ...urls] });
+      }
     } finally {
       setIsUploading(false);
       setPendingUploadPage(null);
+    }
+  }
+
+  // ── Galerie : upload bulk (images + videos, multi-select) ──
+  async function handleGalleryBulkUpload(files: FileList) {
+    const arr = Array.from(files);
+    if (arr.length === 0) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+    try {
+      // On determine le type par le MIME
+      const uploads = arr.map(async (f) => {
+        const kind: "image" | "video" = f.type.startsWith("video/") ? "video" : "image";
+        const url = await uploadSingleFile(f, kind);
+        return url ? { url, caption: "" } : null;
+      });
+      const results = await Promise.all(uploads);
+      const newPhotos = results.filter((p): p is { url: string; caption: string } => !!p);
+      if (newPhotos.length > 0) {
+        const current = (getConfig("MOD_GALERIE")?.photos || []) as { url: string; caption: string }[];
+        updateModuleConfig("MOD_GALERIE", { photos: [...current, ...newPhotos] });
+      }
+    } finally {
+      setIsUploading(false);
     }
   }
 
@@ -345,10 +478,26 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
   const programmeConfig = getConfig("MOD_PROGRAMME");
   const programmeDays = programmeConfig?.days || [{ label: "Jour 1", items: [] }];
 
+  // Icones communs pour les etapes du programme — etendable
+  const PROGRAMME_ICONS = ["🎉", "💒", "⛪", "🏛️", "🎤", "🍽️", "🥂", "💃", "🎂", "📸", "🎁", "🚗", "🎵", "✨"];
+
+  // Liste d'adresses deja utilisees pour l'autocompletion (lieu principal + items existants)
+  const programmeAddressSuggestions = useMemo(() => {
+    const set = new Set<string>();
+    if (location) set.add(location);
+    for (const day of programmeDays) {
+      for (const it of (day.items || []) as { location?: string; address?: string }[]) {
+        if (it.address) set.add(it.address);
+        if (it.location) set.add(it.location);
+      }
+    }
+    return Array.from(set);
+  }, [location, programmeDays]);
+
   function addProgrammeItem(dayIndex: number) {
     const newDays = [...programmeDays];
     if (!newDays[dayIndex].items) newDays[dayIndex].items = [];
-    newDays[dayIndex].items.push({ time: "", title: "", description: "", icon: "🎉", location: "", address: "" });
+    newDays[dayIndex].items.push({ time: "", endTime: "", title: "", description: "", icon: "🎉", location: "", address: "" });
     updateModuleConfig("MOD_PROGRAMME", { days: newDays });
   }
 
@@ -363,6 +512,127 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
     newDays[dayIndex].items.splice(itemIndex, 1);
     updateModuleConfig("MOD_PROGRAMME", { days: newDays });
   }
+
+  // ── Menu & Infos attaches a une etape du programme ──
+  function patchProgrammeItem(dayIndex: number, itemIndex: number, patch: Record<string, unknown>) {
+    const newDays = [...programmeDays];
+    newDays[dayIndex].items[itemIndex] = { ...newDays[dayIndex].items[itemIndex], ...patch };
+    updateModuleConfig("MOD_PROGRAMME", { days: newDays });
+  }
+
+  // Menu de l'etape
+  function addItemMenuCourse(dayIdx: number, itemIdx: number) {
+    const item = programmeDays[dayIdx].items[itemIdx];
+    const menu: ItemMenu = item.menu || { courses: [] };
+    patchProgrammeItem(dayIdx, itemIdx, { menu: { ...menu, courses: [...menu.courses, { name: "", items: [""], icon: "🍽️" }] } });
+  }
+  function updateItemMenuCourse(dayIdx: number, itemIdx: number, courseIdx: number, field: "name" | "icon", value: string) {
+    const item = programmeDays[dayIdx].items[itemIdx];
+    const menu: ItemMenu = item.menu || { courses: [] };
+    const courses = [...menu.courses];
+    courses[courseIdx] = { ...courses[courseIdx], [field]: value };
+    patchProgrammeItem(dayIdx, itemIdx, { menu: { ...menu, courses } });
+  }
+  function removeItemMenuCourse(dayIdx: number, itemIdx: number, courseIdx: number) {
+    const item = programmeDays[dayIdx].items[itemIdx];
+    const menu: ItemMenu | undefined = item.menu;
+    if (!menu) return;
+    const courses = [...menu.courses];
+    courses.splice(courseIdx, 1);
+    patchProgrammeItem(dayIdx, itemIdx, { menu: courses.length ? { ...menu, courses } : undefined });
+  }
+  function addItemMenuCourseItem(dayIdx: number, itemIdx: number, courseIdx: number) {
+    const item = programmeDays[dayIdx].items[itemIdx];
+    const menu: ItemMenu = item.menu || { courses: [] };
+    const courses = [...menu.courses];
+    courses[courseIdx] = { ...courses[courseIdx], items: [...(courses[courseIdx].items || []), ""] };
+    patchProgrammeItem(dayIdx, itemIdx, { menu: { ...menu, courses } });
+  }
+  function updateItemMenuCourseItem(dayIdx: number, itemIdx: number, courseIdx: number, miIdx: number, value: string) {
+    const item = programmeDays[dayIdx].items[itemIdx];
+    const menu: ItemMenu = item.menu || { courses: [] };
+    const courses = [...menu.courses];
+    const items = [...(courses[courseIdx].items || [])];
+    items[miIdx] = value;
+    courses[courseIdx] = { ...courses[courseIdx], items };
+    patchProgrammeItem(dayIdx, itemIdx, { menu: { ...menu, courses } });
+  }
+  function removeItemMenuCourseItem(dayIdx: number, itemIdx: number, courseIdx: number, miIdx: number) {
+    const item = programmeDays[dayIdx].items[itemIdx];
+    const menu: ItemMenu | undefined = item.menu;
+    if (!menu) return;
+    const courses = [...menu.courses];
+    const items = [...(courses[courseIdx].items || [])];
+    items.splice(miIdx, 1);
+    courses[courseIdx] = { ...courses[courseIdx], items };
+    patchProgrammeItem(dayIdx, itemIdx, { menu: { ...menu, courses } });
+  }
+
+  // Infos / instructions de l'etape
+  function addItemInfosSection(dayIdx: number, itemIdx: number) {
+    const item = programmeDays[dayIdx].items[itemIdx];
+    const infos: ItemInfos = item.infos || { sections: [] };
+    patchProgrammeItem(dayIdx, itemIdx, { infos: { sections: [...infos.sections, { title: "", icon: "ℹ️", description: "", items: [] }] } });
+  }
+  function updateItemInfosSection(dayIdx: number, itemIdx: number, sIdx: number, field: "title" | "icon" | "description", value: string) {
+    const item = programmeDays[dayIdx].items[itemIdx];
+    const infos: ItemInfos = item.infos || { sections: [] };
+    const sections = [...infos.sections];
+    sections[sIdx] = { ...sections[sIdx], [field]: value };
+    patchProgrammeItem(dayIdx, itemIdx, { infos: { sections } });
+  }
+  function removeItemInfosSection(dayIdx: number, itemIdx: number, sIdx: number) {
+    const item = programmeDays[dayIdx].items[itemIdx];
+    const infos: ItemInfos | undefined = item.infos;
+    if (!infos) return;
+    const sections = [...infos.sections];
+    sections.splice(sIdx, 1);
+    patchProgrammeItem(dayIdx, itemIdx, { infos: sections.length ? { sections } : undefined });
+  }
+  function addItemInfosSectionItem(dayIdx: number, itemIdx: number, sIdx: number) {
+    const item = programmeDays[dayIdx].items[itemIdx];
+    const infos: ItemInfos = item.infos || { sections: [] };
+    const sections = [...infos.sections];
+    sections[sIdx] = { ...sections[sIdx], items: [...(sections[sIdx].items || []), ""] };
+    patchProgrammeItem(dayIdx, itemIdx, { infos: { sections } });
+  }
+  function updateItemInfosSectionItem(dayIdx: number, itemIdx: number, sIdx: number, miIdx: number, value: string) {
+    const item = programmeDays[dayIdx].items[itemIdx];
+    const infos: ItemInfos = item.infos || { sections: [] };
+    const sections = [...infos.sections];
+    const items = [...(sections[sIdx].items || [])];
+    items[miIdx] = value;
+    sections[sIdx] = { ...sections[sIdx], items };
+    patchProgrammeItem(dayIdx, itemIdx, { infos: { sections } });
+  }
+  function removeItemInfosSectionItem(dayIdx: number, itemIdx: number, sIdx: number, miIdx: number) {
+    const item = programmeDays[dayIdx].items[itemIdx];
+    const infos: ItemInfos | undefined = item.infos;
+    if (!infos) return;
+    const sections = [...infos.sections];
+    const items = [...(sections[sIdx].items || [])];
+    items.splice(miIdx, 1);
+    sections[sIdx] = { ...sections[sIdx], items };
+    patchProgrammeItem(dayIdx, itemIdx, { infos: { sections } });
+  }
+
+  // True si au moins une etape du programme utilise deja menu/infos (pour masquer les modules standalone)
+  const hasPerItemMenu = useMemo(() => {
+    for (const day of programmeDays) {
+      for (const it of (day.items || []) as { menu?: ItemMenu }[]) {
+        if (it.menu && Array.isArray(it.menu.courses) && it.menu.courses.length > 0) return true;
+      }
+    }
+    return false;
+  }, [programmeDays]);
+  const hasPerItemInfos = useMemo(() => {
+    for (const day of programmeDays) {
+      for (const it of (day.items || []) as { infos?: ItemInfos }[]) {
+        if (it.infos && Array.isArray(it.infos.sections) && it.infos.sections.length > 0) return true;
+      }
+    }
+    return false;
+  }, [programmeDays]);
 
   // ── Menu helpers ──
   const menuConfig = getConfig("MOD_MENU");
@@ -550,19 +820,23 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
     return () => window.removeEventListener("resize", recalcScale);
   }, [recalcScale]);
 
-  const previewEventData = useMemo(() => ({
-    id: event.id,
-    slug: event.slug,
-    title,
-    type: event.type,
-    date: new Date(date).toISOString(),
-    location: location || null,
-    description: description || null,
-    organizer: event.organizer,
-    guestCount: event.guestCount,
-    coverImage,
-    coverVideo,
-  }), [event.id, event.slug, event.type, event.organizer, event.guestCount, title, date, location, description, coverImage, coverVideo]);
+  const previewEventData = useMemo(() => {
+    // Première date valide pour l'affichage preview (fallback : today)
+    const firstDate = dates.find(Boolean) || new Date().toISOString().slice(0, 10);
+    return {
+      id: event.id,
+      slug: event.slug,
+      title,
+      type: event.type,
+      date: new Date(firstDate).toISOString(),
+      location: location || null,
+      description: description || null,
+      organizer: event.organizer,
+      guestCount: event.guestCount,
+      coverImage,
+      coverVideo,
+    };
+  }, [event.id, event.slug, event.type, event.organizer, event.guestCount, title, dates, location, description, coverImage, coverVideo]);
 
   // ── Per-page media/theme editor helper (reusable across steps) ──
   const STEP_LABELS: Record<PageKey, string> = { accueil: "l'accueil", evenement: "l'événement", infos: "Infos & Moments", rsvp: "Confirmation" };
@@ -732,21 +1006,71 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                 <p className="text-right text-[10px] text-gray-400">{description.length} car.</p>
               </EditorSection>
 
-              <EditorSection title="Date & Lieu" icon={<Calendar className="h-3.5 w-3.5 text-[#7A3A50]" />}>
-                <div className="grid gap-3 grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                      <Clock className="inline h-3 w-3 mr-0.5" />Date
-                    </label>
-                    <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} aria-label="Date de l'événement" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                      <MapPin className="inline h-3 w-3 mr-0.5" />Lieu
-                    </label>
-                    <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className={inputClass} placeholder="Adresse..." />
-                  </div>
+              {/* ─── Dates multi-jour ─── */}
+              <EditorSection title="Dates de l'événement" icon={<Calendar className="h-3.5 w-3.5 text-[#7A3A50]" />}>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-[11px] text-gray-500">
+                    {dates.filter(Boolean).length} jour{dates.filter(Boolean).length > 1 ? "s" : ""}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={addDate}
+                    className="flex items-center gap-1 rounded-md bg-[#7A3A50]/10 px-2 py-0.5 text-[10px] font-medium text-[#7A3A50] transition hover:bg-[#7A3A50]/20"
+                  >
+                    <Plus className="h-3 w-3" /> Ajouter un jour
+                  </button>
                 </div>
+                <div className="space-y-1.5">
+                  {dates.map((d, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#7A3A50]/10 text-[10px] font-bold text-[#7A3A50]">
+                        J{i + 1}
+                      </div>
+                      <input
+                        type="date"
+                        value={d}
+                        onChange={(e) => updateDate(i, e.target.value)}
+                        className={`${inputClass} flex-1`}
+                        aria-label={`Date du jour ${i + 1}`}
+                      />
+                      {dates.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeDate(i)}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                          aria-label={`Supprimer le jour ${i + 1}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </EditorSection>
+
+              {/* ─── Lieu principal (rétro-compat affichage) ─── */}
+              <EditorSection title="Lieu principal" icon={<MapPin className="h-3.5 w-3.5 text-[#7A3A50]" />}>
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className={inputClass}
+                  placeholder="Adresse principale (fallback)"
+                  aria-label="Lieu principal"
+                />
+                <p className="mt-1 text-[10px] text-gray-400">
+                  Affiché si aucun lieu détaillé n&apos;est défini ci-dessous.
+                </p>
+              </EditorSection>
+
+              {/* ─── Venues détaillées ─── */}
+              <EditorSection title="Lieux & Programme" icon="📍">
+                <VenuesEditor
+                  venues={venues}
+                  availableDates={dates.filter(Boolean)}
+                  onChange={setVenues}
+                  accentColor="#7A3A50"
+                />
               </EditorSection>
 
               {/* ── Per-page Media & Theme ── */}
@@ -764,38 +1088,62 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
               >
                 {getModule("MOD_PROGRAMME")?.active && (
                   <div className="space-y-2">
-                    {programmeDays.map((day: { label: string; items: { time: string; title: string; description: string; icon: string; location?: string; address?: string }[] }, dayIdx: number) => (
+                    {(programmeDays as ProgrammeDayAdmin[]).map((day, dayIdx) => (
                       <div key={dayIdx}>
                         <label className="mb-1 block text-[11px] font-medium text-gray-500">
                           {programmeDays.length > 1 ? day.label || `Jour ${dayIdx + 1}` : "Éléments"}
                         </label>
                         <div className="space-y-2">
-                          {(day.items || []).map((item: { time: string; title: string; description: string; icon: string; location?: string; address?: string }, itemIdx: number) => (
+                          {(day.items || []).map((item, itemIdx) => (
                             <div key={itemIdx} className="rounded-lg border border-gray-100 dark:border-gray-800 p-2 space-y-1.5">
-                              {/* Row 1: Time + Title + Delete */}
+                              {/* Row 1: Icon + Title + Delete */}
                               <div className="flex gap-1.5 items-center">
-                                <div className="relative">
-                                  <Clock className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
-                                  <input
-                                    type="text"
-                                    value={item.time}
-                                    onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "time", e.target.value)}
-                                    className={`${inputClass} w-20 text-xs pl-7`}
-                                    placeholder="14:00"
-                                  />
-                                </div>
+                                <select
+                                  value={item.icon || "🎉"}
+                                  onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "icon", e.target.value)}
+                                  className="h-8 w-10 shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-center text-base cursor-pointer outline-none focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                                  aria-label="Icône de l'étape"
+                                  title="Choisir une icône"
+                                >
+                                  {PROGRAMME_ICONS.map((ic) => (
+                                    <option key={ic} value={ic}>{ic}</option>
+                                  ))}
+                                </select>
                                 <input
                                   type="text"
                                   value={item.title}
                                   onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "title", e.target.value)}
                                   className={`${inputClass} flex-1 text-xs font-medium`}
                                   placeholder="Ex: Cérémonie religieuse"
+                                  aria-label="Titre de l'étape"
                                 />
                                 <button onClick={() => removeProgrammeItem(dayIdx, itemIdx)} className={btnDanger} aria-label="Supprimer cet élément">
                                   <Trash2 className="h-3 w-3" />
                                 </button>
                               </div>
-                              {/* Row 2: Location + Address (optional) */}
+                              {/* Row 2: Start time → End time (native time picker) */}
+                              <div className="flex gap-1.5 items-center">
+                                <div className="relative flex-1">
+                                  <Clock className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
+                                  <input
+                                    type="time"
+                                    value={item.time}
+                                    onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "time", e.target.value)}
+                                    className={`${inputClass} text-xs pl-7`}
+                                    aria-label="Heure de début"
+                                  />
+                                </div>
+                                <span className="text-[10px] text-gray-400 dark:text-gray-500">→</span>
+                                <input
+                                  type="time"
+                                  value={item.endTime || ""}
+                                  onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "endTime", e.target.value)}
+                                  className={`${inputClass} flex-1 text-xs`}
+                                  placeholder="Fin"
+                                  aria-label="Heure de fin (optionnel)"
+                                />
+                              </div>
+                              {/* Row 3: Location + Address with autocomplete */}
                               <div className="flex gap-1.5 items-center">
                                 <div className="relative flex-1">
                                   <MapPin className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
@@ -804,7 +1152,8 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                                     value={item.location || ""}
                                     onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "location", e.target.value)}
                                     className={`${inputClass} text-xs pl-7`}
-                                    placeholder="Lieu (optionnel)"
+                                    placeholder="Lieu (ex: Église Saint-Michel)"
+                                    list="programme-addresses"
                                   />
                                 </div>
                                 <input
@@ -813,13 +1162,163 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                                   onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "address", e.target.value)}
                                   className={`${inputClass} flex-1 text-xs`}
                                   placeholder="Adresse (optionnel)"
+                                  list="programme-addresses"
                                 />
                               </div>
+                              {/* Row 4: Optional description (auto-expands if filled) */}
+                              <details className="group" open={!!item.description}>
+                                <summary className="text-[10px] text-gray-400 hover:text-[#7A3A50] cursor-pointer select-none list-none inline-flex items-center gap-1 group-open:mb-1.5">
+                                  <Plus className="h-2.5 w-2.5 group-open:hidden" />
+                                  <span className="group-open:hidden">Description</span>
+                                  <span className="hidden group-open:inline">Description</span>
+                                </summary>
+                                <textarea
+                                  value={item.description || ""}
+                                  onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "description", e.target.value)}
+                                  className={`${inputClass} text-xs resize-none`}
+                                  placeholder="Détails supplémentaires (optionnel)"
+                                  rows={2}
+                                />
+                              </details>
+
+                              {/* Row 5: Menu de cette etape (optionnel) */}
+                              <details className="group" open={!!(item.menu && item.menu.courses.length)}>
+                                <summary className="text-[10px] text-gray-400 hover:text-[#7A3A50] cursor-pointer select-none list-none inline-flex items-center gap-1 group-open:mb-1.5">
+                                  <Plus className="h-2.5 w-2.5 group-open:hidden" />
+                                  <span>🍽️ Menu de cette étape</span>
+                                </summary>
+                                <div className="space-y-1.5 rounded-lg bg-gray-50/70 dark:bg-gray-800/30 p-2">
+                                  {item.menu && item.menu.courses.length > 0 ? (
+                                    item.menu.courses.map((course: ItemMenuCourse, courseIdx: number) => (
+                                      <div key={courseIdx} className="rounded-md border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-1.5 space-y-1">
+                                        <div className="flex gap-1.5 items-center">
+                                          <select
+                                            value={course.icon || "🍽️"}
+                                            onChange={(e) => updateItemMenuCourse(dayIdx, itemIdx, courseIdx, "icon", e.target.value)}
+                                            className="h-7 w-9 shrink-0 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-center text-sm cursor-pointer outline-none"
+                                            aria-label="Icône du plat"
+                                          >
+                                            {["🍽️","🥗","🍲","🍰","🥂","🧀","🍷","🍝","🍤","🍱","🥩"].map(ic => <option key={ic} value={ic}>{ic}</option>)}
+                                          </select>
+                                          <input
+                                            type="text"
+                                            value={course.name}
+                                            onChange={(e) => updateItemMenuCourse(dayIdx, itemIdx, courseIdx, "name", e.target.value)}
+                                            className={`${inputClass} flex-1 text-xs`}
+                                            placeholder="Ex: Entrée"
+                                          />
+                                          <button onClick={() => removeItemMenuCourse(dayIdx, itemIdx, courseIdx)} className={btnDanger} aria-label="Supprimer ce plat">
+                                            <Trash2 className="h-3 w-3" />
+                                          </button>
+                                        </div>
+                                        <div className="space-y-1 pl-2">
+                                          {(course.items || []).map((mItem: string, miIdx: number) => (
+                                            <div key={miIdx} className="flex gap-1.5 items-center">
+                                              <input
+                                                type="text"
+                                                value={mItem}
+                                                onChange={(e) => updateItemMenuCourseItem(dayIdx, itemIdx, courseIdx, miIdx, e.target.value)}
+                                                className={`${inputClass} flex-1 text-xs`}
+                                                placeholder={`Élément ${miIdx + 1}`}
+                                              />
+                                              {(course.items || []).length > 1 && (
+                                                <button onClick={() => removeItemMenuCourseItem(dayIdx, itemIdx, courseIdx, miIdx)} className={btnDanger} aria-label="Supprimer">
+                                                  <X className="h-3 w-3" />
+                                                </button>
+                                              )}
+                                            </div>
+                                          ))}
+                                          <button onClick={() => addItemMenuCourseItem(dayIdx, itemIdx, courseIdx)} className="text-[10px] text-[#7A3A50] dark:text-[#C48B90] hover:underline">
+                                            + Élément
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ))
+                                  ) : null}
+                                  <button onClick={() => addItemMenuCourse(dayIdx, itemIdx)} className={`${btnSecondary} text-[10px] w-full justify-center`}>
+                                    <Plus className="h-3 w-3" /> Ajouter un plat
+                                  </button>
+                                </div>
+                              </details>
+
+                              {/* Row 6: Infos complementaires de cette etape (optionnel) */}
+                              <details className="group" open={!!(item.infos && item.infos.sections.length)}>
+                                <summary className="text-[10px] text-gray-400 hover:text-[#7A3A50] cursor-pointer select-none list-none inline-flex items-center gap-1 group-open:mb-1.5">
+                                  <Plus className="h-2.5 w-2.5 group-open:hidden" />
+                                  <span>ℹ️ Infos / Instructions</span>
+                                </summary>
+                                <div className="space-y-1.5 rounded-lg bg-gray-50/70 dark:bg-gray-800/30 p-2">
+                                  {item.infos && item.infos.sections.length > 0 ? (
+                                    item.infos.sections.map((sec: ItemInfosSection, sIdx: number) => (
+                                      <div key={sIdx} className="rounded-md border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-1.5 space-y-1">
+                                        <div className="flex gap-1.5 items-center">
+                                          <select
+                                            value={sec.icon || "ℹ️"}
+                                            onChange={(e) => updateItemInfosSection(dayIdx, itemIdx, sIdx, "icon", e.target.value)}
+                                            className="h-7 w-9 shrink-0 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-center text-sm cursor-pointer outline-none"
+                                            aria-label="Icône de la section"
+                                          >
+                                            {["ℹ️","👗","🚗","🅿️","📍","🏨","🎁","🎶","⛔","⚠️","💡"].map(ic => <option key={ic} value={ic}>{ic}</option>)}
+                                          </select>
+                                          <input
+                                            type="text"
+                                            value={sec.title || ""}
+                                            onChange={(e) => updateItemInfosSection(dayIdx, itemIdx, sIdx, "title", e.target.value)}
+                                            className={`${inputClass} flex-1 text-xs`}
+                                            placeholder="Ex: Dresscode"
+                                          />
+                                          <button onClick={() => removeItemInfosSection(dayIdx, itemIdx, sIdx)} className={btnDanger} aria-label="Supprimer cette section">
+                                            <Trash2 className="h-3 w-3" />
+                                          </button>
+                                        </div>
+                                        <textarea
+                                          value={sec.description || ""}
+                                          onChange={(e) => updateItemInfosSection(dayIdx, itemIdx, sIdx, "description", e.target.value)}
+                                          className={`${inputClass} text-xs resize-none`}
+                                          placeholder="Description (optionnel)"
+                                          rows={2}
+                                        />
+                                        <div className="space-y-1 pl-2">
+                                          {(sec.items || []).map((it: string, miIdx: number) => (
+                                            <div key={miIdx} className="flex gap-1.5 items-center">
+                                              <input
+                                                type="text"
+                                                value={it}
+                                                onChange={(e) => updateItemInfosSectionItem(dayIdx, itemIdx, sIdx, miIdx, e.target.value)}
+                                                className={`${inputClass} flex-1 text-xs`}
+                                                placeholder={`Point ${miIdx + 1}`}
+                                              />
+                                              <button onClick={() => removeItemInfosSectionItem(dayIdx, itemIdx, sIdx, miIdx)} className={btnDanger} aria-label="Supprimer ce point">
+                                                <X className="h-3 w-3" />
+                                              </button>
+                                            </div>
+                                          ))}
+                                          <button onClick={() => addItemInfosSectionItem(dayIdx, itemIdx, sIdx)} className="text-[10px] text-[#7A3A50] dark:text-[#C48B90] hover:underline">
+                                            + Point
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ))
+                                  ) : null}
+                                  <button onClick={() => addItemInfosSection(dayIdx, itemIdx)} className={`${btnSecondary} text-[10px] w-full justify-center`}>
+                                    <Plus className="h-3 w-3" /> Ajouter une section
+                                  </button>
+                                </div>
+                              </details>
                             </div>
                           ))}
                         </div>
-                        <button onClick={() => addProgrammeItem(dayIdx)} className={`${btnSecondary} mt-1.5 text-[11px]`}>
-                          <Plus className="h-3 w-3" /> Ajouter
+                        {/* Suggestions d'adresses partagees pour lieu + adresse des items */}
+                        <datalist id="programme-addresses">
+                          {programmeAddressSuggestions.map((addr) => (
+                            <option key={addr} value={addr} />
+                          ))}
+                        </datalist>
+                        <button
+                          onClick={() => addProgrammeItem(dayIdx)}
+                          className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 px-3 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400 transition hover:border-[#7A3A50]/40 hover:text-[#7A3A50]"
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Ajouter un élément
                         </button>
                       </div>
                     ))}
@@ -827,6 +1326,8 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                 )}
               </EditorSection>
 
+              {/* Section Menu standalone : masquee si le menu est deja attache a une etape du programme */}
+              {!hasPerItemMenu && (
               <EditorSection
                 title="Menu"
                 icon="🍽️"
@@ -834,6 +1335,9 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
               >
                 {getModule("MOD_MENU")?.active && (
                   <div className="space-y-3">
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-2.5 py-1.5">
+                      💡 Astuce : vous pouvez aussi attacher un menu directement à chaque étape du programme (ci-dessus, rubrique 🍽️).
+                    </p>
                     {/* Tip: multiple menu sections */}
                     {allProgrammeItems.length > 1 && menuSections.length <= 1 && (
                       <p className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-2.5 py-1.5">
@@ -861,19 +1365,24 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                             )}
                           </div>
 
-                          {/* Link to programme item */}
-                          {allProgrammeItems.length > 1 && (
-                            <select
-                              value={section.programmeRef || ""}
-                              onChange={(e) => updateMenuSectionLabel(sectionIdx, "programmeRef", e.target.value)}
-                              className={`${inputClass} text-[11px]`}
-                              aria-label="Lier au programme"
-                            >
-                              <option value="">Lié à tout le programme</option>
-                              {allProgrammeItems.map((pi: { time: string; title: string }, piIdx: number) => (
-                                <option key={piIdx} value={pi.title}>{pi.time} — {pi.title}</option>
-                              ))}
-                            </select>
+                          {/* Lier ce menu a une etape du programme */}
+                          {allProgrammeItems.length > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] text-gray-400 shrink-0">🔗 Rattaché à</span>
+                              <select
+                                value={section.programmeRef || ""}
+                                onChange={(e) => updateMenuSectionLabel(sectionIdx, "programmeRef", e.target.value)}
+                                className={`${inputClass} flex-1 text-[11px]`}
+                                aria-label="Rattacher ce menu à une étape du programme"
+                              >
+                                <option value="">{allProgrammeItems.length > 1 ? "— Tout le programme —" : "— Aucune étape —"}</option>
+                                {allProgrammeItems.map((pi: { time: string; title: string }, piIdx: number) => (
+                                  <option key={piIdx} value={pi.title}>
+                                    {pi.time ? `${pi.time} — ` : ""}{pi.title}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           )}
 
                           {/* Courses in this section */}
@@ -969,6 +1478,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                   </div>
                 )}
               </EditorSection>
+              )}
 
               {/* ── Per-page Media & Theme ── */}
               {renderPageMediaEditor("evenement")}
@@ -978,6 +1488,8 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
           {/* ═══════════════ STEP 2 — INFOS & MOMENTS ═══════════════ */}
           {currentStep === 2 && (
             <>
+              {/* Infos pratiques standalone : masquees si deja attachees a une etape du programme */}
+              {!hasPerItemInfos && (
               <EditorSection
                 title="Infos pratiques"
                 icon="🚗"
@@ -985,6 +1497,9 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
               >
                 {getModule("MOD_LOGISTIQUE")?.active && (
                   <div className="space-y-2">
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-2.5 py-1.5">
+                      💡 Astuce : vous pouvez aussi ajouter des infos/instructions directement sur chaque étape du programme (rubrique ℹ️).
+                    </p>
                     {logSections.map((section: { title: string; description: string; icon: string }, idx: number) => (
                       <div key={idx} className="rounded-lg border border-gray-100 dark:border-gray-800 p-2.5">
                         <div className="flex gap-1.5 items-center mb-1.5">
@@ -1014,6 +1529,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                   </div>
                 )}
               </EditorSection>
+              )}
 
               <EditorSection
                 title="Galerie"
@@ -1023,8 +1539,22 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                 {getModule("MOD_GALERIE")?.active && (
                   <div className="space-y-2">
                     <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                      Ajoutez des URLs d&apos;images.
+                      Importez vos photos et vidéos, ou collez des URLs.
                     </p>
+                    {/* Bouton principal : import multi-selection */}
+                    <button
+                      onClick={() => galleryUploadRef.current?.click()}
+                      disabled={isUploading}
+                      className="w-full flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 px-3 py-4 text-xs font-medium text-gray-500 dark:text-gray-400 transition hover:border-[#7A3A50]/40 hover:text-[#7A3A50] disabled:opacity-50"
+                    >
+                      {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      <span>Importer des photos / vidéos (multi-sélection)</span>
+                    </button>
+                    {((getConfig("MOD_GALERIE")?.photos || []) as { url: string; caption: string }[]).length > 0 && (
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 pt-1">
+                        {((getConfig("MOD_GALERIE")?.photos || []) as { url: string; caption: string }[]).length} média{((getConfig("MOD_GALERIE")?.photos || []) as { url: string; caption: string }[]).length > 1 ? "s" : ""} dans la galerie
+                      </p>
+                    )}
                     {((getConfig("MOD_GALERIE")?.photos || []) as { url: string; caption: string }[]).map((photo: { url: string; caption: string }, idx: number) => (
                       <div key={idx} className="flex gap-1.5 items-center">
                         <input
@@ -1115,6 +1645,34 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                         }}
                       />
                     </div>
+                    {/* RSVP deadline */}
+                    <div className="rounded-lg bg-gray-50/50 dark:bg-gray-800/30 px-3 py-2.5 space-y-1.5">
+                      <label htmlFor="rsvp-deadline" className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                        ⏰ Clôture des RSVP (optionnel)
+                      </label>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                        Les invités ne pourront plus confirmer après cette date.
+                      </p>
+                      <div className="flex gap-1.5 items-center">
+                        <input
+                          id="rsvp-deadline"
+                          type="datetime-local"
+                          value={rsvpDeadline}
+                          onChange={(e) => setRsvpDeadline(e.target.value)}
+                          className={`${inputClass} flex-1 text-xs`}
+                        />
+                        {rsvpDeadline && (
+                          <button
+                            onClick={() => setRsvpDeadline("")}
+                            className={btnDanger}
+                            aria-label="Supprimer la date limite"
+                            title="Supprimer la date limite"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
               </EditorSection>
@@ -1159,16 +1717,17 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
         </div>
       </div>
 
-      {/* Hidden file inputs for per-page media uploads */}
+      {/* Hidden file inputs for per-page media uploads (multi-select pour les images) */}
       <input
         ref={pageMediaImageRef}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
-        aria-label="Choisir une image de page"
+        aria-label="Choisir des images de page"
         onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f && pendingUploadPage) handlePageMediaUpload(f, "image", pendingUploadPage);
+          const files = e.target.files;
+          if (files && files.length > 0 && pendingUploadPage) handlePageMediaUpload(files, "image", pendingUploadPage);
           e.target.value = "";
         }}
       />
@@ -1179,8 +1738,22 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
         className="hidden"
         aria-label="Choisir une vidéo de page"
         onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f && pendingUploadPage) handlePageMediaUpload(f, "video", pendingUploadPage);
+          const files = e.target.files;
+          if (files && files.length > 0 && pendingUploadPage) handlePageMediaUpload(files, "video", pendingUploadPage);
+          e.target.value = "";
+        }}
+      />
+      {/* Hidden file input for Galerie bulk upload */}
+      <input
+        ref={galleryUploadRef}
+        type="file"
+        accept="image/*,video/*"
+        multiple
+        className="hidden"
+        aria-label="Importer des photos et vidéos"
+        onChange={(e) => {
+          const files = e.target.files;
+          if (files && files.length > 0) handleGalleryBulkUpload(files);
           e.target.value = "";
         }}
       />

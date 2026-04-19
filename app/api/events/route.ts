@@ -90,8 +90,38 @@ export async function POST(request: Request) {
     const finalLocation =
       location || (venues && venues.length > 0 ? venues[0].name : undefined);
 
+    // Préparer les venues avec dates converties (si fournies)
+    const preparedVenues = Array.isArray(venues)
+      ? venues
+          .filter((v: { name?: string; address?: string }) => v.name && v.address)
+          .map(
+            (
+              v: {
+                name: string;
+                address: string;
+                date?: string;
+                startTime?: string;
+                endTime?: string;
+                description?: string;
+              },
+              i: number
+            ) => ({
+              name: v.name,
+              address: v.address,
+              date: v.date
+                ? new Date(v.date).getTime()
+                : datesTimestamps[0] || Date.now(),
+              startTime: v.startTime || undefined,
+              endTime: v.endTime || undefined,
+              order: i,
+              description: v.description || undefined,
+            })
+          )
+      : [];
+
+    // Création atomique : event + theme + modules + venues dans UNE mutation Convex
     const event = await convexClient.mutation(
-      api.events.createWithDefaults,
+      api.events.createFull,
       {
         email: session.user.email,
         title,
@@ -105,30 +135,9 @@ export async function POST(request: Request) {
           order: m.order,
           active: m.active,
         })),
+        venues: preparedVenues.length > 0 ? preparedVenues : undefined,
       }
     );
-
-    // Persist venues into eventVenues table (previously lost)
-    if (venues && Array.isArray(venues) && venues.length > 0) {
-      for (let i = 0; i < venues.length; i++) {
-        const v = venues[i];
-        if (!v.name || !v.address) continue; // skip empty venues
-
-        const venueDate = v.date
-          ? new Date(v.date).getTime()
-          : datesTimestamps[0] || Date.now();
-
-        await convexClient.mutation(api.venues.add, {
-          eventId: event.id,
-          name: v.name,
-          address: v.address,
-          date: venueDate,
-          startTime: v.startTime || undefined,
-          endTime: v.endTime || undefined,
-          order: i,
-        });
-      }
-    }
 
     logSystem("INFO", "EVENT", "EVENT_CREATED", {
       actorId: session.user.id,

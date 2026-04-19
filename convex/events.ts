@@ -93,6 +93,109 @@ export const createWithDefaults = mutation({
   },
 });
 
+// ─── Create Full Event (atomic : event + theme + modules + venues) ─
+// Remplace createWithDefaults + boucle venues par une unique transaction Convex.
+// Soit tout est inséré, soit rien — plus d'état inconsistant si la boucle venues
+// échoue en plein milieu.
+export const createFull = mutation({
+  args: {
+    email: v.string(),
+    title: v.string(),
+    slug: v.string(),
+    type: v.string(),
+    dates: v.array(v.number()),
+    location: v.optional(v.string()),
+    presetId: v.string(),
+    modules: v.array(
+      v.object({
+        type: v.string(),
+        order: v.number(),
+        active: v.boolean(),
+      })
+    ),
+    venues: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          address: v.string(),
+          date: v.number(),
+          startTime: v.optional(v.string()),
+          endTime: v.optional(v.string()),
+          order: v.number(),
+          description: v.optional(v.string()),
+        })
+      )
+    ),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+    if (!user) throw new Error("User not found");
+
+    const eventId = await ctx.db.insert("events", {
+      slug: args.slug,
+      title: args.title,
+      type: args.type,
+      dates: args.dates,
+      location: args.location,
+      status: "DRAFT",
+      visibility: "SEMI_PRIVATE",
+      userId: user._id,
+    });
+
+    // Theme avec les defaults du preset
+    await ctx.db.insert("eventThemes", {
+      eventId,
+      preset: args.presetId,
+      entryEffect: "fade",
+      ambientIntensity: 0.5,
+      scrollReveal: "fade-up",
+      soundEnabled: false,
+      colorPrimary: "#7A3A50",
+      colorSecondary: "#C48B90",
+      colorAccent: "#D4A574",
+      colorBackground: "#FAF7F5",
+      colorText: "#3D2428",
+      colorSurface: "#FFFFFF",
+      colorMuted: "#9B8A8E",
+      colorBorder: "#E8DDD5",
+      fontDisplay: "Cormorant Garamond",
+      fontBody: "Montserrat",
+    });
+
+    // Modules par défaut
+    for (const m of args.modules) {
+      await ctx.db.insert("eventModules", {
+        eventId,
+        type: m.type,
+        order: m.order,
+        active: m.active,
+      });
+    }
+
+    // Venues (optionnel) — insérés dans la même mutation, donc atomiques
+    if (args.venues && args.venues.length > 0) {
+      for (const v of args.venues) {
+        if (!v.name || !v.address) continue; // filtre défensif
+        await ctx.db.insert("eventVenues", {
+          eventId,
+          name: v.name,
+          address: v.address,
+          date: v.date,
+          startTime: v.startTime,
+          endTime: v.endTime,
+          order: v.order,
+          description: v.description,
+        });
+      }
+    }
+
+    return { id: eventId, slug: args.slug, title: args.title };
+  },
+});
+
 // ─── Vérifier l'unicité du slug ───────────────────
 export const isSlugTaken = query({
   args: { slug: v.string() },
@@ -183,6 +286,13 @@ export const getPublicBySlug = query({
       hasRsvp: boolean;
       presence: boolean | null;
       qrToken: string | null;
+      rsvp: {
+        adultCount: number;
+        childrenCount: number;
+        menuChoice: string | null;
+        allergies: string[];
+        message: string | null;
+      } | null;
     } | null = null;
 
     if (args.inviteToken) {
@@ -208,6 +318,15 @@ export const getPublicBySlug = query({
           hasRsvp: !!rsvp,
           presence: rsvp?.presence ?? null,
           qrToken: guest.qrToken ?? null,
+          rsvp: rsvp
+            ? {
+                adultCount: rsvp.adultCount,
+                childrenCount: rsvp.childrenCount,
+                menuChoice: rsvp.menuChoice ?? null,
+                allergies: rsvp.allergies ?? [],
+                message: rsvp.message ?? null,
+              }
+            : null,
         };
       }
     }
@@ -247,6 +366,7 @@ export const update = mutation({
     maxGuests: v.optional(v.number()),
     coverImage: v.optional(v.union(v.string(), v.null())),
     coverVideo: v.optional(v.union(v.string(), v.null())),
+    rsvpDeadline: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
@@ -273,6 +393,30 @@ export const update = mutation({
     }
 
     await ctx.db.patch(args.id, patch);
+    return { success: true };
+  },
+});
+
+// ─── Set Event Tier (appelé par le webhook Stripe) ──
+// Prend eventId + userId propriétaire (pour défense en profondeur) + tier.
+// Pas d'ownership check via session ici car appelé depuis un webhook serveur à serveur.
+export const setTier = mutation({
+  args: {
+    eventId: v.id("events"),
+    tier: v.string(), // "essentiel" | "confort" | "premium" | "prestige" | ...
+    userId: v.optional(v.id("users")), // optionnel : vérif supplémentaire si fourni
+  },
+  handler: async (ctx, args) => {
+    const event = await ctx.db.get(args.eventId);
+    if (!event) throw new Error("Event not found");
+    if (args.userId && event.userId !== args.userId) {
+      throw new Error("User mismatch");
+    }
+
+    await ctx.db.patch(args.eventId, {
+      tier: args.tier,
+      tierPaidAt: Date.now(),
+    });
     return { success: true };
   },
 });

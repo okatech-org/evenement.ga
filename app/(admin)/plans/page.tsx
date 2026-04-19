@@ -2,12 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { INVITATION_TIERS, CURRENCIES, convertPrice, formatPrice } from "@/lib/config";
 import type { Currency } from "@/lib/config";
 
 export default function PlansPage() {
+  const router = useRouter();
   const [currency, setCurrency] = useState<Currency>(CURRENCIES[0]); // EUR default
   const [currencyOpen, setCurrencyOpen] = useState(false);
+
+  function handleSelectTier(tierId: string) {
+    router.push(`/plans/checkout?tier=${tierId}`);
+  }
 
   return (
     <div className="space-y-8">
@@ -140,6 +146,7 @@ export default function PlansPage() {
                 </div>
               ) : (
                 <button
+                  onClick={() => handleSelectTier(tier.id)}
                   className="block w-full rounded-xl px-4 py-2.5 text-center text-sm font-semibold text-white transition-all hover:opacity-90 hover:shadow-md"
                   {...{ style: { backgroundColor: tier.color } }}
                 >

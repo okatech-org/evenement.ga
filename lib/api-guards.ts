@@ -8,9 +8,11 @@ import { prisma } from "@/lib/db";
 const ALLOWED_ORIGINS = [
   process.env.NEXTAUTH_URL,
   process.env.NEXT_PUBLIC_APP_URL,
-  "http://localhost:3000",
+  "http://localhost:3004",
   "http://localhost:8080",
 ].filter(Boolean) as string[];
+
+const IS_DEV = process.env.NODE_ENV !== "production";
 
 export function verifyCsrf(request: Request): NextResponse | null {
   const method = request.method.toUpperCase();
@@ -23,6 +25,19 @@ export function verifyCsrf(request: Request): NextResponse | null {
   // Les requetes sans Origin (navigation, meme origine) sont autorisees
   if (!origin) {
     return null;
+  }
+
+  // En dev, autoriser tous les ports localhost (evite les 403 quand
+  // le port dev change sans que NEXTAUTH_URL soit mis a jour).
+  if (IS_DEV) {
+    try {
+      const originUrl = new URL(origin);
+      if (originUrl.hostname === "localhost" || originUrl.hostname === "127.0.0.1") {
+        return null;
+      }
+    } catch {
+      // Origin malforme — continue vers la verif stricte
+    }
   }
 
   const isAllowed = ALLOWED_ORIGINS.some((allowed) => {

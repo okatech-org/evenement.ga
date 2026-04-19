@@ -5,6 +5,11 @@ import { prisma } from "@/lib/db";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendRSVPConfirmationEmail } from "@/lib/email";
 import { formatDate } from "@/lib/utils";
+import { RSVPSchema } from "@/lib/validations";
+import { z } from "zod";
+import convexClient from "@/lib/convex-server";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import QRCode from "qrcode";
 
 /**
@@ -41,19 +46,50 @@ export async function POST(
       );
     }
 
-    const body = await request.json();
+    // ── Check deadline (lecture depuis Convex) ──
+    try {
+      const convexEvent = await convexClient.query(api.events.getById, {
+        id: params.id as Id<"events">,
+      });
+      const deadline = (convexEvent as { rsvpDeadline?: number } | null)?.rsvpDeadline;
+      if (deadline && Date.now() > deadline) {
+        return NextResponse.json(
+          { error: "RSVP_CLOSED", message: "La date limite de confirmation est dépassée." },
+          { status: 403 }
+        );
+      }
+    } catch {
+      // Non bloquant : si Convex indisponible, on laisse passer
+    }
+
+    const rawBody = await request.json();
+    const { guestToken, ...restBody } = rawBody;
+
+    // ── Validation Zod du corps ──
+    let validated;
+    try {
+      validated = RSVPSchema.parse({ ...restBody, eventId: params.id });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return NextResponse.json(
+          { error: "Données invalides", details: err.issues.map((i) => i.message) },
+          { status: 400 }
+        );
+      }
+      throw err;
+    }
+
     const {
-      guestToken,
       firstName,
       lastName,
       email,
       presence,
-      adultCount = 1,
-      childrenCount = 0,
-      menuChoice = null,
-      allergies = [],
-      message = null,
-    } = body;
+      adultCount,
+      childrenCount,
+      menuChoice,
+      allergies,
+      message,
+    } = validated;
 
     let guest;
 

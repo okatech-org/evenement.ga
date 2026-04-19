@@ -62,3 +62,62 @@ export const listByEvent = query({
     });
   },
 });
+
+// ─── Replace All Venues (atomic upsert) ────────────
+// Supprime toutes les venues de l'event et les remplace par la liste fournie.
+// Garantit l'ownership via email et s'exécute dans une seule transaction Convex.
+export const replaceAll = mutation({
+  args: {
+    eventId: v.id("events"),
+    email: v.string(),
+    venues: v.array(
+      v.object({
+        name: v.string(),
+        address: v.string(),
+        date: v.number(),
+        startTime: v.optional(v.string()),
+        endTime: v.optional(v.string()),
+        order: v.number(),
+        description: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+    if (!user) throw new Error("User not found");
+
+    const event = await ctx.db.get(args.eventId);
+    if (!event || event.userId !== user._id) {
+      throw new Error("Event not found or access denied");
+    }
+
+    // Supprimer l'existant
+    const existing = await ctx.db
+      .query("eventVenues")
+      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+      .collect();
+    for (const venue of existing) {
+      await ctx.db.delete(venue._id);
+    }
+
+    // Insérer la nouvelle liste
+    for (const venue of args.venues) {
+      if (!venue.name || !venue.address) continue; // filtre défensif
+      await ctx.db.insert("eventVenues", {
+        eventId: args.eventId,
+        name: venue.name,
+        address: venue.address,
+        date: venue.date,
+        startTime: venue.startTime,
+        endTime: venue.endTime,
+        order: venue.order,
+        description: venue.description,
+      });
+    }
+
+    return { success: true, count: args.venues.length };
+  },
+});

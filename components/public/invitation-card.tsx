@@ -5,24 +5,44 @@ import { useEffect, useState, useCallback, useRef, type CSSProperties } from "re
 import { AmbientEffect } from "@/components/effects/ambient-effect";
 import { RsvpForm } from "@/components/public/rsvp-form";
 import { ChatBubble } from "@/components/public/chat-bubble";
+import { formatGuestDisplayName } from "@/convex/lib/guestDisplayName";
 import "@/public/effects/entry-effects.css";
 import "@/public/effects/ambient-effects.css";
 import "@/public/effects/invitation-card.css";
 
 // ─── Types pour les configs de modules ─────────────────
+
+// Menu / Infos attaches directement a une etape du programme
+interface ItemMenuCourse { name?: string; items?: string[]; icon?: string }
+interface ItemMenu { label?: string; courses?: ItemMenuCourse[] }
+interface ItemInfosSection { title?: string; icon?: string; description?: string; items?: string[] }
+interface ItemInfos { sections?: ItemInfosSection[] }
+
+interface ProgrammeItem {
+  time?: string;
+  endTime?: string;
+  title?: string;
+  description?: string;
+  icon?: string;
+  location?: string;
+  address?: string;
+  menu?: ItemMenu;
+  infos?: ItemInfos;
+}
+
 interface ProgrammeDay {
   label?: string;
   date?: string;
-  items?: Array<{ time?: string; title?: string; description?: string; icon?: string }>;
-  steps?: Array<{ time?: string; title?: string; description?: string; icon?: string }>;
-  events?: Array<{ time?: string; title?: string; description?: string; icon?: string }>;
+  items?: ProgrammeItem[];
+  steps?: ProgrammeItem[];
+  events?: ProgrammeItem[];
 }
 interface ProgrammeConfig {
   days?: ProgrammeDay[];
   programme?: ProgrammeDay[];
 }
 
-interface MenuCourse { name?: string; description?: string; items?: string[] }
+interface MenuCourse { name?: string; description?: string; items?: string[]; icon?: string }
 interface MenuSection { label?: string; programmeRef?: string; courses?: MenuCourse[]; description?: string; items?: string[] }
 interface MenuConfig {
   courses?: MenuCourse[];
@@ -61,6 +81,13 @@ export interface GuestInfo {
   hasRsvp: boolean;
   presence: boolean | null;
   qrToken: string | null;
+  rsvp?: {
+    adultCount: number;
+    childrenCount: number;
+    menuChoice: string | null;
+    allergies: string[];
+    message: string | null;
+  } | null;
 }
 
 interface InvitationCardProps {
@@ -76,6 +103,7 @@ interface InvitationCardProps {
     guestCount: number;
     coverImage: string | null;
     coverVideo: string | null;
+    rsvpDeadline?: number | null;
   };
   theme: {
     cssVars: Record<string, string>;
@@ -100,7 +128,7 @@ interface InvitationCardProps {
   };
   activeModules: string[];
   modulesData: ModulesData;
-  chatMessages: { id: string; senderName: string; senderRole: string; text: string; reactions: Record<string, string[]>; replyTo: { id: string; senderName: string; content: string } | null; sentAt: string }[];
+  chatMessages: { id: string; senderName: string; senderRole: string; text: string; reactions: Record<string, number>; replyTo: { id: string; senderName: string; content: string } | null; sentAt: string }[];
   guestInfo?: GuestInfo | null;
   initialPage?: number;
 }
@@ -233,16 +261,50 @@ function PageBackground({ pageId, theme }: { pageId: string; theme: InvitationCa
 
 // ─── Programme Section ──────────────────────────────────────
 
+// Hoist legacy : si un MOD_MENU.sections[*].programmeRef matche le titre d'une etape,
+// on synthetise item.menu pour permettre l'affichage du bouton "Menu" sur cette etape.
+function resolveProgrammeItem(item: ProgrammeItem, menuModule: MenuConfig | null): ProgrammeItem {
+  if (item.menu && item.menu.courses && item.menu.courses.length > 0) return item;
+  const sections = menuModule?.sections;
+  if (!Array.isArray(sections) || !item.title) return item;
+  const normalize = (s: string | undefined) => (s ?? "").trim().toLowerCase();
+  const match = sections.find((s) => normalize(s.programmeRef) === normalize(item.title));
+  if (!match) return item;
+  return {
+    ...item,
+    menu: { label: match.label, courses: (match.courses || []) as ItemMenuCourse[] },
+  };
+}
+
+// True si au moins une section du MOD_MENU legacy n'a PAS de programmeRef matchant une etape
+// → on continue d'afficher le bloc Menu standalone pour ne pas perdre de donnees.
+function hasUnmatchedMenuSections(menuModule: MenuConfig | null, allProgrammeItems: ProgrammeItem[]): boolean {
+  const sections = menuModule?.sections;
+  if (!Array.isArray(sections) || sections.length === 0) return !!(menuModule?.courses?.length); // flat courses → show
+  const titles = new Set(allProgrammeItems.map((it) => (it.title ?? "").trim().toLowerCase()).filter(Boolean));
+  return sections.some((s) => {
+    const ref = (s.programmeRef ?? "").trim().toLowerCase();
+    return !ref || !titles.has(ref);
+  });
+}
+
+type OverlayState = { kind: "menu" | "infos"; item: ProgrammeItem } | null;
+
 function ProgrammeContent({
   config,
+  menuModule,
+  onOpenOverlay,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   colors,
 }: {
   config: Record<string, unknown>;
+  menuModule: Record<string, unknown> | null;
+  onOpenOverlay: (state: OverlayState) => void;
   colors: InvitationCardProps["theme"]["colors"];
   fontDisplay: string;
 }) {
   const programme = config as ProgrammeConfig;
+  const menu = (menuModule || null) as MenuConfig | null;
   const days = programme?.days || programme?.programme || [];
   const [activeDay, setActiveDay] = useState(0);
 
@@ -251,7 +313,8 @@ function ProgrammeContent({
   }
 
   const currentDay = days[activeDay];
-  const items = currentDay?.items || currentDay?.steps || currentDay?.events || [];
+  const rawItems = currentDay?.items || currentDay?.steps || currentDay?.events || [];
+  const items: ProgrammeItem[] = rawItems.map((it) => resolveProgrammeItem(it, menu));
 
   return (
     <div className="w-full flex flex-col min-h-0 overflow-hidden">
@@ -271,41 +334,165 @@ function ProgrammeContent({
       )}
 
       {/* Timeline */}
-      <div className="space-y-0 flex-1 min-h-0 overflow-hidden">
-        {items.map((item: { time?: string; title?: string; description?: string; icon?: string; location?: string; address?: string }, idx: number) => (
-          <div key={idx} className="flex gap-2 sm:gap-3 items-start">
-            <div className="flex flex-col items-center w-12 sm:w-14 shrink-0">
-              <span className="text-[10px] sm:text-[11px] font-semibold tabular-nums inv-color-primary">
-                {item.time || "—"}
-              </span>
-              {idx < items.length - 1 && (
-                <div className="w-px flex-1 min-h-[16px] sm:min-h-[24px] mt-0.5 inv-timeline-connector" />
-              )}
-            </div>
-            <div className="flex-1 rounded-lg p-1.5 sm:p-2.5 mb-1 sm:mb-2 inv-surface-card">
-              <div className="flex items-center gap-1.5">
-                {item.icon && <span className="text-xs sm:text-sm">{item.icon}</span>}
-                <h4 className="text-xs sm:text-sm font-semibold inv-font-display inv-color-text">
-                  {item.title}
-                </h4>
-              </div>
-              {item.description && (
-                <p className="mt-0.5 text-[10px] sm:text-xs leading-tight line-clamp-1 sm:line-clamp-2 inv-color-muted">
-                  {item.description}
-                </p>
-              )}
-              {/* Location & Address */}
-              {(item.location || item.address) && (
-                <div className="mt-1 flex items-center gap-1 text-[9px] sm:text-[10px] inv-color-muted">
-                  <span>📍</span>
-                  <span className="truncate">
-                    {item.location}{item.location && item.address ? " — " : ""}{item.address}
+      <div className="space-y-1.5 sm:space-y-2 flex-1 min-h-0 overflow-y-auto">
+        {items.map((item, idx) => {
+          const hasMenu = !!(item.menu && (item.menu.courses?.length ?? 0) > 0);
+          const hasInfos = !!(item.infos && (item.infos.sections?.length ?? 0) > 0);
+          return (
+            <div key={idx} className="flex gap-2 sm:gap-3 items-stretch">
+              {/* Colonne gauche : horaire empile (debut / fin) + ligne verticale */}
+              <div className="flex flex-col items-center w-14 sm:w-16 shrink-0 pt-0.5">
+                <span className="text-[11px] sm:text-xs font-semibold tabular-nums inv-color-primary leading-tight">
+                  {item.time || "—"}
+                </span>
+                {item.endTime && (
+                  <span className="text-[9px] sm:text-[10px] tabular-nums inv-color-muted leading-tight">
+                    {item.endTime}
                   </span>
+                )}
+                {idx < items.length - 1 && (
+                  <div className="w-px flex-1 min-h-[20px] mt-1 inv-timeline-connector" />
+                )}
+              </div>
+              {/* Colonne droite : carte etape */}
+              <div className="flex-1 min-w-0 rounded-lg p-2 sm:p-2.5 inv-surface-card">
+                <div className="flex items-center gap-1.5">
+                  {item.icon && <span className="text-sm shrink-0">{item.icon}</span>}
+                  <h4 className="text-xs sm:text-sm font-semibold inv-font-display inv-color-text truncate">
+                    {item.title}
+                  </h4>
                 </div>
-              )}
+                {item.description && (
+                  <p className="mt-1 text-[10px] sm:text-xs leading-snug line-clamp-2 inv-color-muted">
+                    {item.description}
+                  </p>
+                )}
+                {/* Lieu + adresse : empiles pour lisibilite mobile */}
+                {(item.location || item.address) && (
+                  <div className="mt-1 flex items-start gap-1 text-[10px] sm:text-[11px] inv-color-muted">
+                    <span className="shrink-0 leading-none pt-[1px]">📍</span>
+                    <div className="min-w-0 leading-snug">
+                      {item.location && <div className="font-medium truncate">{item.location}</div>}
+                      {item.address && <div className="line-clamp-2 opacity-90">{item.address}</div>}
+                    </div>
+                  </div>
+                )}
+                {/* Boutons Menu / Infos — centres, n'apparaissent que si les donnees existent */}
+                {(hasMenu || hasInfos) && (
+                  <div className="mt-1.5 flex gap-1.5 justify-center">
+                    {hasMenu && (
+                      <button
+                        onClick={() => onOpenOverlay({ kind: "menu", item })}
+                        className="inv-tab-inactive rounded-full px-2.5 py-1 text-[10px] font-medium transition-all hover:scale-105"
+                        aria-label="Voir le menu"
+                      >
+                        🍽️ Menu
+                      </button>
+                    )}
+                    {hasInfos && (
+                      <button
+                        onClick={() => onOpenOverlay({ kind: "infos", item })}
+                        className="inv-tab-inactive rounded-full px-2.5 py-1 text-[10px] font-medium transition-all hover:scale-105"
+                        aria-label="Voir les infos"
+                      >
+                        ℹ️ Infos
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Overlay card (carte flottante Menu / Infos) ──────────────
+function ProgrammeOverlayCard({ overlay, onClose }: { overlay: OverlayState; onClose: () => void }) {
+  const visible = overlay !== null;
+  return (
+    <div
+      aria-hidden={!visible}
+      className={`absolute inset-0 z-30 flex items-center justify-center p-3 sm:p-4 transition-opacity duration-200 ${visible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+    >
+      {/* Backdrop : clic pour fermer */}
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Fermer"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm cursor-default"
+      />
+      {/* Panel — s'adapte au contenu (pas de max-h ni scroll) */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={`relative z-10 w-[min(92%,360px)] rounded-xl p-4 inv-surface-card shadow-xl transition-transform duration-200 ${visible ? "scale-100" : "scale-95"}`}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-2 right-2 h-7 w-7 flex items-center justify-center rounded-full inv-color-muted hover:inv-color-primary transition-colors text-sm"
+          aria-label="Fermer"
+        >
+          ✕
+        </button>
+        {overlay?.kind === "menu" && overlay.item.menu && (
+          <div>
+            <div className="flex items-center gap-2 mb-3 pr-6">
+              <span className="text-lg">🍽️</span>
+              <h3 className="text-sm font-semibold inv-font-display inv-color-text">
+                {overlay.item.menu.label || overlay.item.title || "Menu"}
+              </h3>
+            </div>
+            <div className="space-y-2.5">
+              {(overlay.item.menu.courses || []).map((course, ci) => (
+                <div key={ci} className="rounded-lg p-2 inv-surface-card">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    {course.icon && <span className="text-sm">{course.icon}</span>}
+                    <h4 className="text-xs font-semibold inv-color-primary">{course.name}</h4>
+                  </div>
+                  <ul className="space-y-0.5 pl-5 list-disc text-[11px] inv-color-muted marker:inv-color-primary">
+                    {(course.items || []).filter(Boolean).map((it, ii) => (
+                      <li key={ii}>{it}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
           </div>
-        ))}
+        )}
+        {overlay?.kind === "infos" && overlay.item.infos && (
+          <div>
+            <div className="flex items-center gap-2 mb-3 pr-6">
+              <span className="text-lg">ℹ️</span>
+              <h3 className="text-sm font-semibold inv-font-display inv-color-text">
+                {overlay.item.title ? `Infos — ${overlay.item.title}` : "Infos complémentaires"}
+              </h3>
+            </div>
+            <div className="space-y-2.5">
+              {(overlay.item.infos.sections || []).map((sec, si) => (
+                <div key={si} className="rounded-lg p-2 inv-surface-card">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    {sec.icon && <span className="text-sm">{sec.icon}</span>}
+                    <h4 className="text-xs font-semibold inv-color-primary">{sec.title}</h4>
+                  </div>
+                  {sec.description && (
+                    <p className="text-[11px] inv-color-muted leading-snug">{sec.description}</p>
+                  )}
+                  {(sec.items ?? []).length > 0 && (
+                    <ul className="space-y-0.5 pl-5 list-disc text-[11px] inv-color-muted marker:inv-color-primary mt-1">
+                      {(sec.items || []).filter(Boolean).map((it, ii) => (
+                        <li key={ii}>{it}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -443,47 +630,184 @@ function LogisticsContent({
 
 // ─── Gallery Section ────────────────────────────────────────
 
+function isVideoUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  return /\.(mp4|webm|mov|m4v|ogg)(\?|#|$)/i.test(url) || url.startsWith("data:video/");
+}
+
+export interface GalleryItem { url?: string; caption?: string }
+
 function GalleryContent({
   config,
+  onOpen,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   colors,
 }: {
   config: Record<string, unknown>;
+  onOpen: (index: number) => void;
   colors: InvitationCardProps["theme"]["colors"];
 }) {
   const galConfig = config as GalleryConfig;
   const photos = galConfig?.photos || [];
-  const [selected, setSelected] = useState<number | null>(null);
 
   if (!Array.isArray(photos) || photos.length === 0) {
     return <p className="inv-color-muted">Galerie à venir...</p>;
   }
 
+  // Grille responsive :
+  // - 1 photo : 1 colonne pleine largeur, aspect-video
+  // - 2-3 photos : 2 colonnes, carrees
+  // - 4+ photos : 3 colonnes sur desktop / 2 sur mobile, carrees
+  const count = photos.length;
+  const gridClass =
+    count === 1 ? "grid-cols-1"
+    : count <= 4 ? "grid-cols-2"
+    : "grid-cols-2 sm:grid-cols-3";
+  const tileAspect = count === 1 ? "aspect-[4/3]" : "aspect-square";
+
   return (
-    <div className="w-full h-full min-h-0 overflow-hidden">
-      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 h-full inv-gallery-grid">
-        {photos.map((photo: { url?: string; caption?: string }, i: number) => (
-          <button
-            key={i}
-            onClick={() => setSelected(selected === i ? null : i)}
-            className={`relative overflow-hidden rounded-lg transition-all hover:scale-[1.02] min-h-0 ${selected === i ? "inv-gallery-selected" : "inv-gallery-unselected"}`}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={photo.url}
-              alt={photo.caption || `Photo ${i + 1}`}
-              className="w-full h-full object-cover"
-            />
-            {photo.caption && selected === i && (
-              <div
-                className="absolute inset-x-0 bottom-0 px-2 py-1 text-[10px] inv-color-text inv-gallery-caption"
-              >
-                {photo.caption}
-              </div>
-            )}
-          </button>
-        ))}
+    <div className="w-full h-full min-h-0 overflow-y-auto overflow-x-hidden">
+      <div className={`grid ${gridClass} gap-1.5 sm:gap-2`}>
+        {photos.map((photo: GalleryItem, i: number) => {
+          const video = isVideoUrl(photo.url);
+          return (
+            <button
+              key={i}
+              onClick={() => onOpen(i)}
+              className={`group relative ${tileAspect} overflow-hidden rounded-lg inv-gallery-unselected transition-all hover:scale-[1.02]`}
+              aria-label={photo.caption || `Média ${i + 1}`}
+            >
+              {video ? (
+                <>
+                  <video
+                    src={photo.url}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                    preload="metadata"
+                  />
+                  {/* Play icon overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 shadow-md">
+                      <span className="text-black text-xs pl-0.5">▶</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={photo.url}
+                  alt={photo.caption || `Photo ${i + 1}`}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              )}
+              {photo.caption && (
+                <div className="absolute inset-x-0 bottom-0 px-1.5 py-0.5 text-[9px] text-white bg-gradient-to-t from-black/60 to-transparent truncate">
+                  {photo.caption}
+                </div>
+              )}
+            </button>
+          );
+        })}
       </div>
+    </div>
+  );
+}
+
+// ─── Gallery Lightbox (carte flottante plein media) ──────────
+function GalleryLightbox({
+  photos,
+  index,
+  onClose,
+  onNavigate,
+}: {
+  photos: GalleryItem[];
+  index: number | null;
+  onClose: () => void;
+  onNavigate: (next: number) => void;
+}) {
+  const visible = index !== null;
+  const photo = index !== null ? photos[index] : null;
+  const video = isVideoUrl(photo?.url);
+
+  return (
+    <div
+      aria-hidden={!visible}
+      className={`absolute inset-0 z-30 flex items-center justify-center p-3 transition-opacity duration-200 ${visible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Fermer"
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm cursor-default"
+      />
+      {photo && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className={`relative z-10 w-[min(96%,440px)] max-h-[90%] flex flex-col transition-transform duration-200 ${visible ? "scale-100" : "scale-95"}`}
+        >
+          {/* Close */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute -top-1 -right-1 h-8 w-8 flex items-center justify-center rounded-full bg-white/90 text-gray-900 shadow-md hover:bg-white transition-colors text-sm z-20"
+            aria-label="Fermer"
+          >
+            ✕
+          </button>
+          {/* Media */}
+          <div className="relative w-full rounded-xl overflow-hidden bg-black flex items-center justify-center">
+            {video ? (
+              <video
+                src={photo.url}
+                className="max-w-full max-h-[75vh] w-auto h-auto"
+                controls
+                autoPlay
+                playsInline
+              />
+            ) : (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={photo.url}
+                alt={photo.caption || "Photo"}
+                className="max-w-full max-h-[75vh] w-auto h-auto object-contain"
+              />
+            )}
+          </div>
+          {photo.caption && (
+            <p className="mt-2 text-center text-[11px] text-white/90 leading-snug px-2">
+              {photo.caption}
+            </p>
+          )}
+          {/* Navigation arrows */}
+          {photos.length > 1 && index !== null && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onNavigate((index - 1 + photos.length) % photos.length); }}
+                className="absolute left-1 top-1/2 -translate-y-1/2 h-9 w-9 flex items-center justify-center rounded-full bg-white/90 text-gray-900 shadow-md hover:bg-white transition-colors"
+                aria-label="Précédent"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onNavigate((index + 1) % photos.length); }}
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 flex items-center justify-center rounded-full bg-white/90 text-gray-900 shadow-md hover:bg-white transition-colors"
+                aria-label="Suivant"
+              >
+                ›
+              </button>
+              {/* Counter */}
+              <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-white/80 tabular-nums">
+                {index + 1} / {photos.length}
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -505,7 +829,39 @@ function SectionDivider({ compact = false }: { colors: InvitationCardProps["them
 export function InvitationCard({ event, theme, activeModules, modulesData, chatMessages, guestInfo, initialPage }: InvitationCardProps) {
   const [currentPage, setCurrentPage] = useState(initialPage ?? 0);
   const [isEntryComplete, setIsEntryComplete] = useState(false);
+  const [programmeOverlay, setProgrammeOverlay] = useState<OverlayState>(null);
+  const [galleryLightbox, setGalleryLightbox] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  // Galerie photos (pour la lightbox)
+  const galleryPhotos = ((modulesData.gallery as GalleryConfig | null)?.photos || []) as GalleryItem[];
+
+  // Options de menu RSVP : aggreger les labels des menus attaches aux etapes du programme
+  const programmeMenuOptions: string[] = (() => {
+    const cfg = modulesData.programme as ProgrammeConfig | null;
+    const days = cfg?.days || cfg?.programme || [];
+    const labels = new Set<string>();
+    for (const d of days) {
+      const items = d.items || d.steps || d.events || [];
+      for (const it of items as ProgrammeItem[]) {
+        const label = it.menu?.label?.trim();
+        if (label) labels.add(label);
+      }
+    }
+    return Array.from(labels);
+  })();
+
+  // Fermeture overlays via Escape
+  useEffect(() => {
+    if (!programmeOverlay && galleryLightbox === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (galleryLightbox !== null) setGalleryLightbox(null);
+      else if (programmeOverlay) setProgrammeOverlay(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [programmeOverlay, galleryLightbox]);
 
   // Sync preview page from editor
   useEffect(() => {
@@ -762,42 +1118,57 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
                 <div className="h-full overflow-hidden flex flex-col items-center px-4 sm:px-6 pt-3 sm:pt-6 pb-[70px] relative">
                   <PageBackground pageId="evenement" theme={theme} />
                   <div className="w-full max-w-2xl flex-1 min-h-0 flex flex-col overflow-hidden relative z-10">
-                    {/* Programme section */}
-                    {hasProgramme && modulesData.programme && (
-                      <div className={`flex flex-col min-h-0 overflow-hidden ${hasMenu ? "flex-1" : ""}`}>
-                        <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-3 text-center shrink-0 inv-section-heading">
-                          📋 Programme
-                        </h2>
-                        <div className="flex-1 min-h-0 overflow-hidden">
-                          <ProgrammeContent
-                            config={modulesData.programme}
-                            colors={theme.colors}
-                            fontDisplay={theme.fontDisplay}
-                          />
-                        </div>
-                      </div>
-                    )}
+                    {(() => {
+                      // Determine si on doit afficher le bloc Menu standalone :
+                      // on masque si toutes les sections du MOD_MENU matchent une etape (deja affichees via les boutons).
+                      const programmeCfg = (modulesData.programme || {}) as ProgrammeConfig;
+                      const allItems: ProgrammeItem[] = (programmeCfg.days || programmeCfg.programme || [])
+                        .flatMap((d: ProgrammeDay) => d.items || d.steps || d.events || []);
+                      const showStandaloneMenu = hasMenu
+                        && hasUnmatchedMenuSections((modulesData.menu || null) as MenuConfig | null, allItems);
+                      return (
+                        <>
+                          {/* Programme section */}
+                          {hasProgramme && modulesData.programme && (
+                            <div className={`flex flex-col min-h-0 overflow-hidden ${showStandaloneMenu ? "flex-1" : "flex-1"}`}>
+                              <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-3 text-center shrink-0 inv-section-heading">
+                                📋 Programme
+                              </h2>
+                              <div className="flex-1 min-h-0 overflow-hidden">
+                                <ProgrammeContent
+                                  config={modulesData.programme}
+                                  menuModule={modulesData.menu}
+                                  onOpenOverlay={setProgrammeOverlay}
+                                  colors={theme.colors}
+                                  fontDisplay={theme.fontDisplay}
+                                />
+                              </div>
+                            </div>
+                          )}
 
-                    {/* Divider compact */}
-                    {hasProgramme && hasMenu && (
-                      <SectionDivider colors={theme.colors} compact />
-                    )}
+                          {/* Divider compact — seulement si le bloc Menu standalone est visible */}
+                          {hasProgramme && showStandaloneMenu && (
+                            <SectionDivider colors={theme.colors} compact />
+                          )}
 
-                    {/* Menu section */}
-                    {hasMenu && modulesData.menu && (
-                      <div className={`flex flex-col min-h-0 overflow-hidden ${hasProgramme ? "flex-1" : ""}`}>
-                        <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-3 text-center shrink-0 inv-section-heading">
-                          🍽️ Menu
-                        </h2>
-                        <div className="flex-1 min-h-0 overflow-hidden">
-                          <MenuContent
-                            config={modulesData.menu}
-                            colors={theme.colors}
-                            fontDisplay={theme.fontDisplay}
-                          />
-                        </div>
-                      </div>
-                    )}
+                          {/* Menu section standalone (backwards-compat : sections sans programmeRef correspondant) */}
+                          {showStandaloneMenu && modulesData.menu && (
+                            <div className={`flex flex-col min-h-0 overflow-hidden ${hasProgramme ? "flex-1" : ""}`}>
+                              <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-3 text-center shrink-0 inv-section-heading">
+                                🍽️ Menu
+                              </h2>
+                              <div className="flex-1 min-h-0 overflow-hidden">
+                                <MenuContent
+                                  config={modulesData.menu}
+                                  colors={theme.colors}
+                                  fontDisplay={theme.fontDisplay}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
@@ -835,7 +1206,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
                           📷 Galerie
                         </h2>
                         <div className="flex-1 min-h-0 overflow-hidden">
-                          <GalleryContent config={modulesData.gallery} colors={theme.colors} />
+                          <GalleryContent config={modulesData.gallery} onOpen={setGalleryLightbox} colors={theme.colors} />
                         </div>
                       </div>
                     )}
@@ -857,10 +1228,12 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
                       </p>
                       <RsvpForm
                         eventId={event.id}
-                        showMenu={activeModules.includes("MOD_MENU")}
-                        showChildren={modulesData.rsvp?.allowChildren !== false}
+                        showMenu={activeModules.includes("MOD_MENU") || programmeMenuOptions.length > 0}
+                        showChildren={(modulesData.rsvp as { allowChildren?: boolean } | null)?.allowChildren !== false}
                         colors={theme.colors}
                         guestInfo={guestInfo || undefined}
+                        menuOptions={programmeMenuOptions}
+                        rsvpDeadline={event.rsvpDeadline ?? null}
                       />
                     </div>
                   </div>
@@ -935,16 +1308,36 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
         )}
       </div>
 
-      {/* Floating Chat Bubble */}
-      {hasChat && (
-        <ChatBubble
-          eventId={event.id}
-          initialMessages={chatMessages}
-          colors={theme.colors}
-          fontBody={theme.fontBody}
-          guestName={guestInfo ? `${guestInfo.firstName} ${guestInfo.lastName}` : undefined}
-        />
-      )}
+      {/* Floating Chat Bubble — accessible en ecriture uniquement apres RSVP confirme */}
+      {hasChat && (() => {
+        // Nom auto : "Prenom I." ou "Prenom I.J." pour les noms composes (Dupont-Martin)
+        const displayName = guestInfo
+          ? formatGuestDisplayName(guestInfo.firstName, guestInfo.lastName)
+          : undefined;
+        const hasConfirmedPresence = !!(guestInfo?.hasRsvp && guestInfo.presence === true);
+        return (
+          <ChatBubble
+            eventId={event.id}
+            initialMessages={chatMessages}
+            colors={theme.colors}
+            fontBody={theme.fontBody}
+            guestName={displayName}
+            hasConfirmedPresence={hasConfirmedPresence}
+            inviteToken={guestInfo?.inviteToken}
+          />
+        );
+      })()}
+
+      {/* Carte flottante Menu / Infos (niveau racine — couvre tout le frame) */}
+      <ProgrammeOverlayCard overlay={programmeOverlay} onClose={() => setProgrammeOverlay(null)} />
+
+      {/* Galerie lightbox (carte flottante plein media) */}
+      <GalleryLightbox
+        photos={galleryPhotos}
+        index={galleryLightbox}
+        onClose={() => setGalleryLightbox(null)}
+        onNavigate={setGalleryLightbox}
+      />
     </div>
   );
 }
