@@ -138,7 +138,7 @@ export default async function SuperAdminUserDetailPage({
                   <Link
                     href={`/${event.slug}`}
                     target="_blank"
-                    className="text-xs text-[#C48B90] hover:underline"
+                    className="text-xs text-[#b59e5e] hover:underline"
                   >
                     Voir →
                   </Link>

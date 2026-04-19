@@ -270,7 +270,7 @@ export default function VerifyPage({ token }: { token: string }) {
         {/* Header */}
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#7A3A50] to-[#C48B90] shadow-lg shadow-[#7A3A50]/20">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#88734C] to-[#b59e5e] shadow-lg shadow-[#88734C]/20">
               {controller?.permission === "SCAN" ? (
                 <ShieldCheck className="h-5 w-5 text-white" />
               ) : (
@@ -373,7 +373,7 @@ export default function VerifyPage({ token }: { token: string }) {
               </p>
               <button
                 onClick={startCamera}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#7A3A50] px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[#6A2A40] active:scale-95"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#88734C] px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[#6b5a3a] active:scale-95"
               >
                 <Camera className="h-5 w-5" />
                 Activer la caméra
@@ -384,7 +384,7 @@ export default function VerifyPage({ token }: { token: string }) {
           {verifying && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
               <div className="flex items-center gap-2 rounded-xl bg-white px-5 py-3 shadow-xl">
-                <RefreshCw className="h-5 w-5 animate-spin text-[#7A3A50]" />
+                <RefreshCw className="h-5 w-5 animate-spin text-[#88734C]" />
                 <span className="text-sm font-medium text-gray-900">Vérification...</span>
               </div>
             </div>
@@ -410,13 +410,13 @@ export default function VerifyPage({ token }: { token: string }) {
                 placeholder="Nom de l'invité ou code..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 pl-10 pr-4 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 pl-10 pr-4 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:border-[#88734C] focus:ring-2 focus:ring-[#88734C]/20"
               />
             </div>
             <button
               type="submit"
               disabled={verifying || !query.trim()}
-              className="rounded-xl bg-[#7A3A50] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#6A2A40] transition disabled:opacity-50 active:scale-95"
+              className="rounded-xl bg-[#88734C] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#6b5a3a] transition disabled:opacity-50 active:scale-95"
             >
               {verifying ? (
                 <RefreshCw className="h-4 w-4 animate-spin" />

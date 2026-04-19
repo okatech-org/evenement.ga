@@ -193,7 +193,7 @@ export function DemoClientSection({ events, accounts }: Props) {
 
           <h1 className="mb-6 text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
             Découvrez{" "}
-            <span className="bg-gradient-to-r from-[#C48B90] via-[#E8734A] to-[#C9A96E] bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[#b59e5e] via-[#E8734A] to-[#b59e5e] bg-clip-text text-transparent">
               EventFlow
             </span>{" "}
             en action
@@ -207,7 +207,7 @@ export function DemoClientSection({ events, accounts }: Props) {
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
               href="#events"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#7A3A50] to-[#C48B90] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-pink-900/30 transition-all hover:shadow-xl hover:shadow-pink-900/40 hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#88734C] to-[#b59e5e] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-pink-900/30 transition-all hover:shadow-xl hover:shadow-pink-900/40 hover:-translate-y-0.5"
             >
               Explorer les événements ↓
             </a>
@@ -242,14 +242,14 @@ export function DemoClientSection({ events, accounts }: Props) {
                 key={event.slug}
                 className={`group relative rounded-2xl border p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl ${
                   isFeatured
-                    ? "sm:col-span-2 lg:col-span-2 border-[#C9A96E]/30 bg-gradient-to-br from-[#8B5C6E]/40 via-[#8B5C6E]/20 to-[#C48B90]/10 hover:border-[#C9A96E]/50 hover:shadow-[#8B5C6E]/20"
+                    ? "sm:col-span-2 lg:col-span-2 border-[#b59e5e]/30 bg-gradient-to-br from-[#8B5C6E]/40 via-[#8B5C6E]/20 to-[#b59e5e]/10 hover:border-[#b59e5e]/50 hover:shadow-[#8B5C6E]/20"
                     : "border-white/[0.06] bg-gradient-to-b from-white/[0.04] to-transparent hover:border-white/[0.12] hover:bg-white/[0.06] hover:shadow-purple-900/10"
                 }`}
               >
                 {/* Type & status badges */}
                 <div className="flex items-center gap-2 mb-4">
                   {isFeatured && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#C9A96E]/15 px-2.5 py-0.5 text-xs font-bold text-[#C9A96E] tracking-wide">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#b59e5e]/15 px-2.5 py-0.5 text-xs font-bold text-[#b59e5e] tracking-wide">
                       ✦ ÉVÉNEMENT VITRINE
                     </span>
                   )}
@@ -275,7 +275,7 @@ export function DemoClientSection({ events, accounts }: Props) {
 
                 {/* Subtitle for featured */}
                 {isFeatured && (
-                  <p className="text-sm text-[#C9A96E]/80 font-medium mb-3 italic" style={{ fontFamily: "Georgia, serif" }}>
+                  <p className="text-sm text-[#b59e5e]/80 font-medium mb-3 italic" style={{ fontFamily: "Georgia, serif" }}>
                     Rose d&apos;Automne &amp; l&apos;Élégance Royale
                   </p>
                 )}
@@ -299,7 +299,7 @@ export function DemoClientSection({ events, accounts }: Props) {
                   <div
                     className={`h-full rounded-full transition-all duration-1000 ${
                       isFeatured
-                        ? "bg-gradient-to-r from-[#C9A96E] to-[#C48B90]"
+                        ? "bg-gradient-to-r from-[#b59e5e] to-[#b59e5e]"
                         : "bg-gradient-to-r from-emerald-500 to-emerald-400"
                     }`}
                     style={{ width: `${event.rsvpRate}%` }}
@@ -331,7 +331,7 @@ export function DemoClientSection({ events, accounts }: Props) {
                     target="_blank"
                     className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
                       isFeatured
-                        ? "flex-1 bg-gradient-to-r from-[#8B5C6E] to-[#C48B90] text-white hover:shadow-lg hover:shadow-[#8B5C6E]/30"
+                        ? "flex-1 bg-gradient-to-r from-[#8B5C6E] to-[#b59e5e] text-white hover:shadow-lg hover:shadow-[#8B5C6E]/30"
                         : "border border-white/[0.08] bg-white/[0.03] text-white/70 hover:bg-white/[0.08] hover:text-white"
                     }`}
                   >
@@ -419,7 +419,7 @@ export function DemoClientSection({ events, accounts }: Props) {
                 <button
                   onClick={() => handleDemoLogin(account)}
                   disabled={loginLoading !== null}
-                  className="w-full rounded-lg bg-gradient-to-r from-[#7A3A50] to-[#C48B90] px-4 py-2.5 text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-pink-900/20 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                  className="w-full rounded-lg bg-gradient-to-r from-[#88734C] to-[#b59e5e] px-4 py-2.5 text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-pink-900/20 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 >
                   {loginLoading === account.key ? (
                     <span className="inline-flex items-center gap-2">
@@ -459,7 +459,7 @@ export function DemoClientSection({ events, accounts }: Props) {
                 key={i}
                 className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 text-center"
               >
-                <div className="text-[#C48B90]">
+                <div className="text-[#b59e5e]">
                   <AnimatedCounter
                     target={stat.value as number}
                     suffix={stat.suffix}
@@ -493,7 +493,7 @@ export function DemoClientSection({ events, accounts }: Props) {
             ].map((step, i) => (
               <div key={i} className="relative group text-center">
                 {/* Step number */}
-                <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7A3A50]/20 to-[#C48B90]/20 text-2xl transition-transform group-hover:scale-110">
+                <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#88734C]/20 to-[#b59e5e]/20 text-2xl transition-transform group-hover:scale-110">
                   {step.icon}
                 </div>
 
@@ -503,7 +503,7 @@ export function DemoClientSection({ events, accounts }: Props) {
                 )}
 
                 <h3 className="mb-2 text-base font-bold text-white">
-                  <span className="mr-1 text-[#C48B90]">{i + 1}.</span>
+                  <span className="mr-1 text-[#b59e5e]">{i + 1}.</span>
                   {step.title}
                 </h3>
                 <p className="text-sm text-white/40 leading-relaxed">{step.desc}</p>
@@ -535,7 +535,7 @@ export function DemoClientSection({ events, accounts }: Props) {
               <div className="mx-auto mb-2 h-5 w-24 rounded-full bg-black/40" />
 
               {/* Screen */}
-              <div className="rounded-2xl bg-gradient-to-b from-[#FFFDF9] to-[#F8F0EB] p-4 aspect-[9/16] flex flex-col items-center justify-center text-center overflow-hidden">
+              <div className="rounded-2xl bg-gradient-to-b from-[#F2F2EB] to-[#F8F0EB] p-4 aspect-[9/16] flex flex-col items-center justify-center text-center overflow-hidden">
                 <div className="text-3xl mb-3">💍</div>
                 <p className="text-[10px] font-medium text-[#9B8A8E] tracking-[0.2em] uppercase mb-1">
                   Vous êtes invités au mariage de
@@ -543,7 +543,7 @@ export function DemoClientSection({ events, accounts }: Props) {
                 <h3 className="text-xl font-serif text-[#3D2428] font-bold mb-2" style={{ fontFamily: "Georgia, serif" }}>
                   Sophie & Marc
                 </h3>
-                <div className="w-12 h-px bg-[#C9A96E] mb-2" />
+                <div className="w-12 h-px bg-[#b59e5e] mb-2" />
                 <p className="text-[9px] text-[#9B8A8E]">
                   15 Juin 2026 · Château de Versailles-sur-Loire
                 </p>
@@ -571,7 +571,7 @@ export function DemoClientSection({ events, accounts }: Props) {
             </Link>
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#7A3A50] to-[#C48B90] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-pink-900/20 transition-all hover:shadow-xl hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#88734C] to-[#b59e5e] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-pink-900/20 transition-all hover:shadow-xl hover:-translate-y-0.5"
             >
               Créer un vrai compte →
             </Link>

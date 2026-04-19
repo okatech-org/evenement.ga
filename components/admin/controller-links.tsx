@@ -157,7 +157,7 @@ export function ControllerLinks({ eventId }: { eventId: string }) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Shield className="h-5 w-5 text-[#7A3A50] dark:text-[#C48B90]" />
+            <Shield className="h-5 w-5 text-[#88734C] dark:text-[#b59e5e]" />
             Liens Contrôleur
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -166,7 +166,7 @@ export function ControllerLinks({ eventId }: { eventId: string }) {
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#7A3A50] px-4 py-2.5 sm:py-2 text-xs font-semibold text-white hover:bg-[#6A2A40] transition w-full sm:w-auto"
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#88734C] px-4 py-2.5 sm:py-2 text-xs font-semibold text-white hover:bg-[#6b5a3a] transition w-full sm:w-auto"
         >
           {showForm ? (
             <>
@@ -186,7 +186,7 @@ export function ControllerLinks({ eventId }: { eventId: string }) {
       {showForm && (
         <form
           onSubmit={handleCreate}
-          className="rounded-xl border border-[#7A3A50]/20 dark:border-[#7A3A50]/30 bg-[#7A3A50]/5 dark:bg-[#7A3A50]/10 p-5 space-y-4"
+          className="rounded-xl border border-[#88734C]/20 dark:border-[#88734C]/30 bg-[#88734C]/5 dark:bg-[#88734C]/10 p-5 space-y-4"
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
@@ -199,7 +199,7 @@ export function ControllerLinks({ eventId }: { eventId: string }) {
                 required
                 value={newLink.label}
                 onChange={(e) => setNewLink((p) => ({ ...p, label: e.target.value }))}
-                className="mt-1 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white outline-none focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                className="mt-1 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white outline-none focus:border-[#88734C] focus:ring-2 focus:ring-[#88734C]/20"
               />
             </div>
             <div>
@@ -245,7 +245,7 @@ export function ControllerLinks({ eventId }: { eventId: string }) {
               type="datetime-local"
               value={newLink.expiresAt}
               onChange={(e) => setNewLink((p) => ({ ...p, expiresAt: e.target.value }))}
-              className="mt-1 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white outline-none focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+              className="mt-1 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white outline-none focus:border-[#88734C] focus:ring-2 focus:ring-[#88734C]/20"
             />
           </div>
 
@@ -257,7 +257,7 @@ export function ControllerLinks({ eventId }: { eventId: string }) {
           <button
             type="submit"
             disabled={creating}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#7A3A50] px-5 py-2 text-sm font-semibold text-white hover:bg-[#6A2A40] disabled:opacity-50 transition"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#88734C] px-5 py-2 text-sm font-semibold text-white hover:bg-[#6b5a3a] disabled:opacity-50 transition"
           >
             {creating ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -294,7 +294,7 @@ export function ControllerLinks({ eventId }: { eventId: string }) {
                 className={`rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-sm transition ${
                   isDisabled
                     ? "border-gray-200 dark:border-gray-800 opacity-60"
-                    : "border-gray-100 dark:border-gray-800 hover:border-[#7A3A50]/20 hover:shadow-md"
+                    : "border-gray-100 dark:border-gray-800 hover:border-[#88734C]/20 hover:shadow-md"
                 }`}
               >
                 <div className="flex items-start gap-3 flex-col sm:flex-row">

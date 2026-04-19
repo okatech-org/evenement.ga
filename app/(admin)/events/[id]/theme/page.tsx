@@ -28,9 +28,9 @@ export default async function EventThemePage({
     <div className="space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-400">
-        <Link href="/events" className="hover:text-[#7A3A50]">Événements</Link>
+        <Link href="/events" className="hover:text-[#88734C]">Événements</Link>
         <span>/</span>
-        <Link href={`/events/${event._id}`} className="hover:text-[#7A3A50]">{event.title}</Link>
+        <Link href={`/events/${event._id}`} className="hover:text-[#88734C]">{event.title}</Link>
         <span>/</span>
         <span className="text-gray-700">Thème</span>
       </div>

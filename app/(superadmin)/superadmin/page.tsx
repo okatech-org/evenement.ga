@@ -294,7 +294,7 @@ export default async function SuperAdminDashboard() {
                   </div>
                   <div className="h-2 rounded-full bg-[#21262D]">
                     <div
-                      className="h-full rounded-full bg-[#C48B90] transition-all"
+                      className="h-full rounded-full bg-[#b59e5e] transition-all"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -315,7 +315,7 @@ export default async function SuperAdminDashboard() {
             </h3>
             <Link
               href="/superadmin/users"
-              className="text-xs text-[#C48B90] hover:underline"
+              className="text-xs text-[#b59e5e] hover:underline"
             >
               Voir tout →
             </Link>
@@ -352,7 +352,7 @@ export default async function SuperAdminDashboard() {
             </h3>
             <Link
               href="/superadmin/events"
-              className="text-xs text-[#C48B90] hover:underline"
+              className="text-xs text-[#b59e5e] hover:underline"
             >
               Voir tout →
             </Link>
@@ -388,7 +388,7 @@ export default async function SuperAdminDashboard() {
             </h3>
             <Link
               href="/superadmin/logs"
-              className="text-xs text-[#C48B90] hover:underline"
+              className="text-xs text-[#b59e5e] hover:underline"
             >
               Voir tout →
             </Link>

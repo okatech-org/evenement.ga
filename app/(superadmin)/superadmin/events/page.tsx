@@ -63,7 +63,7 @@ export default async function SuperAdminEventsPage({
           type="text"
           placeholder="Rechercher..."
           defaultValue={params.q || ""}
-          className="rounded-lg border border-[#30363D] bg-[#0F1117] px-4 py-2 text-sm text-[#E6EDF3] placeholder:text-[#484F58] focus:border-[#C48B90] focus:outline-none w-56"
+          className="rounded-lg border border-[#30363D] bg-[#0F1117] px-4 py-2 text-sm text-[#E6EDF3] placeholder:text-[#484F58] focus:border-[#b59e5e] focus:outline-none w-56"
         />
         <select
           name="type"
@@ -147,7 +147,7 @@ export default async function SuperAdminEventsPage({
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <Link href={`/${event.slug}`} target="_blank" className="text-xs text-[#C48B90] hover:underline">
+                    <Link href={`/${event.slug}`} target="_blank" className="text-xs text-[#b59e5e] hover:underline">
                       Voir →
                     </Link>
                   </td>

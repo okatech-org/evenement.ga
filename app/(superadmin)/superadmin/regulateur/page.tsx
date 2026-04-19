@@ -56,7 +56,7 @@ export default async function SuperAdminReportPage({
             href={`/superadmin/regulateur${s ? `?status=${s}` : ""}`}
             className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
               (params.status || "") === s
-                ? "bg-[#C48B90]/20 text-[#C48B90]"
+                ? "bg-[#b59e5e]/20 text-[#b59e5e]"
                 : "bg-[#21262D] text-[#8B949E] hover:text-white"
             }`}
           >

@@ -10,7 +10,7 @@ export const EVENT_TYPES: Record<
     label: "Mariage",
     icon: "💍",
     description: "Célébration d'amour et d'engagement",
-    color: "#C48B90",
+    color: "#b59e5e",
   },
   ANNIVERSAIRE: {
     label: "Anniversaire",
@@ -40,7 +40,7 @@ export const EVENT_TYPES: Record<
     label: "Fête privée",
     icon: "✨",
     description: "Événement exclusif sur invitation",
-    color: "#C9A96E",
+    color: "#b59e5e",
   },
 };
 
@@ -172,7 +172,7 @@ export const PLAN_LIMITS: Record<
     customDomain: true,
     watermark: false,
     price: 29,
-    color: "#C9A96E",
+    color: "#b59e5e",
   },
   ENTREPRISE: {
     label: "Entreprise",
@@ -321,7 +321,7 @@ export const INVITATION_TIERS: InvitationTier[] = [
     price: 199.99,
     minGuests: 101,
     maxGuests: 250,
-    color: "#C9A96E",
+    color: "#b59e5e",
     features: [
       "Tout le plan Premium",
       "Personnalisation complète",

@@ -91,7 +91,7 @@ export function EventChat({ eventId, currentUserId }: EventChatProps) {
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {isLoading ? (
           <div className="flex h-full items-center justify-center">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#7A3A50] border-t-transparent" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#88734C] border-t-transparent" />
           </div>
         ) : messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
@@ -109,7 +109,7 @@ export function EventChat({ eventId, currentUserId }: EventChatProps) {
               >
                 <div
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                  style={{ backgroundColor: isOwn ? "#7A3A50" : "#6B7280" }}
+                  style={{ backgroundColor: isOwn ? "#88734C" : "#6B7280" }}
                 >
                   {msg.user.name?.charAt(0).toUpperCase() || "?"}
                 </div>
@@ -128,7 +128,7 @@ export function EventChat({ eventId, currentUserId }: EventChatProps) {
                   <div
                     className={`mt-0.5 inline-block rounded-xl px-3 py-1.5 text-sm ${
                       isOwn
-                        ? "bg-[#7A3A50] text-white rounded-tr-none"
+                        ? "bg-[#88734C] text-white rounded-tr-none"
                         : "bg-gray-100 text-gray-800 rounded-tl-none"
                     }`}
                   >
@@ -152,12 +152,12 @@ export function EventChat({ eventId, currentUserId }: EventChatProps) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Votre message..."
-          className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+          className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#88734C] focus:ring-2 focus:ring-[#88734C]/20"
         />
         <button
           type="submit"
           disabled={isSending || !input.trim()}
-          className="rounded-lg bg-[#7A3A50] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#6A2A40] disabled:opacity-50"
+          className="rounded-lg bg-[#88734C] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#6b5a3a] disabled:opacity-50"
         >
           {isSending ? "..." : "Envoyer"}
         </button>

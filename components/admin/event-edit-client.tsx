@@ -191,7 +191,7 @@ function ModuleToggle({
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
       aria-label={active ? "Désactiver le module" : "Activer le module"}
       className={`relative h-5 w-9 rounded-full transition flex-shrink-0 ${
-        active ? "bg-[#7A3A50]" : "bg-gray-300 dark:bg-gray-600"
+        active ? "bg-[#88734C]" : "bg-gray-300 dark:bg-gray-600"
       }`}
     >
       <div
@@ -744,7 +744,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
   }
 
   // ─── Styles ───
-  const inputClass = "w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20";
+  const inputClass = "w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 outline-none transition focus:border-[#88734C] focus:ring-2 focus:ring-[#88734C]/20";
   const btnSecondary = "inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 transition hover:bg-gray-50 dark:hover:bg-gray-800";
   const btnDanger = "inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition";
 
@@ -849,7 +849,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
     return (
       <>
         {/* Per-page Media */}
-        <EditorSection title="Fond de page" icon={<ImageIcon className="h-3.5 w-3.5 text-[#7A3A50]" />}>
+        <EditorSection title="Fond de page" icon={<ImageIcon className="h-3.5 w-3.5 text-[#88734C]" />}>
           {media.video ? (
             <div className="relative group">
               <video src={media.video} className="w-full h-24 object-cover rounded-lg" controls />
@@ -876,7 +876,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                 <button
                   onClick={() => { setPendingUploadPage(pageKey); pageMediaImageRef.current?.click(); }}
                   disabled={isUploading || media.images.length >= 5}
-                  className="flex-1 flex flex-col items-center gap-1 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 p-3 text-gray-400 dark:text-gray-500 transition hover:border-[#7A3A50]/40 hover:text-[#7A3A50] disabled:opacity-40"
+                  className="flex-1 flex flex-col items-center gap-1 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 p-3 text-gray-400 dark:text-gray-500 transition hover:border-[#88734C]/40 hover:text-[#88734C] disabled:opacity-40"
                 >
                   {isUploading && pendingUploadPage === pageKey ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                   <span className="text-[9px] font-medium">Image ({media.images.length}/5)</span>
@@ -884,7 +884,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                 <button
                   onClick={() => { setPendingUploadPage(pageKey); pageMediaVideoRef.current?.click(); }}
                   disabled={isUploading}
-                  className="flex-1 flex flex-col items-center gap-1 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 p-3 text-gray-400 dark:text-gray-500 transition hover:border-[#7A3A50]/40 hover:text-[#7A3A50] disabled:opacity-40"
+                  className="flex-1 flex flex-col items-center gap-1 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 p-3 text-gray-400 dark:text-gray-500 transition hover:border-[#88734C]/40 hover:text-[#88734C] disabled:opacity-40"
                 >
                   <Video className="h-4 w-4" />
                   <span className="text-[9px] font-medium">Vidéo</span>
@@ -898,7 +898,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
         </EditorSection>
 
         {/* Per-page Theme Override */}
-        <EditorSection title={`Thème de ${label}`} icon={<Palette className="h-3.5 w-3.5 text-[#7A3A50]" />} defaultOpen={false}>
+        <EditorSection title={`Thème de ${label}`} icon={<Palette className="h-3.5 w-3.5 text-[#88734C]" />} defaultOpen={false}>
           <div className="grid grid-cols-3 gap-2">
             <div>
               <label htmlFor={`theme-bg-${pageKey}`} className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">Fond</label>
@@ -914,7 +914,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
             </div>
           </div>
           {themeOverride && (
-            <button onClick={() => updatePageTheme(pageKey, null)} className="text-[10px] text-[#7A3A50] hover:underline">
+            <button onClick={() => updatePageTheme(pageKey, null)} className="text-[10px] text-[#88734C] hover:underline">
               Réinitialiser au thème global
             </button>
           )}
@@ -966,7 +966,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#7A3A50] px-3 py-1.5 text-xs font-semibold text-white shadow-md shadow-[#7A3A50]/25 transition hover:bg-[#6A2A40] disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#88734C] px-3 py-1.5 text-xs font-semibold text-white shadow-md shadow-[#88734C]/25 transition hover:bg-[#6b5a3a] disabled:opacity-50"
             >
               {isSaving ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1007,7 +1007,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
               </EditorSection>
 
               {/* ─── Dates multi-jour ─── */}
-              <EditorSection title="Dates de l'événement" icon={<Calendar className="h-3.5 w-3.5 text-[#7A3A50]" />}>
+              <EditorSection title="Dates de l'événement" icon={<Calendar className="h-3.5 w-3.5 text-[#88734C]" />}>
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-[11px] text-gray-500">
                     {dates.filter(Boolean).length} jour{dates.filter(Boolean).length > 1 ? "s" : ""}
@@ -1015,7 +1015,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                   <button
                     type="button"
                     onClick={addDate}
-                    className="flex items-center gap-1 rounded-md bg-[#7A3A50]/10 px-2 py-0.5 text-[10px] font-medium text-[#7A3A50] transition hover:bg-[#7A3A50]/20"
+                    className="flex items-center gap-1 rounded-md bg-[#88734C]/10 px-2 py-0.5 text-[10px] font-medium text-[#88734C] transition hover:bg-[#88734C]/20"
                   >
                     <Plus className="h-3 w-3" /> Ajouter un jour
                   </button>
@@ -1023,7 +1023,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                 <div className="space-y-1.5">
                   {dates.map((d, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#7A3A50]/10 text-[10px] font-bold text-[#7A3A50]">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#88734C]/10 text-[10px] font-bold text-[#88734C]">
                         J{i + 1}
                       </div>
                       <input
@@ -1049,7 +1049,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
               </EditorSection>
 
               {/* ─── Lieu principal (rétro-compat affichage) ─── */}
-              <EditorSection title="Lieu principal" icon={<MapPin className="h-3.5 w-3.5 text-[#7A3A50]" />}>
+              <EditorSection title="Lieu principal" icon={<MapPin className="h-3.5 w-3.5 text-[#88734C]" />}>
                 <input
                   type="text"
                   value={location}
@@ -1069,7 +1069,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                   venues={venues}
                   availableDates={dates.filter(Boolean)}
                   onChange={setVenues}
-                  accentColor="#7A3A50"
+                  accentColor="#88734C"
                 />
               </EditorSection>
 
@@ -1101,7 +1101,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                                 <select
                                   value={item.icon || "🎉"}
                                   onChange={(e) => updateProgrammeItem(dayIdx, itemIdx, "icon", e.target.value)}
-                                  className="h-8 w-10 shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-center text-base cursor-pointer outline-none focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                                  className="h-8 w-10 shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-center text-base cursor-pointer outline-none focus:border-[#88734C] focus:ring-2 focus:ring-[#88734C]/20"
                                   aria-label="Icône de l'étape"
                                   title="Choisir une icône"
                                 >
@@ -1167,7 +1167,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                               </div>
                               {/* Row 4: Optional description (auto-expands if filled) */}
                               <details className="group" open={!!item.description}>
-                                <summary className="text-[10px] text-gray-400 hover:text-[#7A3A50] cursor-pointer select-none list-none inline-flex items-center gap-1 group-open:mb-1.5">
+                                <summary className="text-[10px] text-gray-400 hover:text-[#88734C] cursor-pointer select-none list-none inline-flex items-center gap-1 group-open:mb-1.5">
                                   <Plus className="h-2.5 w-2.5 group-open:hidden" />
                                   <span className="group-open:hidden">Description</span>
                                   <span className="hidden group-open:inline">Description</span>
@@ -1183,7 +1183,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
 
                               {/* Row 5: Menu de cette etape (optionnel) */}
                               <details className="group" open={!!(item.menu && item.menu.courses.length)}>
-                                <summary className="text-[10px] text-gray-400 hover:text-[#7A3A50] cursor-pointer select-none list-none inline-flex items-center gap-1 group-open:mb-1.5">
+                                <summary className="text-[10px] text-gray-400 hover:text-[#88734C] cursor-pointer select-none list-none inline-flex items-center gap-1 group-open:mb-1.5">
                                   <Plus className="h-2.5 w-2.5 group-open:hidden" />
                                   <span>🍽️ Menu de cette étape</span>
                                 </summary>
@@ -1228,7 +1228,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                                               )}
                                             </div>
                                           ))}
-                                          <button onClick={() => addItemMenuCourseItem(dayIdx, itemIdx, courseIdx)} className="text-[10px] text-[#7A3A50] dark:text-[#C48B90] hover:underline">
+                                          <button onClick={() => addItemMenuCourseItem(dayIdx, itemIdx, courseIdx)} className="text-[10px] text-[#88734C] dark:text-[#b59e5e] hover:underline">
                                             + Élément
                                           </button>
                                         </div>
@@ -1243,7 +1243,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
 
                               {/* Row 6: Infos complementaires de cette etape (optionnel) */}
                               <details className="group" open={!!(item.infos && item.infos.sections.length)}>
-                                <summary className="text-[10px] text-gray-400 hover:text-[#7A3A50] cursor-pointer select-none list-none inline-flex items-center gap-1 group-open:mb-1.5">
+                                <summary className="text-[10px] text-gray-400 hover:text-[#88734C] cursor-pointer select-none list-none inline-flex items-center gap-1 group-open:mb-1.5">
                                   <Plus className="h-2.5 w-2.5 group-open:hidden" />
                                   <span>ℹ️ Infos / Instructions</span>
                                 </summary>
@@ -1293,7 +1293,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                                               </button>
                                             </div>
                                           ))}
-                                          <button onClick={() => addItemInfosSectionItem(dayIdx, itemIdx, sIdx)} className="text-[10px] text-[#7A3A50] dark:text-[#C48B90] hover:underline">
+                                          <button onClick={() => addItemInfosSectionItem(dayIdx, itemIdx, sIdx)} className="text-[10px] text-[#88734C] dark:text-[#b59e5e] hover:underline">
                                             + Point
                                           </button>
                                         </div>
@@ -1316,7 +1316,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                         </datalist>
                         <button
                           onClick={() => addProgrammeItem(dayIdx)}
-                          className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 px-3 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400 transition hover:border-[#7A3A50]/40 hover:text-[#7A3A50]"
+                          className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 px-3 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400 transition hover:border-[#88734C]/40 hover:text-[#88734C]"
                         >
                           <Plus className="h-3.5 w-3.5" /> Ajouter un élément
                         </button>
@@ -1411,7 +1411,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                                     placeholder={`Élément ${itemIdx + 1}`}
                                   />
                                 ))}
-                                <button onClick={() => addMenuItemInSection(sectionIdx, courseIdx)} className="text-[10px] text-[#7A3A50] dark:text-[#C48B90] hover:underline">
+                                <button onClick={() => addMenuItemInSection(sectionIdx, courseIdx)} className="text-[10px] text-[#88734C] dark:text-[#b59e5e] hover:underline">
                                   + Élément
                                 </button>
                               </div>
@@ -1449,7 +1449,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                                 placeholder={`Élément ${itemIdx + 1}`}
                               />
                             ))}
-                            <button onClick={() => addMenuItem(courseIdx)} className="text-[10px] text-[#7A3A50] dark:text-[#C48B90] hover:underline">
+                            <button onClick={() => addMenuItem(courseIdx)} className="text-[10px] text-[#88734C] dark:text-[#b59e5e] hover:underline">
                               + Élément
                             </button>
                           </div>
@@ -1545,7 +1545,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                     <button
                       onClick={() => galleryUploadRef.current?.click()}
                       disabled={isUploading}
-                      className="w-full flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 px-3 py-4 text-xs font-medium text-gray-500 dark:text-gray-400 transition hover:border-[#7A3A50]/40 hover:text-[#7A3A50] disabled:opacity-50"
+                      className="w-full flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 px-3 py-4 text-xs font-medium text-gray-500 dark:text-gray-400 transition hover:border-[#88734C]/40 hover:text-[#88734C] disabled:opacity-50"
                     >
                       {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                       <span>Importer des photos / vidéos (multi-sélection)</span>
@@ -1693,7 +1693,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
               <div className="grid gap-3 grid-cols-2">
                 <Link
                   href={`/events/${event.id}/theme`}
-                  className="flex items-center gap-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 shadow-sm transition hover:border-[#7A3A50]/20 hover:shadow-md"
+                  className="flex items-center gap-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 shadow-sm transition hover:border-[#88734C]/20 hover:shadow-md"
                 >
                   <span className="text-lg">🎨</span>
                   <div className="min-w-0">
@@ -1703,7 +1703,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
                 </Link>
                 <Link
                   href={`/events/${event.id}/guests`}
-                  className="flex items-center gap-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 shadow-sm transition hover:border-[#7A3A50]/20 hover:shadow-md"
+                  className="flex items-center gap-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 shadow-sm transition hover:border-[#88734C]/20 hover:shadow-md"
                 >
                   <span className="text-lg">👥</span>
                   <div className="min-w-0">
@@ -1767,7 +1767,7 @@ export function EventEditClient({ event, theme }: EventEditClientProps) {
         <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200/50 dark:border-gray-700/30 bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-[#7A3A50] animate-pulse" />
+              <div className="w-2 h-2 rounded-full bg-[#88734C] animate-pulse" />
               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Aperçu en direct</span>
             </div>
             <span className="text-[10px] text-gray-400 dark:text-gray-500 font-mono">

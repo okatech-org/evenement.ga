@@ -80,12 +80,12 @@ export default async function SuperAdminUsersPage({
             type="text"
             placeholder="Rechercher par nom ou email..."
             defaultValue={params.q || ""}
-            className="rounded-lg border border-[#30363D] bg-[#0F1117] px-4 py-2 text-sm text-[#E6EDF3] placeholder:text-[#484F58] focus:border-[#C48B90] focus:outline-none w-64"
+            className="rounded-lg border border-[#30363D] bg-[#0F1117] px-4 py-2 text-sm text-[#E6EDF3] placeholder:text-[#484F58] focus:border-[#b59e5e] focus:outline-none w-64"
           />
           <select
             name="plan"
             defaultValue={params.plan || ""}
-            className="rounded-lg border border-[#30363D] bg-[#0F1117] px-3 py-2 text-sm text-[#E6EDF3] focus:border-[#C48B90] focus:outline-none"
+            className="rounded-lg border border-[#30363D] bg-[#0F1117] px-3 py-2 text-sm text-[#E6EDF3] focus:border-[#b59e5e] focus:outline-none"
           >
             <option value="">Tous les plans</option>
             <option value="FREE">Free</option>
@@ -96,7 +96,7 @@ export default async function SuperAdminUsersPage({
           <select
             name="role"
             defaultValue={params.role || ""}
-            className="rounded-lg border border-[#30363D] bg-[#0F1117] px-3 py-2 text-sm text-[#E6EDF3] focus:border-[#C48B90] focus:outline-none"
+            className="rounded-lg border border-[#30363D] bg-[#0F1117] px-3 py-2 text-sm text-[#E6EDF3] focus:border-[#b59e5e] focus:outline-none"
           >
             <option value="">Tous les rôles</option>
             <option value="ORGANIZER">Organizer</option>
@@ -177,7 +177,7 @@ export default async function SuperAdminUsersPage({
                 <td className="px-4 py-3">
                   <Link
                     href={`/superadmin/users/${user.id}`}
-                    className="text-xs text-[#C48B90] hover:underline"
+                    className="text-xs text-[#b59e5e] hover:underline"
                   >
                     Voir →
                   </Link>

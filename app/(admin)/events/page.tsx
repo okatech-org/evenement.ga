@@ -43,7 +43,7 @@ export default async function EventsPage() {
         </div>
         <Link
           href="/onboarding"
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#7A3A50] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#7A3A50]/25 transition hover:bg-[#6A2A40] w-full sm:w-auto"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#88734C] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#88734C]/25 transition hover:bg-[#6b5a3a] w-full sm:w-auto"
         >
           <span className="text-lg">+</span> Nouvel événement
         </Link>
@@ -60,7 +60,7 @@ export default async function EventsPage() {
           </p>
           <Link
             href="/onboarding"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#7A3A50] px-6 py-3 text-sm font-semibold text-white"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#88734C] px-6 py-3 text-sm font-semibold text-white"
           >
             Créer un événement
           </Link>
@@ -76,13 +76,13 @@ export default async function EventsPage() {
             return (
               <div
                 key={event._id}
-                className="group relative rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm transition-all hover:border-[#7A3A50]/20 hover:shadow-lg overflow-hidden"
+                className="group relative rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm transition-all hover:border-[#88734C]/20 hover:shadow-lg overflow-hidden"
               >
                 {/* Top accent bar */}
                 <div
                   className={`h-1 ${
                     event.status === "PUBLISHED"
-                      ? "bg-gradient-to-r from-[#7A3A50] to-[#C48B90]"
+                      ? "bg-gradient-to-r from-[#88734C] to-[#b59e5e]"
                       : event.status === "DRAFT"
                       ? "bg-gradient-to-r from-yellow-500 to-yellow-200"
                       : "bg-gray-400"
@@ -94,7 +94,7 @@ export default async function EventsPage() {
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{config?.icon ?? "📅"}</span>
                       <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-[#7A3A50] dark:group-hover:text-[#C48B90] transition">
+                        <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-[#88734C] dark:group-hover:text-[#b59e5e] transition">
                           {event.title}
                         </h3>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -118,7 +118,7 @@ export default async function EventsPage() {
                   </div>
 
                   {!isPast && daysUntil > 0 && (
-                    <div className="mt-3 rounded-lg bg-[#7A3A50]/5 dark:bg-[#7A3A50]/15 px-3 py-1.5 text-xs font-semibold text-[#7A3A50] dark:text-[#C48B90] text-center">
+                    <div className="mt-3 rounded-lg bg-[#88734C]/5 dark:bg-[#88734C]/15 px-3 py-1.5 text-xs font-semibold text-[#88734C] dark:text-[#b59e5e] text-center">
                       {daysUntil <= 1 ? "🎉 C'est demain !" : `Dans ${daysUntil} jours`}
                     </div>
                   )}
@@ -128,20 +128,20 @@ export default async function EventsPage() {
                 <div className="flex border-t border-gray-50 dark:border-gray-800 divide-x divide-gray-50 dark:divide-gray-800">
                   <Link
                     href={`/events/${event._id}/guests`}
-                    className="flex-1 py-2.5 text-center text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-[#7A3A50] dark:hover:text-[#C48B90] transition"
+                    className="flex-1 py-2.5 text-center text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-[#88734C] dark:hover:text-[#b59e5e] transition"
                   >
                     👥 Invités
                   </Link>
                   <Link
                     href={`/events/${event._id}/edit`}
-                    className="flex-1 py-2.5 text-center text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-[#7A3A50] dark:hover:text-[#C48B90] transition"
+                    className="flex-1 py-2.5 text-center text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-[#88734C] dark:hover:text-[#b59e5e] transition"
                   >
                     ✏️ Éditer
                   </Link>
                   <Link
                     href={`/${event.slug}`}
                     target="_blank"
-                    className="flex-1 py-2.5 text-center text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-[#7A3A50] dark:hover:text-[#C48B90] transition"
+                    className="flex-1 py-2.5 text-center text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-[#88734C] dark:hover:text-[#b59e5e] transition"
                   >
                     👁️ Voir
                   </Link>

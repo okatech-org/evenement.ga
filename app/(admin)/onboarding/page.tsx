@@ -101,7 +101,7 @@ export default function OnboardingPage() {
   return (
     // min-h-dvh + flex-col garantit que le contenu scroll quand il déborde sur petits écrans
     // (iPhone SE 375×667). Ancien h-full + overflow-y-auto n'était pas fiable mobile.
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-gradient-to-br from-[#FFFDF9] via-white to-[#FFF0F3] px-4 py-6 sm:py-8">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-gradient-to-br from-[#F2F2EB] via-white to-[#F2F2EB] px-4 py-6 sm:py-8">
       <div className="w-full max-w-xl">
         {/* Progress */}
         <div className="mb-8 flex items-center justify-center gap-2">
@@ -110,7 +110,7 @@ export default function OnboardingPage() {
               key={s}
               className={`h-2 rounded-full transition-all ${
                 i <= ["welcome", "event-type", "event-details", "complete"].indexOf(step)
-                  ? "w-12 bg-[#7A3A50]"
+                  ? "w-12 bg-[#88734C]"
                   : "w-8 bg-gray-200"
               }`}
             />
@@ -120,7 +120,7 @@ export default function OnboardingPage() {
         {/* Step: Welcome */}
         {step === "welcome" && (
           <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-xl shadow-gray-100/50">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7A3A50] to-[#C48B90]">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#88734C] to-[#b59e5e]">
               <span className="text-3xl">🎉</span>
             </div>
             <h1 className="mt-6 text-2xl font-bold text-gray-900">
@@ -134,7 +134,7 @@ export default function OnboardingPage() {
             <div className="mt-8 flex flex-col gap-3">
               <button
                 onClick={() => setStep("event-type")}
-                className="w-full rounded-lg bg-[#7A3A50] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#7A3A50]/25 transition hover:bg-[#6A2A40]"
+                className="w-full rounded-lg bg-[#88734C] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#88734C]/25 transition hover:bg-[#6b5a3a]"
               >
                 Créer mon premier événement
               </button>
@@ -166,9 +166,9 @@ export default function OnboardingPage() {
                       setData((prev) => ({ ...prev, eventType: key }));
                       setStep("event-details");
                     }}
-                    className={`group flex flex-col items-start rounded-xl border p-4 text-left transition hover:border-[#7A3A50]/40 hover:shadow-md ${
+                    className={`group flex flex-col items-start rounded-xl border p-4 text-left transition hover:border-[#88734C]/40 hover:shadow-md ${
                       data.eventType === key
-                        ? "border-[#7A3A50] bg-[#7A3A50]/5 shadow-md"
+                        ? "border-[#88734C] bg-[#88734C]/5 shadow-md"
                         : "border-gray-100"
                     }`}
                   >
@@ -219,7 +219,7 @@ export default function OnboardingPage() {
                   required
                   value={data.title}
                   onChange={(e) => setData((prev) => ({ ...prev, title: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-[#88734C] focus:ring-2 focus:ring-[#88734C]/20"
                   placeholder={
                     data.eventType === "MARIAGE"
                       ? "Mariage de Marie & Jean"
@@ -234,13 +234,13 @@ export default function OnboardingPage() {
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-                    <Calendar className="h-4 w-4 text-[#7A3A50]" />
+                    <Calendar className="h-4 w-4 text-[#88734C]" />
                     Dates de l&apos;événement
                   </label>
                   <button
                     type="button"
                     onClick={addDate}
-                    className="flex items-center gap-1 rounded-md bg-[#7A3A50]/10 px-2.5 py-1 text-xs font-medium text-[#7A3A50] transition hover:bg-[#7A3A50]/20"
+                    className="flex items-center gap-1 rounded-md bg-[#88734C]/10 px-2.5 py-1 text-xs font-medium text-[#88734C] transition hover:bg-[#88734C]/20"
                   >
                     <Plus className="h-3 w-3" />
                     Ajouter un jour
@@ -249,7 +249,7 @@ export default function OnboardingPage() {
                 <div className="space-y-2">
                   {data.dates.map((date, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7A3A50]/10 text-xs font-bold text-[#7A3A50]">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#88734C]/10 text-xs font-bold text-[#88734C]">
                         J{i + 1}
                       </div>
                       <input
@@ -257,7 +257,7 @@ export default function OnboardingPage() {
                         required
                         value={date}
                         onChange={(e) => updateDate(i, e.target.value)}
-                        className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                        className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-[#88734C] focus:ring-2 focus:ring-[#88734C]/20"
                         aria-label={`Date du jour ${i + 1}`}
                       />
                       {data.dates.length > 1 && (
@@ -285,7 +285,7 @@ export default function OnboardingPage() {
                 venues={data.venues}
                 availableDates={data.dates}
                 onChange={setVenues}
-                accentColor="#7A3A50"
+                accentColor="#88734C"
               />
 
               {/* Buttons */}
@@ -299,7 +299,7 @@ export default function OnboardingPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 rounded-lg bg-[#7A3A50] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#7A3A50]/25 transition hover:bg-[#6A2A40]"
+                  className="flex-1 rounded-lg bg-[#88734C] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#88734C]/25 transition hover:bg-[#6b5a3a]"
                 >
                   Continuer
                 </button>
@@ -324,7 +324,7 @@ export default function OnboardingPage() {
             {/* Summary */}
             <div className="mt-4 rounded-xl bg-gray-50 p-4 text-left text-sm">
               <div className="flex items-center gap-2 text-gray-600">
-                <Calendar className="h-4 w-4 text-[#7A3A50]" />
+                <Calendar className="h-4 w-4 text-[#88734C]" />
                 <span className="font-medium">
                   {data.dates.filter(Boolean).length} jour{data.dates.filter(Boolean).length > 1 ? "s" : ""}
                 </span>
@@ -337,7 +337,7 @@ export default function OnboardingPage() {
                 </span>
               </div>
               <div className="mt-2 flex items-center gap-2 text-gray-600">
-                <MapPin className="h-4 w-4 text-[#7A3A50]" />
+                <MapPin className="h-4 w-4 text-[#88734C]" />
                 <span className="font-medium">
                   {data.venues.filter((v) => v.name).length} lieu{data.venues.filter((v) => v.name).length > 1 ? "x" : ""}
                 </span>
@@ -363,7 +363,7 @@ export default function OnboardingPage() {
               <button
                 onClick={handleComplete}
                 disabled={isLoading}
-                className="w-full rounded-lg bg-[#7A3A50] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#7A3A50]/25 transition hover:bg-[#6A2A40] disabled:opacity-50"
+                className="w-full rounded-lg bg-[#88734C] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#88734C]/25 transition hover:bg-[#6b5a3a] disabled:opacity-50"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">

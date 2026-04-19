@@ -23,7 +23,7 @@ export function DemoBanner({ accountType }: DemoBannerProps) {
       </div>
       <Link
         href="/register"
-        className="shrink-0 rounded-full bg-gradient-to-r from-[#7A3A50] to-[#C48B90] px-3 py-1 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+        className="shrink-0 rounded-full bg-gradient-to-r from-[#88734C] to-[#b59e5e] px-3 py-1 text-xs font-semibold text-white transition-opacity hover:opacity-90"
       >
         Créer un vrai compte →
       </Link>

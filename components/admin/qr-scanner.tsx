@@ -334,7 +334,7 @@ export function QRScanner({ eventId }: { eventId: string }) {
             </p>
             <button
               onClick={startScanning}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#7A3A50] px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[#6A2A40]"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#88734C] px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[#6b5a3a]"
             >
               <Camera className="h-5 w-5" />
               Activer le scanner
@@ -358,7 +358,7 @@ export function QRScanner({ eventId }: { eventId: string }) {
         {processing && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
             <div className="flex items-center gap-2 rounded-xl bg-white px-5 py-3 shadow-xl">
-              <RefreshCw className="h-5 w-5 animate-spin text-[#7A3A50]" />
+              <RefreshCw className="h-5 w-5 animate-spin text-[#88734C]" />
               <span className="text-sm font-medium text-gray-900">Vérification...</span>
             </div>
           </div>

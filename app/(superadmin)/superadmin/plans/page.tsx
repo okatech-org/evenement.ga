@@ -52,7 +52,7 @@ export default async function SuperAdminPlansPage() {
                 <p className="text-sm text-[#8B949E]">
                   {config.price === null ? "Sur devis" : config.price === 0 ? "Gratuit" : `${config.price.toLocaleString("fr-FR")} FCFA/an`}
                 </p>
-                <p className="mt-1 text-xs text-[#C48B90] font-medium">
+                <p className="mt-1 text-xs text-[#b59e5e] font-medium">
                   {userCount} utilisateur{userCount !== 1 ? "s" : ""}
                 </p>
               </div>

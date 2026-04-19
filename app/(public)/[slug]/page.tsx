@@ -55,21 +55,24 @@ export default async function PublicEventPage({
     }
   };
 
-  // Build theme from Convex or use preset
+  // Charte "Cité de la Démocratie" — palette forcée pour toutes les invitations.
+  // Les couleurs/fonts stockées dans event.theme (personnalisations historiques) sont
+  // ignorées ici pour harmoniser le look institutionnel. Les effets (entry/ambient/scroll)
+  // restent lus depuis le preset pour garder une variété par type d'événement.
   const presetId = event.theme?.preset || "mariage";
   const preset = THEME_PRESETS[presetId] || THEME_PRESETS.mariage;
 
   const themeData = {
-    colorPrimary: event.theme?.colorPrimary || preset.colorPrimary,
-    colorSecondary: event.theme?.colorSecondary || preset.colorSecondary,
-    colorAccent: event.theme?.colorAccent || preset.colorAccent,
-    colorBackground: event.theme?.colorBackground || preset.colorBackground,
-    colorText: event.theme?.colorText || preset.colorText,
-    colorSurface: event.theme?.colorSurface || preset.colorSurface,
-    colorMuted: event.theme?.colorMuted || preset.colorMuted,
-    colorBorder: event.theme?.colorBorder || preset.colorBorder,
-    fontDisplay: event.theme?.fontDisplay || preset.fontDisplay,
-    fontBody: event.theme?.fontBody || preset.fontBody,
+    colorPrimary: preset.colorPrimary,
+    colorSecondary: preset.colorSecondary,
+    colorAccent: preset.colorAccent,
+    colorBackground: preset.colorBackground,
+    colorText: preset.colorText,
+    colorSurface: preset.colorSurface,
+    colorMuted: preset.colorMuted,
+    colorBorder: preset.colorBorder,
+    fontDisplay: preset.fontDisplay,
+    fontBody: preset.fontBody,
   };
 
   const cssVars = generateThemeCSS(themeData);

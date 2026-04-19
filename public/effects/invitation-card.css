@@ -1,15 +1,17 @@
-/* ─── Invitation Card — Theme-driven styles ──────────────────
-   All classes reference CSS custom properties set on the root
-   element via theme.cssVars: --color-primary, --color-muted, etc.
+/* ─── Invitation Card — Charte "Cité de la Démocratie" ─────────
+   Ces classes utilisent les CSS vars theme.cssVars (injectées par
+   la page /[slug]) mais pointent désormais toutes vers la palette
+   charte (#88734C Or + #F2F2EB crème + Geist).
    ──────────────────────────────────────────────────────────── */
 
-/* ── Typography helpers ──────────────────────────────────────── */
+/* ── Typography — Geist partout, pas de serif ───────────────── */
 .inv-font-display {
-  font-family: var(--font-display), serif;
+  font-family: var(--font-display), var(--font-geist-sans), system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv11";
 }
 
 .inv-font-body {
-  font-family: var(--font-body), sans-serif;
+  font-family: var(--font-body), var(--font-geist-sans), system-ui, sans-serif;
 }
 
 /* ── Color helpers ───────────────────────────────────────────── */
@@ -62,10 +64,11 @@
   border: 1px solid var(--color-primary);
 }
 
-/* ── Compound surface card ───────────────────────────────────── */
+/* ── Compound surface card — charte FlatCard §5.1 ───────────── */
 .inv-surface-card {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
 }
 
 /* ── Root container ──────────────────────────────────────────── */
@@ -109,20 +112,27 @@
   height: auto;
 }
 
-/* ── Section heading (Programme, Menu, etc.) ─────────────────── */
+/* ── Section heading (Programme, Menu, etc.) — UPPERCASE charte ── */
 .inv-section-heading {
-  font-family: var(--font-display), serif;
+  font-family: var(--font-display), var(--font-geist-sans), system-ui, sans-serif;
   color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
 }
 
-/* ── Countdown ───────────────────────────────────────────────── */
+/* ── Countdown — radius 12px + subtle border charte ─────────── */
 .inv-countdown-box {
   background-color: color-mix(in srgb, var(--color-primary) 6%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
 }
 
 .inv-countdown-value {
-  font-family: var(--font-display), serif;
+  font-family: var(--font-display), var(--font-geist-sans), system-ui, sans-serif;
   color: var(--color-primary);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Timeline connector ──────────────────────────────────────── */
@@ -160,25 +170,35 @@
   border: 1px solid var(--color-border);
 }
 
-/* ── Bottom pill ─────────────────────────────────────────────── */
+/* ── Bottom pill — rounded-full charte ──────────────────────── */
 .inv-bottom-pill {
-  background-color: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  background-color: color-mix(in srgb, var(--color-surface) 85%, transparent);
   color: var(--color-muted);
   border: 1px solid var(--color-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
-/* ── Arrow navigation button ─────────────────────────────────── */
+/* ── Arrow navigation button — subtile, citizen-border ──────── */
 .inv-arrow-btn {
-  background-color: var(--color-surface);
+  background-color: color-mix(in srgb, var(--color-surface) 85%, transparent);
   color: var(--color-text);
   border: 1px solid var(--color-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
-/* ── Tab button (active/inactive) ────────────────────────────── */
+.inv-arrow-btn:hover {
+  background-color: var(--color-surface);
+}
+
+/* ── Tab button (active/inactive) — CTA style charte ────────── */
 .inv-tab-active {
   background-color: var(--color-primary);
   color: #fff;
   border: 1px solid var(--color-primary);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .inv-tab-inactive {

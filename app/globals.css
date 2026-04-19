@@ -2,60 +2,93 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ────────────────────────────────────────────────────────────
+   Charte "Cité de la Démocratie" — tokens design
+   Or institutionnel #88734C + fond crème #F2F2EB
+   ──────────────────────────────────────────────────────────── */
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    /* Base charte */
+    --background: 60 13% 94%;           /* #F2F2EB cream */
+    --foreground: 215 36% 20%;          /* #202e44 navy */
+    --card: 0 0% 100%;                  /* #ffffff */
+    --card-foreground: 215 36% 20%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 346 36% 35%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
+    --popover-foreground: 215 36% 20%;
+
+    /* Or institutionnel — primary */
+    --primary: 41 29% 42%;              /* #88734C Or */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 215 36% 20%;
+    --muted: 0 0% 97%;
+    --muted-foreground: 215 10% 40%;
+    --accent: 41 29% 42%;               /* = primary, accent == Or */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 346 36% 35%;
-    --radius: 0.625rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 41 29% 42%;                 /* Or */
+    --radius: 0.75rem;                  /* 12px — rounded-xl default */
+
+    /* Charts palette (neutre harmonieuse avec l'or) */
+    --chart-1: 41 29% 42%;
+    --chart-2: 41 35% 55%;
+    --chart-3: 215 36% 30%;
+    --chart-4: 160 50% 40%;
+    --chart-5: 220 50% 55%;
+
+    /* === Citizen Surface Layer === */
+    --citizen-surface-layout: #f4f4f5;
+    --citizen-surface-card: #ffffff;
+    --citizen-surface-nested: #f8f8f8;
+    --citizen-border: rgba(0, 0, 0, 0.08);
+
+    /* === Gold variants === */
+    --gold-primary: #88734C;
+    --gold-light: #b59e5e;
+    --gold-dark: #6b5a3a;
+    --gold-glow: rgba(136, 115, 76, 0.3);
+
+    /* === Navy (contraste Or) === */
+    --navy-primary: #202e44;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
+    --background: 0 0% 7%;              /* #111111 */
     --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
+    --card: 0 0% 10%;                   /* #191919 */
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
+    --popover: 0 0% 10%;
     --popover-foreground: 0 0% 98%;
-    --primary: 346 36% 55%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 3.7% 15.9%;
+    --primary: 41 29% 42%;              /* Or reste identique */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 13%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --muted: 0 0% 13%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 41 29% 42%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62% 40%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 346 36% 55%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --border: 0 0% 100% / 0.08;
+    --input: 0 0% 100% / 0.08;
+    --ring: 41 29% 42%;
+
+    --chart-1: 41 35% 55%;
+    --chart-2: 41 25% 65%;
+    --chart-3: 215 20% 60%;
+    --chart-4: 160 40% 55%;
+    --chart-5: 220 35% 65%;
+
+    --citizen-surface-layout: #111111;
+    --citizen-surface-card: #191919;
+    --citizen-surface-nested: #222222;
+    --citizen-border: rgba(255, 255, 255, 0.08);
   }
 }
 
@@ -64,11 +97,109 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+  }
+  /* Touch optimizations (charte §12.3) */
+  button,
+  a,
+  [role="button"],
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button,
+  a,
+  [role="button"] {
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
   }
 }
 
-/* Toast slide-up animation */
+/* ────────────────────────────────────────────────────────────
+   Citizen Scrollbar (charte §10)
+   ──────────────────────────────────────────────────────────── */
+.citizen-scrollbar {
+  scrollbar-width: thin;
+}
+.citizen-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.citizen-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.citizen-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+}
+.dark .citizen-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.disable-scrollbars {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.disable-scrollbars::-webkit-scrollbar {
+  display: none;
+}
+
+/* Alias legacy — certains composants utilisent encore .scrollbar-none */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* ────────────────────────────────────────────────────────────
+   Animations (charte §11)
+   ──────────────────────────────────────────────────────────── */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+.stagger-children > *:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.stagger-children > *:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.stagger-children > *:nth-child(3) {
+  animation-delay: 0.15s;
+}
+.stagger-children > *:nth-child(4) {
+  animation-delay: 0.2s;
+}
+.stagger-children > *:nth-child(5) {
+  animation-delay: 0.25s;
+}
+.stagger-children > *:nth-child(6) {
+  animation-delay: 0.3s;
+}
+.stagger-children > *:nth-child(7) {
+  animation-delay: 0.35s;
+}
+.stagger-children > *:nth-child(8) {
+  animation-delay: 0.4s;
+}
+
+/* Toast slide-up (existant, conservé) */
 @keyframes slide-up {
   from {
     opacity: 0;
@@ -83,18 +214,7 @@
   animation: slide-up 0.3s ease-out;
 }
 
-/* ── Mobile Utilities ── */
-
-/* Hide scrollbar but keep scroll functionality */
-.scrollbar-none {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
-}
-
-/* Smooth touch scrolling */
+/* Smooth touch scrolling (existant) */
 @supports (-webkit-overflow-scrolling: touch) {
   .overflow-x-auto,
   .overflow-y-auto {
@@ -102,7 +222,7 @@
   }
 }
 
-/* Safe area padding for modern phones with notches */
+/* Safe area padding (existant) */
 @supports (padding: env(safe-area-inset-bottom)) {
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);

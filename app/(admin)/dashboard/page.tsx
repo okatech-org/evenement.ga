@@ -59,7 +59,7 @@ export default async function DashboardPage() {
         </div>
         <Link
           href="/onboarding"
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#7A3A50] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#7A3A50]/25 transition hover:bg-[#6A2A40] hover:shadow-xl w-full sm:w-auto"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#88734C] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#88734C]/25 transition hover:bg-[#6b5a3a] hover:shadow-xl w-full sm:w-auto"
         >
           <span className="text-lg">+</span> Nouvel événement
         </Link>
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
         const firstDate = nextEvent.dates[0] ?? 0;
         const daysUntil = Math.ceil((firstDate - now) / (1000 * 60 * 60 * 24));
         return (
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#7A3A50] to-[#C48B90] p-6 sm:p-8 text-white shadow-xl shadow-[#7A3A50]/20">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#88734C] to-[#b59e5e] p-6 sm:p-8 text-white shadow-xl shadow-[#88734C]/20">
             {/* Background pattern */}
             <div className="absolute inset-0 opacity-10">
               <div className="absolute top-4 right-8 text-8xl">{eventConfig?.icon ?? "📅"}</div>
@@ -121,7 +121,7 @@ export default async function DashboardPage() {
                 </Link>
                 <Link
                   href={`/events/${nextEvent._id}`}
-                  className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#7A3A50] hover:bg-white/90 transition"
+                  className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#88734C] hover:bg-white/90 transition"
                 >
                   Ouvrir le dashboard →
                 </Link>
@@ -134,7 +134,7 @@ export default async function DashboardPage() {
       {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Événements", value: totalEvents, icon: "📅", color: "from-[#7A3A50]/10 to-[#7A3A50]/5 dark:from-[#7A3A50]/20 dark:to-[#7A3A50]/10" },
+          { label: "Événements", value: totalEvents, icon: "📅", color: "from-[#88734C]/10 to-[#88734C]/5 dark:from-[#88734C]/20 dark:to-[#88734C]/10" },
           { label: "Publiés", value: publishedEvents, icon: "🌐", color: "from-green-100/80 to-green-50 dark:from-green-900/30 dark:to-green-900/10" },
           { label: "Invités totaux", value: totalGuests, icon: "👥", color: "from-blue-100/80 to-blue-50 dark:from-blue-900/30 dark:to-blue-900/10" },
           { label: "Confirmés", value: confirmedGuests, icon: "✅", color: "from-amber-100/80 to-amber-50 dark:from-amber-900/30 dark:to-amber-900/10" },
@@ -162,7 +162,7 @@ export default async function DashboardPage() {
             </h2>
             <Link
               href="/events"
-              className="text-sm font-medium text-[#7A3A50] dark:text-[#C48B90] hover:underline"
+              className="text-sm font-medium text-[#88734C] dark:text-[#b59e5e] hover:underline"
             >
               Voir tout →
             </Link>
@@ -177,7 +177,7 @@ export default async function DashboardPage() {
               </p>
               <Link
                 href="/onboarding"
-                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#7A3A50] px-5 py-2.5 text-sm font-semibold text-white"
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#88734C] px-5 py-2.5 text-sm font-semibold text-white"
               >
                 Créer un événement
               </Link>
@@ -193,11 +193,11 @@ export default async function DashboardPage() {
                   <Link
                     key={event._id}
                     href={`/events/${event._id}`}
-                    className="group flex items-center gap-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm transition-all hover:border-[#7A3A50]/20 hover:shadow-md"
+                    className="group flex items-center gap-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm transition-all hover:border-[#88734C]/20 hover:shadow-md"
                   >
                     <span className="text-2xl">{eventConfig?.icon ?? "📅"}</span>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-[#7A3A50] dark:group-hover:text-[#C48B90] transition truncate">
+                      <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-[#88734C] dark:group-hover:text-[#b59e5e] transition truncate">
                         {event.title}
                       </h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -209,7 +209,7 @@ export default async function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {daysUntil > 0 && daysUntil <= 30 && (
-                        <span className="rounded-lg bg-[#7A3A50]/5 dark:bg-[#7A3A50]/20 px-2.5 py-1 text-[11px] font-semibold text-[#7A3A50] dark:text-[#C48B90]">
+                        <span className="rounded-lg bg-[#88734C]/5 dark:bg-[#88734C]/20 px-2.5 py-1 text-[11px] font-semibold text-[#88734C] dark:text-[#b59e5e]">
                           J-{daysUntil}
                         </span>
                       )}

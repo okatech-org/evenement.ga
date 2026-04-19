@@ -29,21 +29,29 @@ export interface ThemePreset {
   cursorEffect: string | null;
 }
 
+// ─── Palette "Cité de la Démocratie" ─────────────────────────
+// Tous les presets partagent la même palette Or + crème.
+// Seuls les effets (entry/ambient/scroll/cursor) varient pour garder
+// un peu de personnalité visuelle par type d'événement.
+const CHARTE_COLORS = {
+  colorPrimary: "#88734C",      // Or institutionnel
+  colorSecondary: "#b59e5e",    // Or clair
+  colorAccent: "#88734C",       // Or (pas de vert/jaune/bleu)
+  colorBackground: "#F2F2EB",   // Crème charte
+  colorText: "#202e44",         // Navy charte
+  colorSurface: "#FFFFFF",      // Card
+  colorMuted: "#6B6B6B",        // Slate neutre
+  colorBorder: "#E8E4DB",       // Subtil (cohérent avec citizen-border)
+  fontDisplay: "Geist",
+  fontBody: "Geist",
+} as const;
+
 export const THEME_PRESETS: Record<string, ThemePreset> = {
   mariage: {
     id: "mariage",
     label: "Romance & Élégance",
     eventType: "MARIAGE",
-    colorPrimary: "#8B5A6A",
-    colorSecondary: "#C48B90",
-    colorAccent: "#C9A96E",
-    colorBackground: "#FFFDF9",
-    colorText: "#3D2428",
-    colorSurface: "#FFFFFF",
-    colorMuted: "#9B8A8E",
-    colorBorder: "#E8DDD5",
-    fontDisplay: "Cormorant Garamond",
-    fontBody: "Montserrat",
+    ...CHARTE_COLORS,
     entryEffect: "floral_draw",
     ambientEffect: "floating_petals",
     ambientIntensity: 0.6,
@@ -54,16 +62,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     id: "anniversaire",
     label: "Fête & Joie",
     eventType: "ANNIVERSAIRE",
-    colorPrimary: "#E8734A",
-    colorSecondary: "#C9A96E",
-    colorAccent: "#F2C94C",
-    colorBackground: "#FFFEF8",
-    colorText: "#2D1810",
-    colorSurface: "#FFFFFF",
-    colorMuted: "#A89080",
-    colorBorder: "#F0E6D8",
-    fontDisplay: "Playfair Display",
-    fontBody: "Poppins",
+    ...CHARTE_COLORS,
     entryEffect: "curtain_confetti",
     ambientEffect: "sparkle",
     ambientIntensity: 0.8,
@@ -74,16 +73,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     id: "deuil",
     label: "Sérénité & Recueillement",
     eventType: "DEUIL",
-    colorPrimary: "#4A5568",
-    colorSecondary: "#A0AEC0",
-    colorAccent: "#B8943E",
-    colorBackground: "#F9F8F6",
-    colorText: "#1A202C",
-    colorSurface: "#FFFFFF",
-    colorMuted: "#A0AEC0",
-    colorBorder: "#E2E8F0",
-    fontDisplay: "Libre Baskerville",
-    fontBody: "Source Sans Pro",
+    ...CHARTE_COLORS,
     entryEffect: "morning_mist",
     ambientEffect: null,
     ambientIntensity: 0.2,
@@ -94,16 +84,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     id: "bapteme",
     label: "Douceur & Pureté",
     eventType: "BAPTEME",
-    colorPrimary: "#93C5FD",
-    colorSecondary: "#C4B5FD",
-    colorAccent: "#D1D5DB",
-    colorBackground: "#F8FAFF",
-    colorText: "#1E3A5F",
-    colorSurface: "#FFFFFF",
-    colorMuted: "#94A3B8",
-    colorBorder: "#E0E7FF",
-    fontDisplay: "Nunito",
-    fontBody: "Open Sans",
+    ...CHARTE_COLORS,
     entryEffect: "fade_white",
     ambientEffect: "bubbles",
     ambientIntensity: 0.5,
@@ -114,16 +95,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     id: "conference",
     label: "Pro & Moderne",
     eventType: "CONFERENCE",
-    colorPrimary: "#1E3A5F",
-    colorSecondary: "#3B82F6",
-    colorAccent: "#10B981",
-    colorBackground: "#FFFFFF",
-    colorText: "#111827",
-    colorSurface: "#F9FAFB",
-    colorMuted: "#6B7280",
-    colorBorder: "#E5E7EB",
-    fontDisplay: "Inter",
-    fontBody: "Inter",
+    ...CHARTE_COLORS,
     entryEffect: "fade_fast",
     ambientEffect: "geometric_grid",
     ambientIntensity: 0.3,
@@ -134,16 +106,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     id: "prive",
     label: "Luxe & Mystère",
     eventType: "PRIVE",
-    colorPrimary: "#C9A96E",
-    colorSecondary: "#8B7355",
-    colorAccent: "#D4AF37",
-    colorBackground: "#0F0F0F",
-    colorText: "#F5F0E8",
-    colorSurface: "#1A1A1A",
-    colorMuted: "#888888",
-    colorBorder: "#333333",
-    fontDisplay: "Raleway",
-    fontBody: "Lato",
+    ...CHARTE_COLORS,
     entryEffect: "candle_reveal",
     ambientEffect: "starlight",
     ambientIntensity: 0.4,

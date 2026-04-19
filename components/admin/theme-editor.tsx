@@ -110,16 +110,22 @@ export function ThemeEditor({ eventId, currentTheme }: ThemeEditorProps) {
     });
   }
 
+  // Charte "Cité de la Démocratie" — les couleurs/polices sont harmonisées au niveau
+  // produit. Les onglets Couleurs/Polices/Typo sont masqués. Seuls Presets (choix d'effets
+  // par type d'événement) et Effets restent personnalisables.
   const tabs = [
     { id: "preset" as const, label: "Presets", icon: "🎨" },
-    { id: "colors" as const, label: "Couleurs", icon: "🖌️" },
-    { id: "fonts" as const, label: "Polices", icon: "🔤" },
-    { id: "typography" as const, label: "Typo", icon: "📐" },
     { id: "effects" as const, label: "Effets", icon: "✨" },
   ];
 
   return (
     <div className="space-y-6">
+      {/* Charte banner */}
+      <div className="rounded-xl border border-gold/20 bg-gold/5 px-4 py-3 text-xs text-slate-600 dark:text-slate-400">
+        <strong className="text-gold">Identité visuelle harmonisée.</strong>{" "}
+        Les couleurs et polices suivent désormais la charte globale d&apos;EventFlow. Vous gardez la main sur les effets d&apos;animation et l&apos;ambiance de votre invitation.
+      </div>
+
       {/* Save indicator */}
       <div className="flex items-center justify-between">
         <div className="flex gap-1 overflow-x-auto">
@@ -129,7 +135,7 @@ export function ThemeEditor({ eventId, currentTheme }: ThemeEditorProps) {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition whitespace-nowrap ${
                 activeTab === tab.id
-                  ? "bg-[#7A3A50] text-white"
+                  ? "bg-[#88734C] text-white"
                   : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
             >
@@ -152,7 +158,7 @@ export function ThemeEditor({ eventId, currentTheme }: ThemeEditorProps) {
               onClick={() => applyPreset(id)}
               className={`group rounded-xl border p-4 text-left transition hover:shadow-md ${
                 theme.preset === id
-                  ? "border-[#7A3A50] ring-2 ring-[#7A3A50]/20"
+                  ? "border-[#88734C] ring-2 ring-[#88734C]/20"
                   : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"
               }`}
             >
@@ -171,7 +177,7 @@ export function ThemeEditor({ eventId, currentTheme }: ThemeEditorProps) {
                 {preset.fontDisplay} + {preset.fontBody}
               </p>
               {theme.preset === id && (
-                <span className="mt-2 inline-block rounded-full bg-[#7A3A50]/10 px-2.5 py-0.5 text-xs font-medium text-[#7A3A50] dark:text-[#C48B90]">
+                <span className="mt-2 inline-block rounded-full bg-[#88734C]/10 px-2.5 py-0.5 text-xs font-medium text-[#88734C] dark:text-[#b59e5e]">
                   Actif
                 </span>
               )}
@@ -232,7 +238,7 @@ export function ThemeEditor({ eventId, currentTheme }: ThemeEditorProps) {
             </p>
             <div
               className="mt-4 inline-block rounded-lg px-4 py-2 text-sm font-medium text-white"
-              style={{ backgroundColor: theme.colorAccent || "#C9A96E" }}
+              style={{ backgroundColor: theme.colorAccent || "#b59e5e" }}
             >
               Confirmer ma présence
             </div>
@@ -306,7 +312,7 @@ export function ThemeEditor({ eventId, currentTheme }: ThemeEditorProps) {
                       onClick={() => saveTheme({ fontSizeTitle: size.value })}
                       className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                         (theme.fontSizeTitle || "2xl") === size.value
-                          ? "border-[#7A3A50] bg-[#7A3A50]/10 text-[#7A3A50] dark:text-[#C48B90]"
+                          ? "border-[#88734C] bg-[#88734C]/10 text-[#88734C] dark:text-[#b59e5e]"
                           : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300"
                       }`}
                     >
@@ -328,7 +334,7 @@ export function ThemeEditor({ eventId, currentTheme }: ThemeEditorProps) {
                       onClick={() => saveTheme({ fontSizeBody: size.value })}
                       className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                         (theme.fontSizeBody || "base") === size.value
-                          ? "border-[#7A3A50] bg-[#7A3A50]/10 text-[#7A3A50] dark:text-[#C48B90]"
+                          ? "border-[#88734C] bg-[#88734C]/10 text-[#88734C] dark:text-[#b59e5e]"
                           : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300"
                       }`}
                     >
@@ -350,7 +356,7 @@ export function ThemeEditor({ eventId, currentTheme }: ThemeEditorProps) {
                       onClick={() => saveTheme({ letterSpacing: sp.value })}
                       className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                         (theme.letterSpacing || "normal") === sp.value
-                          ? "border-[#7A3A50] bg-[#7A3A50]/10 text-[#7A3A50] dark:text-[#C48B90]"
+                          ? "border-[#88734C] bg-[#88734C]/10 text-[#88734C] dark:text-[#b59e5e]"
                           : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300"
                       }`}
                     >
@@ -372,7 +378,7 @@ export function ThemeEditor({ eventId, currentTheme }: ThemeEditorProps) {
                       onClick={() => saveTheme({ lineHeight: lh.value })}
                       className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                         (theme.lineHeight || "normal") === lh.value
-                          ? "border-[#7A3A50] bg-[#7A3A50]/10 text-[#7A3A50] dark:text-[#C48B90]"
+                          ? "border-[#88734C] bg-[#88734C]/10 text-[#88734C] dark:text-[#b59e5e]"
                           : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300"
                       }`}
                     >
@@ -434,7 +440,7 @@ export function ThemeEditor({ eventId, currentTheme }: ThemeEditorProps) {
                   onClick={() => saveTheme({ entryEffect: id })}
                   className={`flex items-center gap-3 rounded-lg border p-3 text-left transition ${
                     theme.entryEffect === id
-                      ? "border-[#7A3A50] bg-[#7A3A50]/5 dark:bg-[#7A3A50]/20"
+                      ? "border-[#88734C] bg-[#88734C]/5 dark:bg-[#88734C]/20"
                       : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"
                   }`}
                 >
@@ -459,7 +465,7 @@ export function ThemeEditor({ eventId, currentTheme }: ThemeEditorProps) {
                 onClick={() => saveTheme({ ambientEffect: null })}
                 className={`flex items-center gap-3 rounded-lg border p-3 text-left transition ${
                   !theme.ambientEffect
-                    ? "border-[#7A3A50] bg-[#7A3A50]/5 dark:bg-[#7A3A50]/20"
+                    ? "border-[#88734C] bg-[#88734C]/5 dark:bg-[#88734C]/20"
                     : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"
                 }`}
               >
@@ -472,7 +478,7 @@ export function ThemeEditor({ eventId, currentTheme }: ThemeEditorProps) {
                   onClick={() => saveTheme({ ambientEffect: id })}
                   className={`flex items-center gap-3 rounded-lg border p-3 text-left transition ${
                     theme.ambientEffect === id
-                      ? "border-[#7A3A50] bg-[#7A3A50]/5 dark:bg-[#7A3A50]/20"
+                      ? "border-[#88734C] bg-[#88734C]/5 dark:bg-[#88734C]/20"
                       : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"
                   }`}
                 >
@@ -498,7 +504,7 @@ export function ThemeEditor({ eventId, currentTheme }: ThemeEditorProps) {
                   step="0.1"
                   value={theme.ambientIntensity ?? 0.5}
                   onChange={(e) => saveTheme({ ambientIntensity: parseFloat(e.target.value) })}
-                  className="w-full accent-[#7A3A50]"
+                  className="w-full accent-[#88734C]"
                 />
               </div>
             )}

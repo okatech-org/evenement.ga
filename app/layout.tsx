@@ -1,24 +1,24 @@
 // noinspection ALL
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth-provider";
 import { ConvexClientProvider } from "@/components/providers/convex-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { I18nProvider } from "@/components/providers/i18n-provider";
 
-const inter = Inter({
-  subsets: ["latin", "latin-ext"],
-  variable: "--font-sans",
-  display: "swap",
-});
+// Charte "Cité de la Démocratie" — Geist Sans + Geist Mono via package `geist`
+// Les variables CSS sont --font-geist-sans et --font-geist-mono (consommées par tailwind.config).
+const geistSans = GeistSans;
+const geistMono = GeistMono;
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
   viewportFit: "cover",
-  themeColor: "#7A3A50",
+  themeColor: "#88734C",
 };
 
 export const metadata: Metadata = {
@@ -51,7 +51,7 @@ export default function RootLayout({
         <meta httpEquiv="Pragma" content="no-cache" />
         <meta httpEquiv="Expires" content="0" />
       </head>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
         <ThemeProvider>
           <I18nProvider>
             <ConvexClientProvider>

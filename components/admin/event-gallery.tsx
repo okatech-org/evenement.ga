@@ -50,7 +50,7 @@ export function EventGallery({ eventId, images: initialImages }: EventGalleryPro
     <div className="space-y-4">
       {/* Upload button */}
       <div className="flex items-center gap-3">
-        <label className="cursor-pointer rounded-lg bg-[#7A3A50] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#6A2A40]">
+        <label className="cursor-pointer rounded-lg bg-[#88734C] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#6b5a3a]">
           {isUploading ? "Téléchargement..." : "📷 Ajouter des photos"}
           <input
             type="file"

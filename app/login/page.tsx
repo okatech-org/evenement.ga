@@ -16,7 +16,7 @@ function FloatingParticles() {
             (_, i) => `
           .particle-${i} {
             background: radial-gradient(circle, ${
-              i % 2 === 0 ? "#7A3A50" : "#C48B90"
+              i % 2 === 0 ? "#88734C" : "#b59e5e"
             } 0%, transparent 70%);
             width: ${120 + i * 60}px;
             height: ${120 + i * 60}px;
@@ -213,12 +213,12 @@ function LoginForm() {
       {/* ── Branding ── */}
       <div className="mb-8 text-center">
         <Link href="/" className="group inline-flex items-center gap-3">
-          <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#7A3A50] to-[#C48B90] shadow-lg shadow-[#7A3A50]/30 transition-all duration-300 group-hover:shadow-xl group-hover:shadow-[#7A3A50]/40">
+          <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#88734C] to-[#b59e5e] shadow-lg shadow-[#88734C]/30 transition-all duration-300 group-hover:shadow-xl group-hover:shadow-[#88734C]/40">
             <span className="text-2xl font-bold text-white">E</span>
             <div className="absolute inset-0 bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
           </div>
           <span className="text-[1.7rem] font-bold tracking-tight text-gray-900">
-            Event<span className="bg-gradient-to-r from-[#7A3A50] to-[#C48B90] bg-clip-text text-transparent">Flow</span>
+            Event<span className="bg-gradient-to-r from-[#88734C] to-[#b59e5e] bg-clip-text text-transparent">Flow</span>
           </span>
         </Link>
       </div>
@@ -226,7 +226,7 @@ function LoginForm() {
       {/* ── Glass Card ── */}
       <div className="relative rounded-3xl border border-white/60 bg-white/70 p-8 shadow-2xl shadow-gray-200/60 backdrop-blur-xl sm:p-10">
         {/* Subtle gradient overlay */}
-        <div className="pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-br from-white/50 via-transparent to-[#FFF0F3]/30" />
+        <div className="pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-br from-white/50 via-transparent to-[#F2F2EB]/30" />
 
         <div className="relative">
           <h1 className="text-[1.65rem] font-bold leading-tight text-gray-900">
@@ -442,7 +442,7 @@ function LoginForm() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 outline-none transition-all focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                  className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 outline-none transition-all focus:border-[#88734C] focus:ring-2 focus:ring-[#88734C]/20"
                   placeholder="vous@email.com"
                 />
               </div>
@@ -453,7 +453,7 @@ function LoginForm() {
                 <label htmlFor="login-password" className="text-sm font-medium text-gray-700">
                   Mot de passe
                 </label>
-                <a href="#" className="text-xs font-medium text-[#7A3A50]/80 transition-colors hover:text-[#7A3A50]">
+                <a href="#" className="text-xs font-medium text-[#88734C]/80 transition-colors hover:text-[#88734C]">
                   Mot de passe oublié ?
                 </a>
               </div>
@@ -469,7 +469,7 @@ function LoginForm() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-sm text-gray-900 outline-none transition-all focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+                  className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-sm text-gray-900 outline-none transition-all focus:border-[#88734C] focus:ring-2 focus:ring-[#88734C]/20"
                   placeholder="••••••••"
                 />
                 <button
@@ -495,7 +495,7 @@ function LoginForm() {
               type="submit"
               id="login-submit-btn"
               disabled={isLoading}
-              className="w-full rounded-xl bg-gradient-to-r from-[#7A3A50] to-[#9B5068] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[#7A3A50]/30 transition-all duration-200 hover:from-[#6A2A40] hover:to-[#8A4058] hover:shadow-xl hover:shadow-[#7A3A50]/40 disabled:opacity-50"
+              className="w-full rounded-xl bg-gradient-to-r from-[#88734C] to-[#88734C] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[#88734C]/30 transition-all duration-200 hover:from-[#6b5a3a] hover:to-[#8A4058] hover:shadow-xl hover:shadow-[#88734C]/40 disabled:opacity-50"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -511,7 +511,7 @@ function LoginForm() {
           {/* ── Footer ── */}
           <p className="mt-7 text-center text-sm text-gray-500">
             Pas encore de compte ?{" "}
-            <Link href="/register" className="font-semibold text-[#7A3A50] transition-colors hover:text-[#9B5068]">
+            <Link href="/register" className="font-semibold text-[#88734C] transition-colors hover:text-[#88734C]">
               Créer un compte
             </Link>
           </p>
@@ -536,18 +536,18 @@ function LoginForm() {
 /* ─── Page Wrapper ─────────────────────────────────────────── */
 export default function LoginPage() {
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#FAF7F5] via-white to-[#FFF0F3] px-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#F2F2EB] via-white to-[#F2F2EB] px-4">
       {/* Animated background */}
       <FloatingParticles />
 
       {/* Decorative shapes */}
-      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#7A3A50]/5 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-[#C48B90]/8 blur-3xl" />
+      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#88734C]/5 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-[#b59e5e]/8 blur-3xl" />
 
       <Suspense
         fallback={
           <div className="flex min-h-screen items-center justify-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[#7A3A50]/20 border-t-[#7A3A50]" />
+            <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[#88734C]/20 border-t-[#88734C]" />
           </div>
         }
       >

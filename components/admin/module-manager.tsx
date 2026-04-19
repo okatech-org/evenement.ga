@@ -69,7 +69,7 @@ function SortableModule({
       style={style}
       className={`flex items-center gap-2.5 rounded-xl border bg-white dark:bg-gray-900 px-3 py-2.5 shadow-sm transition ${
         isDragging
-          ? "z-50 border-[#7A3A50] shadow-xl ring-2 ring-[#7A3A50]/20"
+          ? "z-50 border-[#88734C] shadow-xl ring-2 ring-[#88734C]/20"
           : module.active
           ? "border-gray-100 dark:border-gray-800"
           : "border-gray-100 dark:border-gray-800 opacity-60"
@@ -110,7 +110,7 @@ function SortableModule({
           onClick={() => isAvailable && onToggle(module.id)}
           disabled={!isAvailable}
           className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${
-            module.active ? "bg-[#7A3A50]" : "bg-gray-200 dark:bg-gray-700"
+            module.active ? "bg-[#88734C]" : "bg-gray-200 dark:bg-gray-700"
           } ${!isAvailable ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
         >
           <span

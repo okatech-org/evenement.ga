@@ -177,12 +177,12 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
       {/* Logo */}
       <div className={`flex h-14 items-center border-b border-gray-100 dark:border-gray-800 px-4 ${collapsed ? "justify-center" : "gap-2 px-5"}`}>
         <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#7A3A50] to-[#C48B90] flex-shrink-0">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#88734C] to-[#b59e5e] flex-shrink-0">
             <span className="text-sm font-bold text-white">E</span>
           </div>
           {!collapsed && (
             <span className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">
-              Event<span className="text-[#7A3A50] dark:text-[#C48B90]">Flow</span>
+              Event<span className="text-[#88734C] dark:text-[#b59e5e]">Flow</span>
             </span>
           )}
         </Link>
@@ -202,9 +202,9 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
                 onClick={() => setMobileOpen(false)}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                   active && !isEventsWithContext
-                    ? "bg-[#7A3A50] text-white shadow-lg shadow-[#7A3A50]/20"
+                    ? "bg-[#88734C] text-white shadow-lg shadow-[#88734C]/20"
                     : active && isEventsWithContext
-                    ? "bg-[#7A3A50]/10 dark:bg-[#7A3A50]/20 text-[#7A3A50] dark:text-[#C48B90] font-semibold"
+                    ? "bg-[#88734C]/10 dark:bg-[#88734C]/20 text-[#88734C] dark:text-[#b59e5e] font-semibold"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
                 } ${collapsed ? "justify-center" : ""}`}
                 title={collapsed ? item.label : undefined}
@@ -215,7 +215,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
 
               {/* ── Contextual Event Sub-Navigation ── */}
               {isEventsWithContext && !collapsed && (
-                <div className="ml-4 mt-1 space-y-0.5 border-l-2 border-[#7A3A50]/20 dark:border-[#C48B90]/20 pl-3">
+                <div className="ml-4 mt-1 space-y-0.5 border-l-2 border-[#88734C]/20 dark:border-[#b59e5e]/20 pl-3">
                   {eventSubItems.map((sub) => {
                     if (sub.separator) {
                       return (
@@ -233,7 +233,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
                         onClick={() => setMobileOpen(false)}
                         className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-all ${
                           subActive
-                            ? "bg-[#7A3A50] text-white shadow-sm"
+                            ? "bg-[#88734C] text-white shadow-sm"
                             : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
                         }`}
                       >
@@ -249,7 +249,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
                       <Link
                         href={`/${eventCtx.slug}`}
                         target="_blank"
-                        className="flex flex-1 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-[#7A3A50] dark:text-[#C48B90] hover:bg-[#7A3A50]/5 dark:hover:bg-[#7A3A50]/10 transition"
+                        className="flex flex-1 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-[#88734C] dark:text-[#b59e5e] hover:bg-[#88734C]/5 dark:hover:bg-[#88734C]/10 transition"
                       >
                         <Eye className="h-3.5 w-3.5" />
                         Prévisualiser
@@ -274,7 +274,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
               {/* Collapsed mode: show dot indicator for active sub-page */}
               {isEventsWithContext && collapsed && (
                 <div className="flex justify-center mt-1">
-                  <div className="h-1.5 w-1.5 rounded-full bg-[#7A3A50] dark:bg-[#C48B90]" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-[#88734C] dark:bg-[#b59e5e]" />
                 </div>
               )}
             </div>
@@ -324,7 +324,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
                   key={key}
                   onClick={() => { setLocale(key); setLangMenuOpen(false); }}
                   className={`flex w-full items-center gap-2 px-4 py-2.5 text-sm transition hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                    locale === key ? "bg-[#7A3A50]/5 text-[#7A3A50] dark:text-[#C48B90] font-medium" : "text-gray-700 dark:text-gray-300"
+                    locale === key ? "bg-[#88734C]/5 text-[#88734C] dark:text-[#b59e5e] font-medium" : "text-gray-700 dark:text-gray-300"
                   }`}
                 >
                   <span>{val.flag}</span>
@@ -341,7 +341,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
             onClick={() => setUserMenuOpen(!userMenuOpen)}
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 transition hover:bg-gray-100 dark:hover:bg-gray-800 ${collapsed ? "justify-center" : ""}`}
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#7A3A50]/10 dark:bg-[#7A3A50]/30 text-sm font-bold text-[#7A3A50] dark:text-[#C48B90] flex-shrink-0">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#88734C]/10 dark:bg-[#88734C]/30 text-sm font-bold text-[#88734C] dark:text-[#b59e5e] flex-shrink-0">
               {user.name?.charAt(0).toUpperCase() || "U"}
             </div>
             {!collapsed && (
@@ -419,9 +419,9 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
         {sidebarContent}
       </aside>
 
-      {/* Desktop sidebar */}
+      {/* Desktop sidebar — charte §6.2 : card flottante */}
       <aside
-        className={`hidden lg:flex flex-col border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 transition-all duration-300 ${
+        className={`hidden lg:flex flex-col m-3 mr-0 rounded-2xl bg-citizen-surface-card border border-citizen-border transition-[width] duration-300 ease-in-out overflow-hidden ${
           collapsed ? "w-[72px]" : "w-64"
         }`}
       >

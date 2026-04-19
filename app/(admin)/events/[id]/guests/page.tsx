@@ -60,9 +60,9 @@ export default async function EventGuestsPage({
     <div className="flex flex-col h-full gap-3 lg:gap-4 overflow-hidden">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 shrink-0">
-        <Link href="/events" className="hover:text-[#7A3A50] dark:hover:text-[#C48B90]">Événements</Link>
+        <Link href="/events" className="hover:text-[#88734C] dark:hover:text-[#b59e5e]">Événements</Link>
         <span>/</span>
-        <Link href={`/events/${event._id}`} className="hover:text-[#7A3A50] dark:hover:text-[#C48B90]">{event.title}</Link>
+        <Link href={`/events/${event._id}`} className="hover:text-[#88734C] dark:hover:text-[#b59e5e]">{event.title}</Link>
         <span>/</span>
         <span className="text-gray-700 dark:text-gray-300">Invités</span>
       </div>

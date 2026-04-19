@@ -413,7 +413,7 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
             placeholder="Rechercher un invité..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-auto sm:flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 sm:py-2 text-sm text-gray-900 dark:text-white outline-none focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+            className="w-full sm:w-auto sm:flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 sm:py-2 text-sm text-gray-900 dark:text-white outline-none focus:border-[#88734C] focus:ring-2 focus:ring-[#88734C]/20"
           />
           <div className="flex gap-2">
             <button
@@ -424,7 +424,7 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
             </button>
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#7A3A50] px-4 py-2 sm:py-1.5 text-xs font-semibold text-white hover:bg-[#6A2A40] transition"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#88734C] px-4 py-2 sm:py-1.5 text-xs font-semibold text-white hover:bg-[#6b5a3a] transition"
             >
               <UserPlus className="h-3.5 w-3.5" />
               <span className="sm:inline">Ajouter</span>
@@ -444,7 +444,7 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
               onClick={() => setFilter(f.key)}
               className={`shrink-0 rounded-lg px-3 py-2 sm:py-1.5 text-xs font-medium transition ${
                 filter === f.key
-                  ? "bg-[#7A3A50] text-white"
+                  ? "bg-[#88734C] text-white"
                   : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
             >
@@ -458,7 +458,7 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
       {showAddForm && (
         <form
           onSubmit={handleAddGuest}
-          className="rounded-xl border border-[#7A3A50]/20 dark:border-[#7A3A50]/30 bg-[#7A3A50]/5 dark:bg-[#7A3A50]/10 p-5 space-y-4"
+          className="rounded-xl border border-[#88734C]/20 dark:border-[#88734C]/30 bg-[#88734C]/5 dark:bg-[#88734C]/10 p-5 space-y-4"
         >
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -507,7 +507,7 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
             <button
               type="submit"
               disabled={isAdding}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#7A3A50] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6A2A40] disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#88734C] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6b5a3a] disabled:opacity-50"
             >
               {isAdding ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -529,7 +529,7 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
           </p>
           <button
             onClick={() => setShowAddForm(true)}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#7A3A50] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6A2A40]"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#88734C] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6b5a3a]"
           >
             <UserPlus className="h-4 w-4" />
             Ajouter votre premier invité
@@ -555,7 +555,7 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
                       >
                         {/* Header */}
                         <div className="flex items-center gap-2.5 px-3 py-2">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#7A3A50]/10 dark:bg-[#7A3A50]/20 text-[10px] font-bold text-[#7A3A50] dark:text-[#C48B90]">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#88734C]/10 dark:bg-[#88734C]/20 text-[10px] font-bold text-[#88734C] dark:text-[#b59e5e]">
                             {initials}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -584,7 +584,7 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
                           <div className="flex items-center">
                             {g.inviteToken ? (
                               <>
-                                <a href={getInviteUrl(g.inviteToken)} target="_blank" rel="noopener noreferrer" className="rounded-lg p-1 text-[#7A3A50] dark:text-[#C48B90] hover:bg-[#7A3A50]/10 transition" title="Aperçu">
+                                <a href={getInviteUrl(g.inviteToken)} target="_blank" rel="noopener noreferrer" className="rounded-lg p-1 text-[#88734C] dark:text-[#b59e5e] hover:bg-[#88734C]/10 transition" title="Aperçu">
                                   <Eye className="h-3.5 w-3.5" />
                                 </a>
                                 <button onClick={() => handleCopyLink(g.id, g.inviteToken)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition" title="Copier le lien">
@@ -592,7 +592,7 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
                                 </button>
                               </>
                             ) : (
-                              <button onClick={() => handleGenerateToken(g.id)} disabled={generatingId === g.id} className="rounded-lg p-1 text-[#7A3A50] dark:text-[#C48B90] hover:bg-[#7A3A50]/10 transition" title="Générer un lien">
+                              <button onClick={() => handleGenerateToken(g.id)} disabled={generatingId === g.id} className="rounded-lg p-1 text-[#88734C] dark:text-[#b59e5e] hover:bg-[#88734C]/10 transition" title="Générer un lien">
                                 {generatingId === g.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
                               </button>
                             )}
@@ -648,7 +648,7 @@ export function GuestTable({ eventId, eventSlug, guests: initialGuests }: GuestT
                         onClick={() => setPage(i)}
                         className={`flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-lg text-xs font-medium transition ${
                           i === safePage
-                            ? "bg-[#7A3A50] text-white"
+                            ? "bg-[#88734C] text-white"
                             : "border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                         }`}
                       >

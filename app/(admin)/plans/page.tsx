@@ -19,7 +19,7 @@ export default function PlansPage() {
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center">
-        <p className="text-xs uppercase tracking-[0.3em] text-[#7A3A50] dark:text-[#C48B90] font-semibold mb-2">
+        <p className="text-xs uppercase tracking-[0.3em] text-[#88734C] dark:text-[#b59e5e] font-semibold mb-2">
           💍 Mariage
         </p>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -54,7 +54,7 @@ export default function PlansPage() {
                     onClick={() => { setCurrency(c); setCurrencyOpen(false); }}
                     className={`flex w-full items-center gap-2.5 px-3 py-2 text-xs text-left transition ${
                       currency.code === c.code
-                        ? "bg-[#7A3A50]/10 text-[#7A3A50] dark:text-[#C48B90] font-semibold"
+                        ? "bg-[#88734C]/10 text-[#88734C] dark:text-[#b59e5e] font-semibold"
                         : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                     }`}
                   >
@@ -79,13 +79,13 @@ export default function PlansPage() {
               key={tier.id}
               className={`relative rounded-2xl border p-5 transition-all hover:shadow-lg dark:bg-gray-900 ${
                 tier.popular
-                  ? "border-[#7A3A50] ring-2 ring-[#7A3A50]/20 shadow-lg scale-[1.02]"
+                  ? "border-[#88734C] ring-2 ring-[#88734C]/20 shadow-lg scale-[1.02]"
                   : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"
               }`}
             >
               {/* Popular badge */}
               {tier.popular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#7A3A50] px-3 py-1 text-[10px] font-bold text-white uppercase tracking-wide whitespace-nowrap">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#88734C] px-3 py-1 text-[10px] font-bold text-white uppercase tracking-wide whitespace-nowrap">
                   ⭐ Populaire
                 </span>
               )}
@@ -171,7 +171,7 @@ export default function PlansPage() {
               { n: "3", t: "Envoyez vos invitations", d: "QR codes et liens personnalisés" },
             ].map((step) => (
               <div key={step.n} className="flex gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#7A3A50]/10 text-sm font-bold text-[#7A3A50] dark:text-[#C48B90]">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#88734C]/10 text-sm font-bold text-[#88734C] dark:text-[#b59e5e]">
                   {step.n}
                 </div>
                 <div>
@@ -225,7 +225,7 @@ export default function PlansPage() {
       <div className="text-center">
         <Link
           href="/dashboard"
-          className="text-sm text-gray-400 hover:text-[#7A3A50] dark:hover:text-[#C48B90]"
+          className="text-sm text-gray-400 hover:text-[#88734C] dark:hover:text-[#b59e5e]"
         >
           ← Retour au dashboard
         </Link>

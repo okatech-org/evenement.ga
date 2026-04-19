@@ -29,7 +29,7 @@ export function VenuesEditor({
   venues,
   availableDates,
   onChange,
-  accentColor = "#7A3A50",
+  accentColor = "#88734C",
   addLabel = "Ajouter un lieu",
 }: VenuesEditorProps) {
   const validDates = availableDates.filter(Boolean);

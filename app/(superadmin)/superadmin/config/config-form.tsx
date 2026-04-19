@@ -104,7 +104,7 @@ export function ConfigForm({ config }: { config: ConfigData }) {
               maintenanceMessage: e.target.value || null,
             }))
           }
-          className="w-full rounded-lg border border-[#30363D] bg-[#0F1117] px-3 py-2 text-sm text-[#E6EDF3] focus:border-[#C48B90] focus:outline-none resize-none"
+          className="w-full rounded-lg border border-[#30363D] bg-[#0F1117] px-3 py-2 text-sm text-[#E6EDF3] focus:border-[#b59e5e] focus:outline-none resize-none"
           rows={3}
           placeholder="Message affiché pendant le mode maintenance (optionnel)"
         />
@@ -115,7 +115,7 @@ export function ConfigForm({ config }: { config: ConfigData }) {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="rounded-lg bg-gradient-to-r from-[#7A3A50] to-[#C48B90] px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50"
+          className="rounded-lg bg-gradient-to-r from-[#88734C] to-[#b59e5e] px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50"
         >
           {saving ? "Enregistrement..." : "Sauvegarder les modifications"}
         </button>

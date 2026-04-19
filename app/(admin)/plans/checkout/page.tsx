@@ -45,7 +45,7 @@ function CheckoutInner() {
     return (
       <div className="max-w-xl mx-auto rounded-2xl border border-gray-100 bg-white p-8 text-center">
         <p className="text-sm text-red-600">Forfait inconnu.</p>
-        <Link href="/plans" className="mt-4 inline-block text-sm text-[#7A3A50] underline">
+        <Link href="/plans" className="mt-4 inline-block text-sm text-[#88734C] underline">
           Retour aux forfaits
         </Link>
       </div>
@@ -56,7 +56,7 @@ function CheckoutInner() {
     return (
       <div className="max-w-xl mx-auto rounded-2xl border border-gray-100 bg-white p-8 text-center">
         <p className="text-sm">Le forfait <strong>{tier.label}</strong> est gratuit — il est déjà inclus.</p>
-        <Link href="/plans" className="mt-4 inline-block text-sm text-[#7A3A50] underline">
+        <Link href="/plans" className="mt-4 inline-block text-sm text-[#88734C] underline">
           Retour aux forfaits
         </Link>
       </div>
@@ -101,7 +101,7 @@ function CheckoutInner() {
   return (
     <div className="max-w-xl mx-auto space-y-6">
       <div className="text-center">
-        <p className="text-xs uppercase tracking-[0.3em] text-[#7A3A50] font-semibold mb-2">
+        <p className="text-xs uppercase tracking-[0.3em] text-[#88734C] font-semibold mb-2">
           Finaliser votre achat
         </p>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -130,7 +130,7 @@ function CheckoutInner() {
             <select
               value={selectedEventId}
               onChange={(e) => setSelectedEventId(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#88734C] focus:ring-2 focus:ring-[#88734C]/20"
             >
               <option value="">Choisir un événement…</option>
               {events.map((e) => (
@@ -177,7 +177,7 @@ function CheckoutInner() {
       <div className="text-center">
         <button
           onClick={() => router.back()}
-          className="text-sm text-gray-400 hover:text-[#7A3A50] dark:hover:text-[#C48B90]"
+          className="text-sm text-gray-400 hover:text-[#88734C] dark:hover:text-[#b59e5e]"
         >
           ← Retour aux forfaits
         </button>

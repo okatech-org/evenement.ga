@@ -111,7 +111,7 @@ export async function sendInvitationEmail({
         <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(122,58,80,0.08);">
           <!-- Header -->
           <tr>
-            <td style="background:linear-gradient(135deg,#7A3A50 0%,#5a2538 100%);padding:36px 40px;text-align:center;">
+            <td style="background:linear-gradient(135deg,#88734C 0%,#5a2538 100%);padding:36px 40px;text-align:center;">
               <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;letter-spacing:-0.5px;">🎉 Vous êtes invité(e) !</h1>
             </td>
           </tr>
@@ -130,16 +130,16 @@ export async function sendInvitationEmail({
                 <tr>
                   <td align="center" style="padding:8px 0 32px;">
                     <a href="${safeUrl}" 
-                       style="display:inline-block;background:linear-gradient(135deg,#7A3A50 0%,#9A5A70 100%);color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:16px;font-weight:600;letter-spacing:0.3px;box-shadow:0 4px 16px rgba(122,58,80,0.3);">
+                       style="display:inline-block;background:linear-gradient(135deg,#88734C 0%,#9A5A70 100%);color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:16px;font-weight:600;letter-spacing:0.3px;box-shadow:0 4px 16px rgba(122,58,80,0.3);">
                       Voir mon invitation →
                     </a>
                   </td>
                 </tr>
               </table>
               <!-- Link fallback -->
-              <p style="margin:0;padding:16px;background-color:#f8f4f5;border-radius:8px;color:#7A3A50;font-size:12px;line-height:1.5;word-break:break-all;">
+              <p style="margin:0;padding:16px;background-color:#f8f4f5;border-radius:8px;color:#88734C;font-size:12px;line-height:1.5;word-break:break-all;">
                 Si le bouton ne fonctionne pas, copiez ce lien :<br/>
-                <a href="${safeUrl}" style="color:#7A3A50;">${safeUrl}</a>
+                <a href="${safeUrl}" style="color:#88734C;">${safeUrl}</a>
               </p>
             </td>
           </tr>
@@ -330,14 +330,14 @@ export async function sendEventNotificationEmail({
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8f4f5;padding:40px 20px;">
     <tr><td align="center">
       <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(122,58,80,0.08);">
-        <tr><td style="background:linear-gradient(135deg,#7A3A50 0%,#5a2538 100%);padding:28px 40px;text-align:center;">
+        <tr><td style="background:linear-gradient(135deg,#88734C 0%,#5a2538 100%);padding:28px 40px;text-align:center;">
           <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">${safeTitle}</h1>
         </td></tr>
         <tr><td style="padding:32px 40px;">
           <p style="margin:0 0 16px;color:#1a1a2e;font-size:16px;">Bonjour <strong>${safeName}</strong>,</p>
           <div style="margin:0 0 24px;color:#4a4a5a;font-size:15px;line-height:1.6;">${safeMessage}</div>
           <table role="presentation" width="100%"><tr><td align="center" style="padding:8px 0;">
-            <a href="${safeUrl}" style="display:inline-block;background:linear-gradient(135deg,#7A3A50 0%,#9A5A70 100%);color:#ffffff;text-decoration:none;padding:12px 32px;border-radius:10px;font-size:15px;font-weight:600;">Voir l'événement</a>
+            <a href="${safeUrl}" style="display:inline-block;background:linear-gradient(135deg,#88734C 0%,#9A5A70 100%);color:#ffffff;text-decoration:none;padding:12px 32px;border-radius:10px;font-size:15px;font-weight:600;">Voir l'événement</a>
           </td></tr></table>
         </td></tr>
         <tr><td style="padding:20px 40px 28px;border-top:1px solid #f0e8eb;text-align:center;">

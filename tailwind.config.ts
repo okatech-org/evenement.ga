@@ -50,6 +50,29 @@ const config: Config = {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        // ─── Charte "Cité de la Démocratie" ───
+        gold: {
+          DEFAULT: "#88734C",
+          light: "#b59e5e",
+          dark: "#6b5a3a",
+        },
+        navy: {
+          DEFAULT: "#202e44",
+        },
+        citizen: {
+          "surface-layout": "var(--citizen-surface-layout)",
+          "surface-card": "var(--citizen-surface-card)",
+          "surface-nested": "var(--citizen-surface-nested)",
+          border: "var(--citizen-border)",
+        },
+        // Personas mapping adapté evenement.ga
+        persona: {
+          organizer: "#10b981", // emerald-500
+          guest: "#3b82f6", // blue-500
+          controller: "#a855f7", // purple-500
+          admin: "#f59e0b", // amber-500
+          moderator: "#06b6d4", // cyan-500
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -57,7 +80,23 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        sans: [
+          "var(--font-geist-sans)",
+          "var(--font-sans)",
+          "system-ui",
+          "sans-serif",
+        ],
+        mono: [
+          "var(--font-geist-mono)",
+          "ui-monospace",
+          "SFMono-Regular",
+          "monospace",
+        ],
+      },
+      boxShadow: {
+        gold: "0 0 15px rgba(136, 115, 76, 0.3)",
+        "gold-lg": "0 0 30px rgba(136, 115, 76, 0.6)",
+        "gold-login": "0 0 20px rgba(181, 158, 94, 0.3)",
       },
       keyframes: {
         "accordion-down": {

@@ -1055,15 +1055,16 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
                   )}
 
                   <div className="relative z-10 text-center max-w-2xl px-6">
-                    <p className="text-xs sm:text-sm uppercase tracking-[0.3em] mb-4 inv-color-muted">
+                    <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] font-bold mb-4 inv-color-muted">
                       Vous êtes invité(e)
                     </p>
                     {guestInfo && (
-                      <p className="text-lg sm:text-xl font-semibold mb-6 inv-color-accent inv-font-display">
+                      <p className="text-sm sm:text-base font-semibold uppercase tracking-widest mb-6 inv-color-accent inv-font-display">
                         Cher(e) {guestInfo.firstName} {guestInfo.lastName}
                       </p>
                     )}
-                    <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight inv-font-display inv-color-primary">
+                    {/* Charte §3.2 : H1 uppercase font-black tracking-tight */}
+                    <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight leading-[1.05] inv-font-display inv-color-primary">
                       {event.title}
                     </h1>
 
@@ -1095,7 +1096,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
                       </>
                     )}
 
-                    {/* Scroll hint */}
+                    {/* Scroll hint — micro label charte */}
                     {isEntryComplete && currentPage === 0 && totalPages > 1 && (
                       <button
                         onClick={goNext}
@@ -1104,7 +1105,7 @@ export function InvitationCard({ event, theme, activeModules, modulesData, chatM
                         <svg className="h-6 w-6 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                         </svg>
-                        <span className="text-[10px] uppercase tracking-widest inv-color-muted">
+                        <span className="text-[10px] font-bold uppercase tracking-widest inv-color-muted">
                           Découvrir
                         </span>
                       </button>

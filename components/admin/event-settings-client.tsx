@@ -104,11 +104,11 @@ export function EventSettingsClient({ event }: SettingsClientProps) {
     <div className="flex flex-col h-full gap-3 lg:gap-4 overflow-hidden">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 shrink-0">
-        <Link href="/events" className="hover:text-[#7A3A50] dark:hover:text-[#C48B90]">
+        <Link href="/events" className="hover:text-[#88734C] dark:hover:text-[#b59e5e]">
           Événements
         </Link>
         <span>/</span>
-        <Link href={`/events/${event.id}`} className="hover:text-[#7A3A50] dark:hover:text-[#C48B90]">
+        <Link href={`/events/${event.id}`} className="hover:text-[#88734C] dark:hover:text-[#b59e5e]">
           {event.title}
         </Link>
         <span>/</span>
@@ -147,7 +147,7 @@ export function EventSettingsClient({ event }: SettingsClientProps) {
               <Link
                 href={`/${event.slug}`}
                 target="_blank"
-                className="text-xs text-[#7A3A50] dark:text-[#C48B90] hover:underline"
+                className="text-xs text-[#88734C] dark:text-[#b59e5e] hover:underline"
               >
                 Ouvrir →
               </Link>
@@ -156,7 +156,7 @@ export function EventSettingsClient({ event }: SettingsClientProps) {
           <div>
             <Link
               href={`/events/${event.id}/edit`}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#7A3A50]/20 px-3 py-1.5 text-xs font-medium text-[#7A3A50] dark:text-[#C48B90] transition hover:bg-[#7A3A50]/5"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#88734C]/20 px-3 py-1.5 text-xs font-medium text-[#88734C] dark:text-[#b59e5e] transition hover:bg-[#88734C]/5"
             >
               ✏️ Modifier les détails
             </Link>
@@ -176,7 +176,7 @@ export function EventSettingsClient({ event }: SettingsClientProps) {
           <button
             onClick={handleSaveVisibility}
             disabled={isSaving}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#7A3A50] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#6A2A40] disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#88734C] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#6b5a3a] disabled:opacity-50"
           >
             {isSaving ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -198,16 +198,16 @@ export function EventSettingsClient({ event }: SettingsClientProps) {
                 onClick={() => setVisibility(opt.value)}
                 className={`flex items-center gap-3 rounded-xl border p-4 text-left transition ${
                   visibility === opt.value
-                    ? "border-[#7A3A50] bg-[#7A3A50]/5 dark:bg-[#7A3A50]/20"
+                    ? "border-[#88734C] bg-[#88734C]/5 dark:bg-[#88734C]/20"
                     : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"
                 }`}
               >
                 <Icon className={`h-5 w-5 ${
-                  visibility === opt.value ? "text-[#7A3A50] dark:text-[#C48B90]" : "text-gray-400"
+                  visibility === opt.value ? "text-[#88734C] dark:text-[#b59e5e]" : "text-gray-400"
                 }`} />
                 <div>
                   <p className={`text-sm font-semibold ${
-                    visibility === opt.value ? "text-[#7A3A50] dark:text-[#C48B90]" : "text-gray-900 dark:text-white"
+                    visibility === opt.value ? "text-[#88734C] dark:text-[#b59e5e]" : "text-gray-900 dark:text-white"
                   }`}>
                     {opt.label}
                   </p>
@@ -227,7 +227,7 @@ export function EventSettingsClient({ event }: SettingsClientProps) {
               type="text"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 outline-none transition focus:border-[#7A3A50] focus:ring-2 focus:ring-[#7A3A50]/20"
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 outline-none transition focus:border-[#88734C] focus:ring-2 focus:ring-[#88734C]/20"
               placeholder="Entrez un mot de passe"
             />
           </div>

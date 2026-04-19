@@ -57,7 +57,7 @@ export default async function EventDetailPage({
     <div className="flex flex-col h-full gap-3 lg:gap-4 overflow-hidden">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 shrink-0">
-        <Link href="/events" className="hover:text-[#7A3A50] dark:hover:text-[#C48B90]">
+        <Link href="/events" className="hover:text-[#88734C] dark:hover:text-[#b59e5e]">
           Événements
         </Link>
         <span>/</span>
@@ -83,7 +83,7 @@ export default async function EventDetailPage({
                 year: "numeric",
               })}
               {daysUntil > 0 && (
-                <span className="ml-2 text-[#7A3A50] dark:text-[#C48B90] font-medium">
+                <span className="ml-2 text-[#88734C] dark:text-[#b59e5e] font-medium">
                   (J-{daysUntil})
                 </span>
               )}
@@ -115,13 +115,13 @@ export default async function EventDetailPage({
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 shrink-0">
         <Link
           href={`/events/${event._id}/guests`}
-          className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 lg:p-4 shadow-sm hover:border-[#7A3A50]/20 hover:shadow-md transition group"
+          className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 lg:p-4 shadow-sm hover:border-[#88734C]/20 hover:shadow-md transition group"
         >
           <div className="flex items-center justify-between">
             <span className="text-lg">👥</span>
             <span className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{event._count.guests}</span>
           </div>
-          <p className="mt-1 text-xs lg:text-sm font-medium text-gray-600 dark:text-gray-400 group-hover:text-[#7A3A50]">
+          <p className="mt-1 text-xs lg:text-sm font-medium text-gray-600 dark:text-gray-400 group-hover:text-[#88734C]">
             Invités totaux
           </p>
           <div className="mt-1 flex gap-2 text-[10px] lg:text-[11px]">
@@ -163,7 +163,7 @@ export default async function EventDetailPage({
       </div>
 
       {/* Share link — compact */}
-      <div className="rounded-xl border border-[#7A3A50]/10 dark:border-[#7A3A50]/20 bg-[#7A3A50]/5 dark:bg-[#7A3A50]/10 px-4 py-3 sm:py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 shrink-0">
+      <div className="rounded-xl border border-[#88734C]/10 dark:border-[#88734C]/20 bg-[#88734C]/5 dark:bg-[#88734C]/10 px-4 py-3 sm:py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 shrink-0">
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium text-gray-900 dark:text-white">🔗 Lien de partage</p>
           <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono truncate">
@@ -172,7 +172,7 @@ export default async function EventDetailPage({
         </div>
         <Link
           href={`/events/${event._id}/guests`}
-          className="rounded-lg bg-[#7A3A50] px-3 py-2 sm:py-1.5 text-xs font-medium text-white hover:bg-[#6A2A40] transition shrink-0 text-center"
+          className="rounded-lg bg-[#88734C] px-3 py-2 sm:py-1.5 text-xs font-medium text-white hover:bg-[#6b5a3a] transition shrink-0 text-center"
         >
           + Ajouter des invités
         </Link>

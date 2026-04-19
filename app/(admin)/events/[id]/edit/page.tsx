@@ -36,21 +36,23 @@ export default async function EventEditPage({
 
   if (!event) notFound();
 
-  // Build theme data (same logic as the public [slug] page)
+  // Charte "Cité de la Démocratie" — palette forcée pour l'aperçu admin aussi.
+  // Les valeurs event.theme.* en DB (héritées des anciens presets) sont ignorées pour
+  // refléter exactement ce que l'invité public voit.
   const presetId = event.theme?.preset || "mariage";
   const preset = THEME_PRESETS[presetId] || THEME_PRESETS.mariage;
 
   const themeColors = {
-    colorPrimary: event.theme?.colorPrimary || preset.colorPrimary,
-    colorSecondary: event.theme?.colorSecondary || preset.colorSecondary,
-    colorAccent: event.theme?.colorAccent || preset.colorAccent,
-    colorBackground: event.theme?.colorBackground || preset.colorBackground,
-    colorText: event.theme?.colorText || preset.colorText,
-    colorSurface: event.theme?.colorSurface || preset.colorSurface,
-    colorMuted: event.theme?.colorMuted || preset.colorMuted,
-    colorBorder: event.theme?.colorBorder || preset.colorBorder,
-    fontDisplay: event.theme?.fontDisplay || preset.fontDisplay,
-    fontBody: event.theme?.fontBody || preset.fontBody,
+    colorPrimary: preset.colorPrimary,
+    colorSecondary: preset.colorSecondary,
+    colorAccent: preset.colorAccent,
+    colorBackground: preset.colorBackground,
+    colorText: preset.colorText,
+    colorSurface: preset.colorSurface,
+    colorMuted: preset.colorMuted,
+    colorBorder: preset.colorBorder,
+    fontDisplay: preset.fontDisplay,
+    fontBody: preset.fontBody,
   };
 
   const cssVars = generateThemeCSS(themeColors);
@@ -69,10 +71,12 @@ export default async function EventEditPage({
     cssVars,
     fontDisplay: themeColors.fontDisplay,
     fontBody: themeColors.fontBody,
-    entryEffect: event.theme?.entryEffect || preset.entryEffect,
-    ambientEffect: event.theme?.ambientEffect ?? preset.ambientEffect,
-    ambientIntensity: event.theme?.ambientIntensity ?? preset.ambientIntensity,
-    scrollReveal: event.theme?.scrollReveal || preset.scrollReveal,
+    // Effets visuels : conservés depuis le preset (variété par type d'event)
+    entryEffect: preset.entryEffect,
+    ambientEffect: preset.ambientEffect,
+    ambientIntensity: preset.ambientIntensity,
+    scrollReveal: preset.scrollReveal,
+    // Médias par page conservés (uploads utilisateur)
     pageMedia: parseJson(event.theme?.pageMedia),
     pageThemes: parseJson(event.theme?.pageThemes),
     colors: {

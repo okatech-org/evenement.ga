@@ -55,13 +55,13 @@ export default async function SuperAdminLayout({
       <aside className="hidden w-[280px] flex-col border-r border-[#30363D] bg-[#161B22] lg:flex">
         {/* Header */}
         <div className="flex items-center gap-3 border-b border-[#30363D] px-5 py-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#7A3A50] to-[#C48B90]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#88734C] to-[#b59e5e]">
             <span className="text-sm font-bold text-white">E</span>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-white">
-                Event<span className="text-[#C48B90]">Flow</span>
+                Event<span className="text-[#b59e5e]">Flow</span>
               </span>
               <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-red-400">
                 Système
@@ -126,7 +126,7 @@ export default async function SuperAdminLayout({
         <header className="flex h-14 items-center justify-between border-b border-[#30363D] bg-[#161B22] px-6">
           {/* Mobile logo */}
           <div className="flex items-center gap-2 lg:hidden">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-[#7A3A50] to-[#C48B90]">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-[#88734C] to-[#b59e5e]">
               <span className="text-xs font-bold text-white">E</span>
             </div>
             <span className="text-sm font-bold text-white">Super Admin</span>
